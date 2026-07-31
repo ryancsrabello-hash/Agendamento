@@ -223,6 +223,8 @@
 <body>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
+<script type="module" src="./supabase.js"></script>
+
 <script>
 (function(){
 
@@ -302,7 +304,7 @@ function timeSlots(){
 }
 function timeToMinutes(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]); }
 
-/* ---------------- storage ---------------- */
+/* ---------------- storage (Supabase + cache local) ---------------- */
 function seedStore(){
   return {
     appointments: [],
@@ -312,38 +314,109 @@ function seedStore(){
   };
 }
 
-var HAS_CLAUDE_STORAGE = (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function');
+var realtimeChannel = null;
+var realtimeStarted = false;
+
+function normalizeStore(value){
+  var base = seedStore();
+  if(!value || typeof value !== 'object') return base;
+  base.appointments = Array.isArray(value.appointments) ? value.appointments : [];
+  base.expenses = Array.isArray(value.expenses) ? value.expenses : [];
+  base.logs = Array.isArray(value.logs) ? value.logs : [];
+  base.blocks = Array.isArray(value.blocks) ? value.blocks : [];
+  return base;
+}
+
+function readLocalStore(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? normalizeStore(JSON.parse(raw)) : null;
+  }catch(e){
+    console.warn('Não foi possível ler o cache local.', e);
+    return null;
+  }
+}
+
+function writeLocalStore(value){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); }
+  catch(e){ console.warn('Não foi possível atualizar o cache local.', e); }
+}
+
+function waitForSupabase(timeoutMs){
+  return new Promise(function(resolve){
+    if(window.ILRSupabase){ resolve(window.ILRSupabase); return; }
+
+    var finished = false;
+    function done(value){
+      if(finished) return;
+      finished = true;
+      window.removeEventListener('ilr-supabase-ready', onReady);
+      resolve(value);
+    }
+    function onReady(){ done(window.ILRSupabase || null); }
+
+    window.addEventListener('ilr-supabase-ready', onReady, {once:true});
+    setTimeout(function(){ done(window.ILRSupabase || null); }, timeoutMs || 8000);
+  });
+}
+
+function startRealtime(api){
+  if(realtimeStarted || !api || typeof api.subscribeStore !== 'function') return;
+  realtimeStarted = true;
+  realtimeChannel = api.subscribeStore(function(remoteStore){
+    store = normalizeStore(remoteStore);
+    writeLocalStore(store);
+    render();
+  });
+}
 
 function loadStore(cb){
-  if(HAS_CLAUDE_STORAGE){
-    window.storage.get(STORAGE_KEY, true).then(function(res){
-      store = JSON.parse(res.value);
+  var localCopy = readLocalStore();
+
+  waitForSupabase(8000).then(function(api){
+    if(!api){
+      store = localCopy || seedStore();
+      writeLocalStore(store);
       cb();
-    }).catch(function(){
-      store = seedStore();
-      persist(cb);
-    });
-  } else {
-    try{
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ store = JSON.parse(raw); cb(); }
-      else { store = seedStore(); persist(cb); }
-    }catch(e){
-      store = seedStore();
-      cb();
+      return;
     }
-  }
+
+    api.loadStore().then(function(remoteStore){
+      if(remoteStore){
+        store = normalizeStore(remoteStore);
+      }else{
+        // Primeira execução: preserva e envia ao Supabase os dados já existentes no navegador.
+        store = localCopy || seedStore();
+        return api.saveStore(store);
+      }
+    }).then(function(){
+      writeLocalStore(store);
+      startRealtime(api);
+      cb();
+    }).catch(function(error){
+      console.error('Falha ao carregar o Supabase; usando o cache local.', error);
+      store = localCopy || seedStore();
+      writeLocalStore(store);
+      cb();
+    });
+  });
 }
+
 function persist(cb){
-  if(HAS_CLAUDE_STORAGE){
-    window.storage.set(STORAGE_KEY, JSON.stringify(store), true).then(function(){ if(cb) cb(); render(); })
-      .catch(function(){ if(cb) cb(); render(); });
-  } else {
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }catch(e){}
-    if(cb) cb();
-    render();
-  }
+  store = normalizeStore(store);
+  writeLocalStore(store);
+  if(cb) cb();
+  render();
+
+  waitForSupabase(3000).then(function(api){
+    if(!api) return;
+    startRealtime(api);
+    return api.saveStore(store);
+  }).catch(function(error){
+    console.error('Os dados ficaram salvos localmente, mas não foi possível sincronizar com o Supabase.', error);
+  });
 }
+
 function resetDemo(){
   store = seedStore();
   persist();
