@@ -217,6 +217,27 @@
 
   .warn-badge{background:var(--danger-soft);color:var(--danger);font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:6px;}
   footer.note{text-align:center;color:var(--ink-soft);font-size:11.5px;margin-top:40px;}
+  .patient-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+  .patient-toolbar .search{flex:1;min-width:220px;}
+  .patient-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+  .patient-form-grid .span-2{grid-column:span 2;}
+  .patient-form-grid .span-3{grid-column:1/-1;}
+  .patient-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
+  .patient-card-list{display:none;}
+  .patient-history{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .patient-history-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .patient-history-row:last-child{border-bottom:none;}
+  @media (max-width:780px){
+    .patient-form-grid{grid-template-columns:1fr 1fr;}
+    .patient-form-grid .span-3{grid-column:1/-1;}
+  }
+  @media (max-width:620px){
+    .patient-form-grid{grid-template-columns:1fr;}
+    .patient-form-grid .span-2,.patient-form-grid .span-3{grid-column:auto;}
+    .patients-table-wrap{display:none;}
+    .patient-card-list{display:grid;gap:10px;}
+    .patient-mobile-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:#fff;}
+  }
   .loading{text-align:center;padding:80px 0;color:var(--ink-soft);}
 </style>
 </head>
@@ -272,6 +293,9 @@ var state = {
   lookupLoading: false,
   agendaDate: todayISO(),
   agendaBlockProf: PROFESSIONALS[0].id,
+  patientSearch: '',
+  patientEditingId: null,
+  patientMessage: '',
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO() }
 };
 var store = null;
@@ -312,6 +336,7 @@ function timeToMinutes(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt
 function seedStore(){
   return {
     appointments: [],
+    patients: [],
     expenses: [],
     logs: [],
     blocks: []
@@ -325,6 +350,7 @@ function normalizeStore(value){
   var base = seedStore();
   if(!value || typeof value !== 'object') return base;
   base.appointments = Array.isArray(value.appointments) ? value.appointments : [];
+  base.patients = Array.isArray(value.patients) ? value.patients : [];
   base.expenses = Array.isArray(value.expenses) ? value.expenses : [];
   base.logs = Array.isArray(value.logs) ? value.logs : [];
   base.blocks = Array.isArray(value.blocks) ? value.blocks : [];
@@ -496,7 +522,8 @@ function availableSlots(professionalId, date, duration){
 }
 
 /* ---------------- rendering ---------------- */
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function render(){
   var root = document.getElementById('root');
@@ -884,25 +911,106 @@ function renderFinanceiro(){
   return out;
 }
 
-function renderPacientes(){
+function patientBlank(){
+  return {id:'',name:'',cpf:'',rg:'',birthDate:'',sex:'',phone:'',email:'',cep:'',address:'',number:'',complement:'',neighborhood:'',city:'',state:'SP',insurance:'',responsible:'',notes:'',sourcePhone:'',createdAt:''};
+}
+
+function patientRecords(){
   var map = {};
-  store.appointments.forEach(function(a){
-    if(!map[a.phone]) map[a.phone] = {name:a.name, phone:a.phone, total:0, faltas:0, ultima:a.date};
-    map[a.phone].total++;
-    if(a.status==='falta') map[a.phone].faltas++;
-    if(a.date>map[a.phone].ultima) map[a.phone].ultima = a.date;
+  (store.patients||[]).forEach(function(p){
+    var item = Object.assign(patientBlank(), p);
+    var key = item.id || ('saved-'+(item.phone||Math.random()));
+    map[key] = item;
   });
-  var list = Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){ return b.total-a.total; });
-  var out = '<div class="section-title">Pacientes</div><div class="card">';
-  if(list.length===0) out += '<div class="empty-state">Nenhum paciente cadastrado ainda.</div>';
-  else{
-    out += '<table><thead><tr><th>Nome</th><th>Telefone</th><th>Consultas</th><th>Faltas</th><th>Última visita</th></tr></thead><tbody>';
-    list.forEach(function(p){
-      out += '<tr><td>'+esc(p.name)+(p.faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone)+'</td><td>'+p.total+'</td><td>'+p.faltas+'</td><td>'+dayDisplay(p.ultima)+'</td></tr>';
+  store.appointments.forEach(function(a){
+    var phone = String(a.phone||'').replace(/\D/g,'');
+    if(!phone) return;
+    var existing = null;
+    Object.keys(map).some(function(k){
+      var p=map[k];
+      if(String(p.phone||'').replace(/\D/g,'')===phone || String(p.sourcePhone||'').replace(/\D/g,'')===phone){ existing=p; return true; }
+      return false;
     });
-    out += '</tbody></table>';
+    if(!existing){
+      map['auto-'+phone] = Object.assign(patientBlank(), {id:'auto-'+phone,name:a.name||'',phone:phone,sourcePhone:phone,createdAt:a.createdAt||''});
+    }else if(!existing.name && a.name){ existing.name=a.name; }
+  });
+  return Object.keys(map).map(function(k){ return map[k]; });
+}
+
+function patientHistory(p){
+  var phones=[p.phone,p.sourcePhone].map(function(v){ return String(v||'').replace(/\D/g,''); }).filter(Boolean);
+  return store.appointments.filter(function(a){ return phones.indexOf(String(a.phone||'').replace(/\D/g,''))>=0; })
+    .sort(function(a,b){ return (a.date+a.time)<(b.date+b.time)?1:-1; });
+}
+
+function patientById(id){
+  var list=patientRecords();
+  for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i];
+  return null;
+}
+
+function renderPatientForm(p){
+  p=Object.assign(patientBlank(),p||{});
+  var title=p.id?'Editar paciente':'Novo paciente';
+  var out='<div class="card" style="margin-bottom:18px;"><h3 style="margin-top:0;">'+title+'</h3><div class="patient-form-grid">';
+  function field(id,label,value,type,cls,extra){
+    return '<div class="field '+(cls||'')+'"><label>'+label+'</label><input id="'+id+'" type="'+(type||'text')+'" value="'+escAttr(value||'')+'" '+(extra||'')+'></div>';
   }
-  out += '</div>';
+  out+=field('pt-name','Nome completo *',p.name,'text','span-2','autocomplete="name"');
+  out+=field('pt-birth','Data de nascimento',p.birthDate,'date');
+  out+=field('pt-cpf','CPF',p.cpf,'text','','inputmode="numeric" placeholder="Somente números"');
+  out+=field('pt-rg','RG',p.rg);
+  out+='<div class="field"><label>Sexo</label><select id="pt-sex"><option value="">Não informado</option>'+['Feminino','Masculino','Outro','Prefiro não informar'].map(function(v){return '<option '+(p.sex===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>';
+  out+=field('pt-phone','WhatsApp / telefone',p.phone,'text','','inputmode="numeric" maxlength="11"');
+  out+=field('pt-email','E-mail',p.email,'email','span-2','autocomplete="email"');
+  out+=field('pt-cep','CEP',p.cep,'text','','inputmode="numeric" maxlength="8"');
+  out+=field('pt-address','Endereço',p.address,'text','span-2');
+  out+=field('pt-number','Número',p.number);
+  out+=field('pt-complement','Complemento',p.complement);
+  out+=field('pt-neighborhood','Bairro',p.neighborhood);
+  out+=field('pt-city','Cidade',p.city);
+  out+=field('pt-state','UF',p.state,'text','','maxlength="2"');
+  out+=field('pt-insurance','Convênio',p.insurance);
+  out+=field('pt-responsible','Responsável',p.responsible,'text','span-2');
+  out+='<div class="field span-3"><label>Observações</label><textarea id="pt-notes" style="width:100%;min-height:90px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit;">'+esc(p.notes||'')+'</textarea></div>';
+  out+='</div><div class="patient-actions"><button class="btn btn-ghost" data-action="cancel-patient">Cancelar</button><button class="btn btn-primary" data-action="save-patient" data-id="'+escAttr(p.id||'')+'">Salvar paciente</button></div></div>';
+  return out;
+}
+
+function renderPacientes(){
+  var list=patientRecords();
+  var q=String(state.patientSearch||'').trim().toLowerCase().replace(/\D/g,function(m){return m;});
+  if(q){
+    list=list.filter(function(p){
+      var hay=[p.name,p.cpf,p.phone,p.email,p.city].join(' ').toLowerCase();
+      return hay.indexOf(q)>=0 || hay.replace(/\D/g,'').indexOf(q.replace(/\D/g,''))>=0;
+    });
+  }
+  list.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'pt-BR'); });
+  var out='<div class="section-title">Pacientes <span class="pill realizado">'+list.length+' cadastro(s)</span></div>';
+  if(state.patientEditingId!==null){ out+=renderPatientForm(state.patientEditingId==='new'?patientBlank():patientById(state.patientEditingId)); }
+  if(state.patientMessage) out+='<div class="card" style="padding:12px 16px;margin-bottom:14px;background:var(--success-soft);color:var(--teal-deep);">'+esc(state.patientMessage)+'</div>';
+  out+='<div class="card"><div class="patient-toolbar"><input class="search" id="pt-search" value="'+escAttr(state.patientSearch)+'" placeholder="Buscar por nome, CPF, telefone, e-mail ou cidade"><button class="btn btn-ghost" data-action="patient-search">Buscar</button><button class="btn btn-primary" data-action="new-patient">+ Novo paciente</button></div>';
+  if(list.length===0){ out+='<div class="empty-state">Nenhum paciente encontrado.</div>'; }
+  else{
+    out+='<div class="patients-table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>CPF</th><th>Consultas</th><th>Última visita</th><th>Ações</th></tr></thead><tbody>';
+    list.forEach(function(p){
+      var h=patientHistory(p), faltas=h.filter(function(a){return a.status==='falta';}).length;
+      out+='<tr><td>'+esc(p.name||'Sem nome')+(faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone||'—')+'</td><td class="mono">'+esc(p.cpf||'—')+'</td><td>'+h.length+'</td><td>'+(h.length?dayDisplay(h[0].date):'—')+'</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Abrir</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></td></tr>';
+    });
+    out+='</tbody></table></div><div class="patient-card-list">';
+    list.forEach(function(p){var h=patientHistory(p);out+='<div class="patient-mobile-card"><strong>'+esc(p.name||'Sem nome')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0;">'+esc(p.phone||'Sem telefone')+' · '+h.length+' consulta(s)</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Abrir</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></div>';});
+    out+='</div>';
+  }
+  if(state.patientEditingId && state.patientEditingId!=='new'){
+    var selected=patientById(state.patientEditingId), hist=selected?patientHistory(selected):[];
+    out+='<div class="patient-history"><h3>Histórico de consultas</h3>';
+    if(!hist.length) out+='<div class="empty-note">Nenhuma consulta vinculada a este paciente.</div>';
+    hist.forEach(function(a){out+='<div class="patient-history-row"><span><strong>'+dayDisplay(a.date)+' às '+a.time+'</strong> · '+esc(procById(a.procedureId).name)+'</span><span class="pill '+a.status+'">'+STATUS_LABEL[a.status]+'</span></div>';});
+    out+='</div>';
+  }
+  out+='</div>';
   return out;
 }
 
@@ -983,10 +1091,59 @@ function attachEvents(){
     else if(a==='toggle-block'){ toggleBlock(t.dataset.id); return; }
     else if(a==='add-expense'){ addExpense(); return; }
     else if(a==='del-expense'){ delExpense(t.dataset.id); return; }
+    else if(a==='new-patient'){ state.patientEditingId='new'; state.patientMessage=''; render(); return; }
+    else if(a==='edit-patient'){ state.patientEditingId=t.dataset.id; state.patientMessage=''; render(); return; }
+    else if(a==='cancel-patient'){ state.patientEditingId=null; state.patientMessage=''; render(); return; }
+    else if(a==='save-patient'){ savePatient(t.dataset.id); return; }
+    else if(a==='delete-patient'){ deletePatient(t.dataset.id); return; }
+    else if(a==='patient-search'){ var ps=document.getElementById('pt-search'); state.patientSearch=ps?ps.value:''; render(); return; }
     else if(a==='reset-demo'){ if(confirm('Zerar TODOS os agendamentos, pacientes, despesas e bloqueios? Essa ação não pode ser desfeita.')) resetDemo(); return; }
 
     render();
   };
+}
+
+function readPatientForm(){
+  function val(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
+  return {
+    name:val('pt-name'), birthDate:val('pt-birth'), cpf:val('pt-cpf').replace(/\D/g,''), rg:val('pt-rg'), sex:val('pt-sex'),
+    phone:val('pt-phone').replace(/\D/g,''), email:val('pt-email').toLowerCase(), cep:val('pt-cep').replace(/\D/g,''),
+    address:val('pt-address'), number:val('pt-number'), complement:val('pt-complement'), neighborhood:val('pt-neighborhood'),
+    city:val('pt-city'), state:val('pt-state').toUpperCase(), insurance:val('pt-insurance'), responsible:val('pt-responsible'), notes:val('pt-notes')
+  };
+}
+
+function savePatient(id){
+  var form=readPatientForm();
+  if(form.name.length<3){ alert('Informe o nome completo do paciente.'); return; }
+  if(form.phone && form.phone.length!==10 && form.phone.length!==11){ alert('Informe um telefone com DDD válido.'); return; }
+  if(form.cpf && form.cpf.length!==11){ alert('O CPF deve ter 11 números.'); return; }
+  store.patients=Array.isArray(store.patients)?store.patients:[];
+  var existing=patientById(id);
+  var savedIndex=-1;
+  for(var i=0;i<store.patients.length;i++) if(store.patients[i].id===id){savedIndex=i;break;}
+  var record=Object.assign(patientBlank(), existing||{}, form);
+  if(!record.id || record.id.indexOf('auto-')===0){
+    record.sourcePhone=record.sourcePhone || (existing&&existing.phone) || form.phone;
+    record.id='p'+Date.now();
+    record.createdAt=new Date().toISOString();
+  }
+  record.updatedAt=new Date().toISOString();
+  if(savedIndex>=0) store.patients[savedIndex]=record; else store.patients.push(record);
+  state.patientEditingId=record.id;
+  state.patientMessage='Paciente salvo com sucesso.';
+  persist();
+}
+
+function deletePatient(id){
+  var p=patientById(id);
+  if(!p) return;
+  if(id.indexOf('auto-')===0){ alert('Este cadastro foi gerado automaticamente por um agendamento. Abra e salve o paciente antes de excluí-lo.'); return; }
+  if(!confirm('Excluir o cadastro de '+(p.name||'este paciente')+'? O histórico de agendamentos será preservado.')) return;
+  store.patients=(store.patients||[]).filter(function(x){return x.id!==id;});
+  state.patientEditingId=null;
+  state.patientMessage='Cadastro excluído. Os agendamentos foram preservados.';
+  persist();
 }
 
 function confirmBooking(){
