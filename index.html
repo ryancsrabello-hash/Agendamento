@@ -239,6 +239,30 @@
     .patient-mobile-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:#fff;}
   }
   .loading{text-align:center;padding:80px 0;color:var(--ink-soft);}
+
+  /* PRONTUÁRIO ELETRÔNICO */
+  .record-shell{margin-top:18px;border-top:3px solid var(--teal);}
+  .record-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px;}
+  .record-head h2{margin:0 0 4px;font-size:21px;}
+  .record-tabs{display:flex;gap:5px;overflow-x:auto;border-bottom:1px solid var(--border);margin-bottom:18px;}
+  .record-tabs button{border:0;background:transparent;padding:10px 13px;font-weight:700;color:var(--ink-soft);border-bottom:2px solid transparent;white-space:nowrap;}
+  .record-tabs button.active{color:var(--teal-deep);border-bottom-color:var(--teal);}
+  .record-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+  .record-grid .full{grid-column:1/-1;}
+  .record-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0;}
+  .record-check{display:flex;align-items:center;gap:8px;background:var(--grey-soft);padding:10px;border-radius:9px;font-size:13px;font-weight:600;}
+  .record-check input{width:auto;}
+  .odontogram{display:grid;grid-template-columns:repeat(8,minmax(48px,1fr));gap:8px;margin:14px 0;}
+  .tooth{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:9px 4px;text-align:center;font-weight:700;font-size:13px;}
+  .tooth small{display:block;font-size:9px;color:var(--ink-soft);font-weight:500;margin-top:3px;overflow:hidden;text-overflow:ellipsis;}
+  .tooth.selected{border-color:var(--teal);background:var(--teal-soft);}
+  .evolution-item{padding:14px 0;border-bottom:1px solid var(--border);}
+  .evolution-item:last-child{border-bottom:0;}
+  .evolution-meta{font-size:12px;color:var(--ink-soft);margin-bottom:5px;}
+  textarea.record-textarea{width:100%;min-height:95px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit;resize:vertical;}
+  .record-status{padding:12px;border-radius:10px;background:var(--grey-soft);font-size:13px;margin-bottom:14px;}
+  @media(max-width:700px){.record-grid{grid-template-columns:1fr}.record-grid .full{grid-column:auto}.record-checks{grid-template-columns:1fr 1fr}.odontogram{grid-template-columns:repeat(4,1fr)}.record-head{flex-direction:column}.record-head .row-actions{width:100%}}
+
 </style>
 </head>
 <body>
@@ -296,6 +320,12 @@ var state = {
   patientSearch: '',
   patientEditingId: null,
   patientMessage: '',
+  recordPatientId: null,
+  recordTab: 'anamnese',
+  recordLoading: false,
+  recordError: '',
+  recordData: {prontuario:null,evolucoes:[],odontograma:[]},
+  selectedTooth: null,
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO() }
 };
 var store = null;
@@ -997,10 +1027,10 @@ function renderPacientes(){
     out+='<div class="patients-table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>CPF</th><th>Consultas</th><th>Última visita</th><th>Ações</th></tr></thead><tbody>';
     list.forEach(function(p){
       var h=patientHistory(p), faltas=h.filter(function(a){return a.status==='falta';}).length;
-      out+='<tr><td>'+esc(p.name||'Sem nome')+(faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone||'—')+'</td><td class="mono">'+esc(p.cpf||'—')+'</td><td>'+h.length+'</td><td>'+(h.length?dayDisplay(h[0].date):'—')+'</td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Abrir</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></td></tr>';
+      out+='<tr><td>'+esc(p.name||'Sem nome')+(faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone||'—')+'</td><td class="mono">'+esc(p.cpf||'—')+'</td><td>'+h.length+'</td><td>'+(h.length?dayDisplay(h[0].date):'—')+'</td><td><div class="row-actions"><button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></td></tr>';
     });
     out+='</tbody></table></div><div class="patient-card-list">';
-    list.forEach(function(p){var h=patientHistory(p);out+='<div class="patient-mobile-card"><strong>'+esc(p.name||'Sem nome')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0;">'+esc(p.phone||'Sem telefone')+' · '+h.length+' consulta(s)</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Abrir</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></div>';});
+    list.forEach(function(p){var h=patientHistory(p);out+='<div class="patient-mobile-card"><strong>'+esc(p.name||'Sem nome')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0;">'+esc(p.phone||'Sem telefone')+' · '+h.length+' consulta(s)</div><div class="row-actions"><button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></div>';});
     out+='</div>';
   }
   if(state.patientEditingId && state.patientEditingId!=='new'){
@@ -1011,6 +1041,69 @@ function renderPacientes(){
     out+='</div>';
   }
   out+='</div>';
+  out+=renderClinicalRecord();
+  return out;
+}
+
+function clinicalToothMap(){
+  var map={};
+  (state.recordData.odontograma||[]).forEach(function(x){map[String(x.dente)]=x;});
+  return map;
+}
+function renderClinicalRecord(){
+  if(!state.recordPatientId) return '';
+  var p=patientById(state.recordPatientId);
+  if(!p) return '<div class="card record-shell">Paciente não encontrado.</div>';
+  var out='<div class="card record-shell">';
+  out+='<div class="record-head"><div><h2>Prontuário — '+esc(p.name||'Paciente')+'</h2><div style="color:var(--ink-soft);font-size:13px;">'+esc(p.phone||'Sem telefone')+(p.birthDate?' · Nascimento: '+dayDisplay(p.birthDate):'')+'</div></div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="close-record">Fechar</button></div></div>';
+  if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
+  if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
+  out+='<div class="record-tabs">'+[['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  if(state.recordTab==='anamnese') out+=renderAnamnesis();
+  else if(state.recordTab==='odontograma') out+=renderOdontogram();
+  else if(state.recordTab==='evolucoes') out+=renderEvolutions();
+  else out+=renderRecordHistory(p);
+  out+='</div>';
+  return out;
+}
+function renderAnamnesis(){
+  var r=state.recordData.prontuario||{};
+  function area(id,label,val){return '<div class="field"><label>'+label+'</label><textarea class="record-textarea" id="'+id+'">'+esc(val||'')+'</textarea></div>';}
+  var out='<div class="record-grid">';
+  out+=area('rec-queixa','Queixa principal',r.queixa_principal);
+  out+=area('rec-historico','Histórico médico',r.historico_medico);
+  out+=area('rec-alergias','Alergias',r.alergias);
+  out+=area('rec-medicamentos','Medicamentos em uso',r.medicamentos);
+  out+='<div class="full"><label>Condições sistêmicas</label><div class="record-checks">';
+  [['rec-hipertensao','Hipertensão','hipertensao'],['rec-diabetes','Diabetes','diabetes'],['rec-anticoagulante','Uso de anticoagulante','anticoagulante'],['rec-gestante','Gestante','gestante'],['rec-cirurgia','Cirurgia prévia','cirurgia_previa']].forEach(function(x){out+='<label class="record-check"><input type="checkbox" id="'+x[0]+'" '+(r[x[2]]?'checked':'')+'> '+x[1]+'</label>';});
+  out+='</div></div><div class="full">'+area('rec-observacoes','Observações clínicas',r.observacoes)+'</div></div>';
+  out+='<div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-anamnesis">Salvar anamnese</button></div>';
+  return out;
+}
+function renderOdontogram(){
+  var teeth=['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28','48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
+  var map=clinicalToothMap(), selected=state.selectedTooth, current=selected?map[selected]:null;
+  var out='<p style="color:var(--ink-soft);font-size:13px;">Clique em um dente para registrar ou atualizar sua condição.</p><div class="odontogram">';
+  teeth.forEach(function(n){var x=map[n];out+='<button class="tooth '+(selected===n?'selected':'')+'" data-action="select-tooth" data-id="'+n+'">'+n+'<small>'+(x?esc(x.condicao):'Sem registro')+'</small></button>';});
+  out+='</div>';
+  if(selected){
+    var conditions=['Saudável','Cárie','Restauração','Coroa','Endodontia','Fratura','Ausente/extraído','Implante','Prótese','Mobilidade','Outro'];
+    out+='<div class="card" style="background:var(--grey-soft);"><h3 style="margin-top:0;">Dente '+selected+'</h3><div class="record-grid"><div class="field"><label>Condição</label><select id="tooth-condition">'+conditions.map(function(c){return '<option '+(current&&current.condicao===c?'selected':'')+'>'+c+'</option>';}).join('')+'</select></div><div class="field"><label>Observações</label><input id="tooth-notes" value="'+escAttr(current?current.observacoes||'':'')+'" placeholder="Detalhes adicionais"></div></div><div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-tooth" data-id="'+selected+'">Salvar dente</button></div></div>';
+  }
+  return out;
+}
+function renderEvolutions(){
+  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px;"><h3 style="margin-top:0;">Nova evolução clínica</h3><div class="record-grid"><div class="field"><label>Data do atendimento</label><input type="date" id="ev-date" value="'+todayISO()+'"></div><div class="field"><label>Procedimento</label><input id="ev-procedure" placeholder="Ex: restauração do 36"></div><div class="field full"><label>Descrição / evolução *</label><textarea class="record-textarea" id="ev-description" placeholder="Registre achados clínicos, sintomas e procedimentos realizados"></textarea></div><div class="field"><label>Conduta</label><textarea class="record-textarea" id="ev-conduct" placeholder="Orientações, prescrição e plano"></textarea></div><div class="field"><label>Observações</label><textarea class="record-textarea" id="ev-notes"></textarea></div></div><div class="patient-actions"><span></span><button class="btn btn-primary" data-action="add-evolution">Salvar evolução</button></div></div>';
+  var list=state.recordData.evolucoes||[];
+  out+='<h3>Histórico de evoluções</h3>';
+  if(!list.length) return out+'<div class="empty-note">Nenhuma evolução clínica registrada.</div>';
+  list.forEach(function(e){out+='<div class="evolution-item"><div class="evolution-meta">'+(e.data_atendimento?dayDisplay(e.data_atendimento):'')+(e.profissional_email?' · '+esc(e.profissional_email):'')+'</div><strong>'+esc(e.procedimento||'Atendimento clínico')+'</strong><div style="margin-top:6px;white-space:pre-wrap;">'+esc(e.descricao||'')+'</div>'+(e.conduta?'<div style="margin-top:7px;"><strong>Conduta:</strong> '+esc(e.conduta)+'</div>':'')+(e.observacoes?'<div style="margin-top:5px;color:var(--ink-soft);">'+esc(e.observacoes)+'</div>':'')+'</div>';});
+  return out;
+}
+function renderRecordHistory(p){
+  var hist=patientHistory(p), out='';
+  if(!hist.length) return '<div class="empty-note">Nenhuma consulta vinculada a este paciente.</div>';
+  hist.forEach(function(a){out+='<div class="patient-history-row"><span><strong>'+dayDisplay(a.date)+' às '+a.time+'</strong> · '+esc(procById(a.procedureId).name)+' · '+esc(profById(a.professionalId).name)+'</span><span class="pill '+a.status+'">'+STATUS_LABEL[a.status]+'</span></div>';});
   return out;
 }
 
@@ -1097,10 +1190,42 @@ function attachEvents(){
     else if(a==='save-patient'){ savePatient(t.dataset.id); return; }
     else if(a==='delete-patient'){ deletePatient(t.dataset.id); return; }
     else if(a==='patient-search'){ var ps=document.getElementById('pt-search'); state.patientSearch=ps?ps.value:''; render(); return; }
+    else if(a==='open-record'){ openClinicalRecord(t.dataset.id); return; }
+    else if(a==='close-record'){ state.recordPatientId=null; state.selectedTooth=null; render(); return; }
+    else if(a==='record-tab'){ state.recordTab=t.dataset.id; render(); return; }
+    else if(a==='select-tooth'){ state.selectedTooth=t.dataset.id; render(); return; }
+    else if(a==='save-anamnesis'){ saveAnamnesis(); return; }
+    else if(a==='save-tooth'){ saveTooth(t.dataset.id); return; }
+    else if(a==='add-evolution'){ addEvolution(); return; }
     else if(a==='reset-demo'){ if(confirm('Zerar TODOS os agendamentos, pacientes, despesas e bloqueios? Essa ação não pode ser desfeita.')) resetDemo(); return; }
 
     render();
   };
+}
+
+
+function openClinicalRecord(id){
+  if(String(id||'').indexOf('auto-')===0){ alert('Abra e salve o cadastro do paciente antes de criar o prontuário.'); return; }
+  state.recordPatientId=id; state.recordTab='anamnese'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
+  waitForSupabase(5000).then(function(api){ if(!api||!api.loadClinicalRecord) throw new Error('Módulo do prontuário não foi carregado. Atualize também o arquivo supabase.js.'); return api.loadClinicalRecord(id); })
+    .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[]};state.recordLoading=false;render();})
+    .catch(function(e){state.recordLoading=false;state.recordError=e.message||'Erro ao carregar prontuário.';render();});
+}
+function saveAnamnesis(){
+  function val(id){var e=document.getElementById(id);return e?e.value.trim():'';} function checked(id){var e=document.getElementById(id);return !!(e&&e.checked);}
+  var data={queixa_principal:val('rec-queixa'),historico_medico:val('rec-historico'),alergias:val('rec-alergias'),medicamentos:val('rec-medicamentos'),hipertensao:checked('rec-hipertensao'),diabetes:checked('rec-diabetes'),anticoagulante:checked('rec-anticoagulante'),gestante:checked('rec-gestante'),cirurgia_previa:checked('rec-cirurgia'),observacoes:val('rec-observacoes')};
+  waitForSupabase(5000).then(function(api){return api.saveAnamnesis(state.recordPatientId,data);}).then(function(saved){state.recordData.prontuario=saved;state.patientMessage='Anamnese salva com sucesso.';render();}).catch(function(e){alert('Não foi possível salvar a anamnese: '+e.message);});
+}
+function saveTooth(tooth){
+  var c=document.getElementById('tooth-condition'),n=document.getElementById('tooth-notes');
+  var data={condicao:c?c.value:'Saudável',observacoes:n?n.value.trim():''};
+  waitForSupabase(5000).then(function(api){return api.saveTooth(state.recordPatientId,tooth,data);}).then(function(saved){var list=state.recordData.odontograma||[],idx=list.findIndex(function(x){return String(x.dente)===String(tooth);});if(idx>=0)list[idx]=saved;else list.push(saved);state.recordData.odontograma=list;render();}).catch(function(e){alert('Não foi possível salvar o dente: '+e.message);});
+}
+function addEvolution(){
+  function val(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+  var data={data_atendimento:val('ev-date')||todayISO(),procedimento:val('ev-procedure'),descricao:val('ev-description'),conduta:val('ev-conduct'),observacoes:val('ev-notes')};
+  if(!data.descricao){alert('Preencha a descrição da evolução clínica.');return;}
+  waitForSupabase(5000).then(function(api){return api.addEvolution(state.recordPatientId,data);}).then(function(saved){state.recordData.evolucoes=[saved].concat(state.recordData.evolucoes||[]);render();}).catch(function(e){alert('Não foi possível salvar a evolução: '+e.message);});
 }
 
 function readPatientForm(){
