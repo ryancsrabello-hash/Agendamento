@@ -6,9 +6,9 @@ const STATE_ROW_ID = 'main';
 
 const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
 });
 
@@ -48,12 +48,47 @@ function subscribeStore(onChange) {
     .subscribe();
 }
 
+async function signIn(email, password) {
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data.user;
+}
+
+async function signOut() {
+  const { error } = await client.auth.signOut();
+  if (error) throw error;
+}
+
+
+async function isAuthorizedTeamMember() {
+  const { data, error } = await client.rpc('is_team_member');
+  if (error) throw error;
+  return data === true;
+}
+
+async function getCurrentUser() {
+  const { data, error } = await client.auth.getUser();
+  if (error) return null;
+  return data.user || null;
+}
+
+function onAuthChange(callback) {
+  return client.auth.onAuthStateChange((_event, session) => {
+    callback(session ? session.user : null);
+  });
+}
+
 window.ILRSupabase = {
   client,
   loadStore,
   saveStore,
-  subscribeStore
+  subscribeStore,
+  signIn,
+  signOut,
+  getCurrentUser,
+  isAuthorizedTeamMember,
+  onAuthChange
 };
 window.dispatchEvent(new Event('ilr-supabase-ready'));
 
-export { client, loadStore, saveStore, subscribeStore };
+export { client, loadStore, saveStore, subscribeStore, signIn, signOut, getCurrentUser, isAuthorizedTeamMember, onAuthChange };

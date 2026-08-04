@@ -263,7 +263,9 @@ var state = {
   role: 'patient', // patient | gate | staff
   staffTab: 'visao',
   gateError: false,
+  gateLoading: false,
   staffUser: null,
+  staffEmail: null,
   booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', done:false, error:null },
   lookupPhone: '',
   agendaDate: todayISO(),
@@ -666,20 +668,20 @@ function renderLookupResults(){
 function renderGate(){
   return '<div class="gate-wrap card">' +
     '<h2 style="margin-top:0;">Acesso da equipe</h2>' +
-    '<p>Área restrita a dentistas e recepção do Instituto Lins Rabello. Cada doutor(a) tem seu próprio código.</p>' +
-    '<div class="field" style="text-align:left;"><label>Código de acesso</label><input type="password" id="inp-code" placeholder="••••"></div>' +
-    (state.gateError ? '<p style="color:var(--danger);font-size:13px;">Código incorreto. Tente novamente.</p>' : '') +
-    '<button class="btn btn-primary" style="width:100%;" data-action="do-gate">Entrar</button>' +
+    '<p>Entre com o e-mail e a senha cadastrados no Supabase.</p>' +
+    '<div class="field" style="text-align:left;"><label>E-mail</label><input type="email" id="inp-email" autocomplete="username" placeholder="seuemail@exemplo.com"></div>' +
+    '<div class="field" style="text-align:left;"><label>Senha</label><input type="password" id="inp-password" autocomplete="current-password" placeholder="Sua senha"></div>' +
+    (state.gateError ? '<p style="color:var(--danger);font-size:13px;">'+esc(state.gateError)+'</p>' : '') +
+    '<button class="btn btn-primary" style="width:100%;" data-action="do-gate" '+(state.gateLoading?'disabled':'')+'>'+(state.gateLoading?'Entrando…':'Entrar')+'</button>' +
   '</div>';
 }
 
 /* ---- STAFF ---- */
 function renderStaff(){
-  var loggedProf = state.staffUser ? profById(state.staffUser) : null;
   var out = '';
-  if(loggedProf){
+  if(state.staffEmail){
     out += '<div style="display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:13px;margin-bottom:10px;">' +
-      '<span class="dot" style="background:'+loggedProf.color+';"></span>Conectado(a) como <strong style="color:var(--ink);">'+loggedProf.name+'</strong>' +
+      '<span class="dot" style="background:var(--teal);"></span>Conectado(a) como <strong style="color:var(--ink);">'+esc(state.staffEmail)+'</strong>' +
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
   var tabs = [['visao','Visão geral'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios']];
@@ -971,7 +973,7 @@ function attachEvents(){
     else if(a==='wiz-confirm'){ confirmBooking(); return; }
     else if(a==='do-lookup'){ var v=document.getElementById('inp-lookup'); state.lookupPhone = v?v.value:''; }
     else if(a==='do-gate'){ doGate(); return; }
-    else if(a==='do-logout'){ state.role='gate'; state.staffUser=null; render(); return; }
+    else if(a==='do-logout'){ doLogout(); return; }
     else if(a==='cycle-status' || a==='set-status'){ cycleOrSetStatus(t); return; }
     else if(a==='agenda-date'){ state.agendaDate = t.dataset.id; }
     else if(a==='agenda-block-prof'){ state.agendaBlockProf = t.dataset.id; }
@@ -1012,13 +1014,85 @@ function confirmBooking(){
 }
 
 function doGate(){
-  var el = document.getElementById('inp-code');
-  var val = el ? el.value : '';
-  var matched = null;
-  Object.keys(ACCESS_CODES).forEach(function(k){ if(ACCESS_CODES[k]===val) matched = k; });
-  if(matched){ state.role='staff'; state.gateError=false; state.staffTab='visao'; state.staffUser = matched; }
-  else { state.gateError = true; }
+  var emailEl = document.getElementById('inp-email');
+  var passwordEl = document.getElementById('inp-password');
+  var email = emailEl ? emailEl.value.trim() : '';
+  var password = passwordEl ? passwordEl.value : '';
+
+  if(!email || !password){
+    state.gateError = 'Preencha o e-mail e a senha.';
+    render();
+    return;
+  }
+
+  state.gateLoading = true;
+  state.gateError = false;
   render();
+
+  waitForSupabase(8000).then(function(api){
+    if(!api || typeof api.signIn !== 'function') throw new Error('A conexão com o Supabase não ficou disponível.');
+    return api.signIn(email, password);
+  }).then(function(user){
+    return waitForSupabase(3000).then(function(api){
+      if(!api || typeof api.isAuthorizedTeamMember !== 'function') return true;
+      return api.isAuthorizedTeamMember();
+    }).then(function(authorized){
+      if(!authorized){
+        return waitForSupabase(3000).then(function(api){
+          if(api && typeof api.signOut === 'function') return api.signOut();
+        }).then(function(){
+          throw new Error('Este usuário não está autorizado para acessar a equipe clínica.');
+        });
+      }
+      state.role = 'staff';
+      state.staffTab = 'visao';
+      state.staffUser = user ? user.id : null;
+      state.staffEmail = user ? user.email : email;
+      state.gateLoading = false;
+      state.gateError = false;
+      render();
+    });
+  }).catch(function(error){
+    console.error('Erro no login:', error);
+    state.gateLoading = false;
+    state.gateError = (error && error.message && error.message.indexOf('não está autorizado')>=0) ? error.message : 'E-mail ou senha inválidos.';
+    render();
+  });
+}
+
+function doLogout(){
+  waitForSupabase(5000).then(function(api){
+    if(api && typeof api.signOut === 'function') return api.signOut();
+  }).catch(function(error){
+    console.error('Erro ao sair:', error);
+  }).finally(function(){
+    state.role = 'gate';
+    state.staffUser = null;
+    state.staffEmail = null;
+    state.gateError = false;
+    render();
+  });
+}
+
+function restoreStaffSession(cb){
+  waitForSupabase(8000).then(function(api){
+    if(!api || typeof api.getCurrentUser !== 'function') return null;
+    return api.getCurrentUser();
+  }).then(function(user){
+    if(!user) return false;
+    return waitForSupabase(3000).then(function(api){
+      if(!api || typeof api.isAuthorizedTeamMember !== 'function') return true;
+      return api.isAuthorizedTeamMember();
+    }).then(function(authorized){
+      if(authorized){
+        state.staffUser = user.id;
+        state.staffEmail = user.email || '';
+      }
+      return authorized;
+    });
+  }).then(function(){
+    if(cb) cb();
+  }).catch(function(){ if(cb) cb(); });
 }
 
 function cycleOrSetStatus(t){
@@ -1065,10 +1139,12 @@ function delExpense(id){
 
 /* ---------------- boot ---------------- */
 try{
-  loadStore(function(){ render(); });
+  loadStore(function(){
+    restoreStaffSession(function(){ render(); });
+  });
 }catch(e){
   store = seedStore();
-  render();
+  restoreStaffSession(function(){ render(); });
 }
 
 })();
