@@ -268,6 +268,8 @@ var state = {
   staffEmail: null,
   booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', done:false, error:null },
   lookupPhone: '',
+  lookupResults: [],
+  lookupLoading: false,
   agendaDate: todayISO(),
   agendaBlockProf: PROFESSIONALS[0].id,
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO() }
@@ -614,7 +616,7 @@ function renderPatient(){
     var canNext = (b.step===1 && b.procedureId) || (b.step===2 && b.professionalId) || (b.step===3 && b.date) || (b.step===4 && b.time);
     out += '<button class="btn btn-primary" data-action="wiz-next" '+(canNext?'':'disabled')+'>Continuar</button>';
   } else {
-    out += '<button class="btn btn-primary" data-action="wiz-confirm">Confirmar agendamento</button>';
+    out += '<button class="btn btn-primary" data-action="wiz-confirm" '+(b.saving?'disabled':'')+'>'+(b.saving?'Confirmando…':'Confirmar agendamento')+'</button>';
   }
   out += '</div>';
   out += '</div>'; // card
@@ -631,8 +633,9 @@ function renderPatient(){
 function renderLookupResults(){
   if(!state.lookupPhone) return '';
   var digits = state.lookupPhone.replace(/\D/g,'');
-  if(digits.length<4) return '<div class="empty-note">Digite ao menos 4 dígitos do telefone.</div>';
-  var found = store.appointments.filter(function(a){ return a.phone.replace(/\D/g,'').indexOf(digits)!==-1; });
+  if(digits.length!==11) return '<div class="empty-note">Digite o telefone completo com 11 dígitos.</div>';
+  if(state.lookupLoading) return '<div class="empty-note">Consultando…</div>';
+  var found = Array.isArray(state.lookupResults) ? state.lookupResults : [];
   if(found.length===0) return '<div class="empty-note">Nenhum agendamento encontrado para esse número.</div>';
 
   var today = todayISO();
@@ -971,7 +974,7 @@ function attachEvents(){
     else if(a==='wiz-back'){ b.step = Math.max(1,b.step-1); }
     else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', done:false, error:null }; }
     else if(a==='wiz-confirm'){ confirmBooking(); return; }
-    else if(a==='do-lookup'){ var v=document.getElementById('inp-lookup'); state.lookupPhone = v?v.value:''; }
+    else if(a==='do-lookup'){ doLookup(); return; }
     else if(a==='do-gate'){ doGate(); return; }
     else if(a==='do-logout'){ doLogout(); return; }
     else if(a==='cycle-status' || a==='set-status'){ cycleOrSetStatus(t); return; }
@@ -996,21 +999,59 @@ function confirmBooking(){
   if(b.name.trim().length<3){ b.error = 'Informe seu nome completo.'; render(); return; }
   if(digits.length!==11){ b.error = 'Informe o telefone com DDD + 9 dígitos (11 números), sem espaços ou traços.'; render(); return; }
 
-  var proc = procById(b.procedureId), prof = profById(b.professionalId);
+  var proc = procById(b.procedureId);
   if(!isFreeSlot(b.professionalId, b.date, b.time, proc.duration)){
     b.error = 'Esse horário acabou de ser preenchido. Escolha outro horário.';
-    b.step = 4; b.time = null;
-    render(); return;
+    b.step = 4; b.time = null; render(); return;
   }
 
   b.phone = digits;
   b.error = null;
-  var id = 'a'+Date.now();
-  store.appointments.push({id:id, procedureId:b.procedureId, professionalId:b.professionalId, date:b.date, time:b.time, name:b.name, phone:b.phone, status:'confirmado', createdAt:nowStamp()});
-  store.logs.push({id:'l'+Date.now(), type:'lembrete_24h', status:'agendado', at:'programado', message:'Lembrete de 24h para '+b.phone+' será enviado 1 dia antes da consulta de '+proc.name+' com '+prof.name+'.'});
-  store.logs.push({id:'l'+(Date.now()+1), type:'lembrete_2h', status:'agendado', at:'programado', message:'Lembrete de 2h para '+b.phone+' será enviado no dia da consulta.'});
-  b.done = true;
-  persist();
+  b.saving = true;
+  render();
+
+  waitForSupabase(8000).then(function(api){
+    if(!api || typeof api.createPublicBooking !== 'function') throw new Error('Serviço de agendamento indisponível.');
+    return api.createPublicBooking({
+      procedureId:b.procedureId, professionalId:b.professionalId,
+      date:b.date, time:b.time, name:b.name, phone:b.phone
+    });
+  }).then(function(newAppt){
+    if(newAppt) store.appointments.push(newAppt);
+    b.saving = false;
+    b.done = true;
+    writeLocalStore(store);
+    render();
+  }).catch(function(error){
+    console.error('Erro ao criar agendamento:', error);
+    b.saving = false;
+    b.error = (error && error.message) ? error.message : 'Não foi possível concluir o agendamento.';
+    if(b.error.indexOf('preenchido')>=0){ b.step=4; b.time=null; }
+    render();
+  });
+}
+
+function doLookup(){
+  var v = document.getElementById('inp-lookup');
+  state.lookupPhone = v ? v.value : '';
+  var digits = state.lookupPhone.replace(/\D/g,'');
+  state.lookupResults = [];
+  if(digits.length!==11){ state.lookupLoading=false; render(); return; }
+  state.lookupLoading = true;
+  render();
+  waitForSupabase(8000).then(function(api){
+    if(!api || typeof api.lookupAppointments !== 'function') throw new Error('Consulta indisponível.');
+    return api.lookupAppointments(digits);
+  }).then(function(items){
+    state.lookupResults = items || [];
+    state.lookupLoading = false;
+    render();
+  }).catch(function(error){
+    console.error('Erro na consulta:', error);
+    state.lookupResults = [];
+    state.lookupLoading = false;
+    render();
+  });
 }
 
 function doGate(){
@@ -1044,13 +1085,21 @@ function doGate(){
           throw new Error('Este usuário não está autorizado para acessar a equipe clínica.');
         });
       }
-      state.role = 'staff';
-      state.staffTab = 'visao';
-      state.staffUser = user ? user.id : null;
-      state.staffEmail = user ? user.email : email;
-      state.gateLoading = false;
-      state.gateError = false;
-      render();
+      return waitForSupabase(3000).then(function(api){
+        return api && typeof api.loadStore==='function' ? api.loadStore() : null;
+      }).then(function(fullStore){
+        if(fullStore) store = normalizeStore(fullStore);
+        writeLocalStore(store);
+        realtimeStarted = false;
+        state.role = 'staff';
+        state.staffTab = 'visao';
+        state.staffUser = user ? user.id : null;
+        state.staffEmail = user ? user.email : email;
+        state.gateLoading = false;
+        state.gateError = false;
+        waitForSupabase(1000).then(startRealtime);
+        render();
+      });
     });
   }).catch(function(error){
     console.error('Erro no login:', error);
@@ -1065,11 +1114,22 @@ function doLogout(){
     if(api && typeof api.signOut === 'function') return api.signOut();
   }).catch(function(error){
     console.error('Erro ao sair:', error);
+  }).then(function(){
+    return waitForSupabase(3000);
+  }).then(function(api){
+    return api && typeof api.loadStore==='function' ? api.loadStore() : seedStore();
+  }).then(function(publicStore){
+    store = normalizeStore(publicStore);
+    writeLocalStore(store);
+  }).catch(function(error){
+    console.error('Erro ao atualizar dados públicos:', error);
+    store = seedStore();
   }).finally(function(){
     state.role = 'gate';
     state.staffUser = null;
     state.staffEmail = null;
     state.gateError = false;
+    realtimeStarted = false;
     render();
   });
 }
