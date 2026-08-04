@@ -263,12 +263,15 @@
   .record-status{padding:12px;border-radius:10px;background:var(--grey-soft);font-size:13px;margin-bottom:14px;}
   @media(max-width:700px){.record-grid{grid-template-columns:1fr}.record-grid .full{grid-column:auto}.record-checks{grid-template-columns:1fr 1fr}.odontogram{grid-template-columns:repeat(4,1fr)}.record-head{flex-direction:column}.record-head .row-actions{width:100%}}
 
+
+  .finance-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}.finance-tabs button{border:1px solid var(--border);background:#fff;padding:8px 12px;border-radius:9px;font-weight:600;color:var(--ink-soft)}.finance-tabs button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .finance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:18px}.finance-kpi{padding:17px}.finance-kpi .k-label{font-size:11px;text-transform:uppercase;color:var(--ink-soft);font-weight:700}.finance-kpi .k-value{font-family:'Space Grotesk';font-size:23px;font-weight:700;margin-top:5px}.finance-kpi .k-sub{font-size:11px;color:var(--ink-soft);margin-top:3px}.finance-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.finance-form-grid .span-2{grid-column:span 2}.finance-form-grid .span-4{grid-column:span 4}.mini-note{font-size:11.5px;color:var(--ink-soft);line-height:1.5}.alert-card{background:var(--amber-soft);border:1px solid #efd19d;border-radius:12px;padding:12px 14px;font-size:12.5px}.good-card{background:var(--success-soft);border:1px solid #b9e4cf;border-radius:12px;padding:12px 14px;font-size:12.5px}.danger-card{background:var(--danger-soft);border:1px solid #efb7bd;border-radius:12px;padding:12px 14px;font-size:12.5px}.finance-table-wrap{overflow-x:auto}.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.config-section{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}.config-section:last-child{border-bottom:none}@media(max-width:760px){.finance-form-grid{grid-template-columns:1fr 1fr}.finance-form-grid .span-4{grid-column:span 2}.finance-form-grid .span-2{grid-column:span 2}}
 </style>
 </head>
 <body>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
-<script type="module" src="./supabase.js?v=prontuario-20260804-1"></script>
+<script type="module" src="./supabase.js?v=financeiro-20260804-1"></script>
 
 <script>
 (function(){
@@ -297,7 +300,8 @@ var PROCEDURES = [
 function priceLabel(p){ return p.priceDisplay ? p.priceDisplay : fmtMoney(p.price); }
 
 var SPECIALTIES = ['Clínico Geral', 'Endodontia', 'Prótese', 'Implante'];
-var EXPENSE_CATS = ['Materiais', 'Equipamentos', 'Laboratório (prótese)', 'Componentes de implante', 'Folha de pagamento', 'Aluguel', 'Marketing', 'Outros'];
+var EXPENSE_CATS = ['Materiais','Equipamentos','Laboratório (prótese)','Componentes de implante','Folha de pagamento','Aluguel','Condomínio','Energia','Água','Internet e telefone','Software','Contabilidade','Marketing','Manutenção','Limpeza','Impostos e taxas','Outros'];
+var PAYMENT_METHODS = ['Pix','Dinheiro','Débito','Crédito','Transferência','Boleto','Convênio','Outro'];
 
 var STATUS_LABEL = {confirmado:'Confirmado', realizado:'Realizado', falta:'Falta', cancelado:'Cancelado', pendente:'Pendente'};
 var STATUS_COLOR = {confirmado:'#34A671', realizado:'#1B5C56', falta:'#D64550', cancelado:'#98A6AC', pendente:'#E8A33D'};
@@ -326,7 +330,8 @@ var state = {
   recordError: '',
   recordData: {prontuario:null,evolucoes:[],odontograma:[]},
   selectedTooth: null,
-  finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO() }
+  finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'',
+  finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
 
@@ -368,6 +373,8 @@ function seedStore(){
     appointments: [],
     patients: [],
     expenses: [],
+    payments: [],
+    financeConfig: defaultFinanceConfig(),
     logs: [],
     blocks: []
   };
@@ -382,6 +389,8 @@ function normalizeStore(value){
   base.appointments = Array.isArray(value.appointments) ? value.appointments : [];
   base.patients = Array.isArray(value.patients) ? value.patients : [];
   base.expenses = Array.isArray(value.expenses) ? value.expenses : [];
+  base.payments = Array.isArray(value.payments) ? value.payments : [];
+  base.financeConfig = mergeFinanceConfig(value.financeConfig);
   base.logs = Array.isArray(value.logs) ? value.logs : [];
   base.blocks = Array.isArray(value.blocks) ? value.blocks : [];
   return base;
@@ -759,6 +768,59 @@ function renderStaff(){
   return out;
 }
 
+
+function defaultFinanceConfig(){
+  return {
+    taxMode:'pf2026', dependents:0, monthlyInss:0, issRate:0, customTaxRate:0,
+    cardRates:{debit:1.49,credit1:3.19,credit2to6:3.79,credit7to12:4.49,anticipation:0},
+    doctorRates:{ryan:{hourly:0,commission:0,targetHours:160},amanda:{hourly:0,commission:0,targetHours:160}},
+    reserveRate:5, notes:''
+  };
+}
+function mergeFinanceConfig(v){
+  var d=defaultFinanceConfig(), x=v||{};
+  d.taxMode=x.taxMode||d.taxMode; d.dependents=Number(x.dependents||0); d.monthlyInss=Number(x.monthlyInss||0); d.issRate=Number(x.issRate||0); d.customTaxRate=Number(x.customTaxRate||0); d.reserveRate=Number(x.reserveRate==null?5:x.reserveRate); d.notes=x.notes||'';
+  d.cardRates=Object.assign({},d.cardRates,x.cardRates||{}); d.doctorRates=Object.assign({},d.doctorRates,x.doctorRates||{});
+  PROFESSIONALS.forEach(function(p){d.doctorRates[p.id]=Object.assign({hourly:0,commission:0,targetHours:160},d.doctorRates[p.id]||{});});
+  return d;
+}
+function monthRef(){ return state.financeMonth || todayISO().slice(0,7); }
+function inMonth(date,ref){ return String(date||'').slice(0,7)===ref; }
+function n(v){ var x=Number(v); return isFinite(x)?x:0; }
+function paymentFeeRate(p,cfg){
+  if(p.feeOverride!=='' && p.feeOverride!=null && !isNaN(Number(p.feeOverride))) return Number(p.feeOverride);
+  var m=p.method||'Pix', inst=Number(p.installments||1), r=cfg.cardRates;
+  if(m==='Débito') return n(r.debit); if(m==='Crédito'){ if(inst<=1)return n(r.credit1); if(inst<=6)return n(r.credit2to6); return n(r.credit7to12); } return 0;
+}
+function paymentNumbers(p,cfg){
+  var gross=n(p.gross), discount=n(p.discount), billed=Math.max(0,gross-discount), fee=billed*paymentFeeRate(p,cfg)/100, net=Math.max(0,billed-fee);
+  return {gross:gross,discount:discount,billed:billed,fee:fee,net:net};
+}
+function paymentByAppointment(id){ return (store.payments||[]).find(function(p){return p.appointmentId===id;})||null; }
+function realizedAppointments(ref){ return store.appointments.filter(function(a){return a.status==='realizado'&&inMonth(a.date,ref);}); }
+function financeSummary(ref){
+  var cfg=mergeFinanceConfig(store.financeConfig), payments=(store.payments||[]).filter(function(p){return inMonth(p.date||p.paidDate,ref);}), realized=realizedAppointments(ref);
+  var gross=0,discount=0,fees=0,received=0,pending=0;
+  payments.forEach(function(p){var z=paymentNumbers(p,cfg);gross+=z.gross;discount+=z.discount;fees+=z.fee;if(p.status==='pago')received+=z.net;else pending+=z.net;});
+  realized.forEach(function(a){if(!paymentByAppointment(a.id)) pending+=n(procById(a.procedureId).price);});
+  var exp=(store.expenses||[]).filter(function(e){return inMonth(e.date,ref);}), expenses=0,fixed=0,variable=0,deductible=0,unpaidExp=0;
+  exp.forEach(function(e){var v=n(e.value);expenses+=v;if(e.type==='fixa')fixed+=v;else variable+=v;if(e.deductible!==false)deductible+=v;if(e.paid===false)unpaidExp+=v;});
+  var doctorCost=0, doctor={};
+  PROFESSIONALS.forEach(function(prof){var hrs=0,rev=0;realized.filter(function(a){return a.professionalId===prof.id;}).forEach(function(a){hrs+=n(procById(a.procedureId).duration)/60;var pay=paymentByAppointment(a.id);rev+=pay?paymentNumbers(pay,cfg).billed:n(procById(a.procedureId).price);});var dc=cfg.doctorRates[prof.id]||{};var cost=hrs*n(dc.hourly)+rev*n(dc.commission)/100;doctorCost+=cost;doctor[prof.id]={hours:hrs,revenue:rev,cost:cost};});
+  var taxable=Math.max(0,received-deductible-n(cfg.monthlyInss)); var ir=estimateIR2026(taxable,n(cfg.dependents)); if(cfg.taxMode==='custom')ir=received*n(cfg.customTaxRate)/100; if(cfg.taxMode==='none')ir=0;
+  var iss=received*n(cfg.issRate)/100, taxes=ir+iss+n(cfg.monthlyInss), reserve=Math.max(0,received)*n(cfg.reserveRate)/100;
+  var result=received-expenses-doctorCost-taxes-reserve;
+  return {cfg:cfg,payments:payments,realized:realized,gross:gross,discount:discount,fees:fees,received:received,pending:pending,expenses:expenses,fixed:fixed,variable:variable,deductible:deductible,unpaidExp:unpaidExp,doctorCost:doctorCost,doctor:doctor,taxable:taxable,ir:ir,iss:iss,inss:n(cfg.monthlyInss),taxes:taxes,reserve:reserve,result:result};
+}
+function estimateIR2026(base,dependents){
+  var b=Math.max(0,n(base)-n(dependents)*189.59), tax=0;
+  if(b<=2428.80)tax=0; else if(b<=2826.65)tax=b*.075-182.16; else if(b<=3751.05)tax=b*.15-394.16; else if(b<=4664.68)tax=b*.225-675.49; else tax=b*.275-908.73;
+  tax=Math.max(0,tax); var reduction=0; if(b<=5000)reduction=Math.min(tax,312.89); else if(b<=7350)reduction=Math.max(0,978.62-.133145*b); return Math.max(0,tax-reduction);
+}
+function financeTabs(){var tabs=[['resumo','Resumo'],['recebimentos','Recebimentos'],['despesas','Despesas'],['doutores','Doutores'],['impostos','Impostos'],['config','Configurações']];return '<div class="finance-tabs">'+tabs.map(function(t){return '<button class="'+(state.finTab===t[0]?'active':'')+'" data-action="finance-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';}
+function monthPicker(){return '<div style="display:flex;gap:8px;align-items:end;margin-bottom:14px;"><div class="field" style="margin:0;max-width:190px;"><label>Mês de referência</label><input type="month" id="finance-month" value="'+monthRef()+'"></div><button class="btn btn-ghost" data-action="finance-month">Atualizar</button></div>';}
+function financeKpi(label,value,sub,cls){return '<div class="card finance-kpi"><div class="k-label">'+label+'</div><div class="k-value" '+(cls?'style="color:'+cls+'"':'')+'>'+value+'</div><div class="k-sub">'+sub+'</div></div>';}
+
 function monthTotals(){
   var ref = todayISO();
   var revenue=0, expenses=0;
@@ -876,68 +938,30 @@ function renderAgenda(){
 }
 
 function renderFinanceiro(){
-  var fin = monthTotals();
-  var today = todayISO();
-  var doneThisMonth = store.appointments.filter(function(a){ return a.status==='realizado' && isSameMonth(a.date,today); });
-  var ticketMedio = doneThisMonth.length ? (fin.revenue/doneThisMonth.length) : 0;
-
-  var out = '<div class="section-title">Financeiro do mês</div><div class="fin-cards">';
-  out += '<div class="card"><div class="label" style="color:var(--ink-soft);font-size:12px;font-weight:600;">RECEITA (consultas realizadas)</div><div class="val" style="font-family:\'Space Grotesk\';font-size:24px;color:var(--success);margin-top:6px;">'+fmtMoney(fin.revenue)+'</div></div>';
-  out += '<div class="card"><div class="label" style="color:var(--ink-soft);font-size:12px;font-weight:600;">DESPESAS</div><div class="val" style="font-family:\'Space Grotesk\';font-size:24px;color:var(--danger);margin-top:6px;">'+fmtMoney(fin.expenses)+'</div></div>';
-  out += '<div class="card"><div class="label" style="color:var(--ink-soft);font-size:12px;font-weight:600;">SALDO</div><div class="val" style="font-family:\'Space Grotesk\';font-size:24px;margin-top:6px;">'+fmtMoney(fin.saldo)+'</div></div>';
-  out += '</div><div class="fin-cards">';
-  out += '<div class="card"><div class="label" style="color:var(--ink-soft);font-size:12px;font-weight:600;">TICKET MÉDIO</div><div class="val" style="font-family:\'Space Grotesk\';font-size:22px;margin-top:6px;">'+fmtMoney(ticketMedio)+'</div></div>';
-  out += '<div class="card"><div class="label" style="color:var(--ink-soft);font-size:12px;font-weight:600;">CONSULTAS REALIZADAS</div><div class="val" style="font-family:\'Space Grotesk\';font-size:22px;margin-top:6px;">'+doneThisMonth.length+'</div></div>';
-  out += '<div class="card"><div class="label" style="color:var(--ink-soft);font-size:12px;font-weight:600;">DESPESAS LANÇADAS</div><div class="val" style="font-family:\'Space Grotesk\';font-size:22px;margin-top:6px;">'+store.expenses.filter(function(e){return isSameMonth(e.date,today);}).length+'</div></div>';
-  out += '</div>';
-
-  out += '<div class="two-col">';
-  out += '<div class="card"><h3 style="margin-top:0;">Lançar despesa</h3>' +
-    '<div class="field"><label>Descrição</label><input type="text" id="fx-desc" placeholder="Ex: Compra de luvas" value="'+esc(state.finForm.desc)+'"></div>' +
-    '<div class="field"><label>Categoria</label><select id="fx-cat">' +
-      EXPENSE_CATS.map(function(c){ return '<option '+(state.finForm.cat===c?'selected':'')+'>'+c+'</option>'; }).join('') +
-    '</select></div>' +
-    '<div class="field"><label>Especialidade relacionada</label><select id="fx-specialty">' +
-      SPECIALTIES.map(function(s){ return '<option '+(state.finForm.specialty===s?'selected':'')+'>'+s+'</option>'; }).join('') +
-    '</select></div>' +
-    '<div class="field"><label>Valor (R$)</label><input type="number" id="fx-value" placeholder="0,00" value="'+esc(state.finForm.value)+'"></div>' +
-    '<div class="field"><label>Data</label><input type="date" id="fx-date" value="'+state.finForm.date+'"></div>' +
-    '<button class="btn btn-primary" data-action="add-expense">Adicionar despesa</button>' +
-  '</div>';
-
-  out += '<div class="card"><h3 style="margin-top:0;">Despesas recentes</h3>';
-  var exp = store.expenses.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
-  if(exp.length===0) out += '<div class="empty-state">Nenhuma despesa lançada.</div>';
-  else{
-    out += '<table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Especialidade</th><th>Valor</th><th></th></tr></thead><tbody>';
-    exp.forEach(function(e){
-      out += '<tr><td class="mono">'+dayDisplay(e.date)+'</td><td>'+esc(e.desc)+'</td><td>'+e.cat+'</td><td>'+(e.specialty||'—')+'</td><td class="mono">'+fmtMoney(Number(e.value))+'</td>' +
-        '<td><button class="btn btn-ghost btn-sm" data-action="del-expense" data-id="'+e.id+'">Excluir</button></td></tr>';
-    });
-    out += '</tbody></table>';
+  var ref=monthRef(), f=financeSummary(ref), out='<div class="section-title">Financeiro inteligente</div>'+monthPicker()+financeTabs();
+  if(state.financeMessage) out+='<div class="good-card" style="margin-bottom:14px;">'+esc(state.financeMessage)+'</div>';
+  if(state.finTab==='resumo'){
+    out+='<div class="finance-grid">'+financeKpi('Recebido líquido',fmtMoney(f.received),'já descontadas taxas de cartão','var(--success)')+financeKpi('A receber',fmtMoney(f.pending),'consultas sem baixa ou pagamentos pendentes','var(--amber)')+financeKpi('Despesas',fmtMoney(f.expenses),fmtMoney(f.fixed)+' fixas · '+fmtMoney(f.variable)+' variáveis','var(--danger)')+financeKpi('Resultado estimado',fmtMoney(f.result),'após despesas, doutores, impostos e reserva',f.result>=0?'var(--success)':'var(--danger)')+'</div>';
+    out+='<div class="two-col"><div class="card"><h3 style="margin-top:0;">Mapa do dinheiro</h3>'+
+      '<div class="summary-line"><span>Receita bruta lançada</span><strong>'+fmtMoney(f.gross)+'</strong></div><div class="summary-line"><span>Descontos concedidos</span><strong>- '+fmtMoney(f.discount)+'</strong></div><div class="summary-line"><span>Taxas de cartão</span><strong>- '+fmtMoney(f.fees)+'</strong></div><div class="summary-line"><span>Custos dos doutores</span><strong>- '+fmtMoney(f.doctorCost)+'</strong></div><div class="summary-line"><span>Despesas operacionais</span><strong>- '+fmtMoney(f.expenses)+'</strong></div><div class="summary-line"><span>Impostos e INSS estimados</span><strong>- '+fmtMoney(f.taxes)+'</strong></div><div class="summary-line"><span>Reserva de segurança</span><strong>- '+fmtMoney(f.reserve)+'</strong></div><div class="summary-line"><span>Resultado final estimado</span><strong>'+fmtMoney(f.result)+'</strong></div></div>';
+    var alerts=[]; if(f.pending>0)alerts.push('Há '+fmtMoney(f.pending)+' a receber.'); if(f.unpaidExp>0)alerts.push('Há '+fmtMoney(f.unpaidExp)+' em despesas ainda não pagas.'); if(f.received>0&&f.fees/f.received>.05)alerts.push('As taxas financeiras superaram 5% do recebido.'); if(!alerts.length)alerts.push('Nenhum alerta financeiro relevante neste mês.');
+    out+='<div><div class="card"><h3 style="margin-top:0;">Verificações automáticas</h3>'+alerts.map(function(x){return '<div class="alert-card" style="margin-bottom:8px;">'+x+'</div>';}).join('')+'<p class="mini-note">O sistema procura pendências, despesas em aberto, taxas elevadas e resultado negativo. Valores tributários são estimativas gerenciais e devem ser validados pelo contador.</p></div></div></div>';
+  }else if(state.finTab==='recebimentos'){
+    var appts=f.realized.slice().sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?1:-1;});
+    out+='<div class="card"><h3 style="margin-top:0;">Atendimentos realizados</h3><div class="finance-table-wrap">';
+    if(!appts.length)out+='<div class="empty-state">Nenhum atendimento realizado neste mês.</div>'; else{out+='<table><thead><tr><th>Data</th><th>Paciente</th><th>Procedimento</th><th>Profissional</th><th>Valor</th><th>Situação</th><th></th></tr></thead><tbody>';appts.forEach(function(a){var p=paymentByAppointment(a.id),z=p?paymentNumbers(p,f.cfg):null;out+='<tr><td>'+dayDisplay(a.date)+'</td><td>'+esc(a.name)+'</td><td>'+esc(procById(a.procedureId).name)+'</td><td>'+esc(profById(a.professionalId).name)+'</td><td>'+fmtMoney(p?z.net:procById(a.procedureId).price)+'</td><td>'+(p?(p.status==='pago'?'Pago':'Pendente'):'Sem lançamento')+'</td><td><button class="btn btn-ghost btn-sm" data-action="prepare-payment" data-id="'+a.id+'">'+(p?'Editar':'Receber')+'</button></td></tr>';});out+='</tbody></table>';}
+    out+='</div></div>';
+    if(state.financeDraft){var d=state.financeDraft;out+='<div class="card" style="margin-top:14px;"><h3 style="margin-top:0;">'+(d.id?'Editar recebimento':'Registrar recebimento')+'</h3><div class="finance-form-grid"><div class="field span-2"><label>Paciente</label><input id="pay-patient" value="'+escAttr(d.patient||'')+'"></div><div class="field"><label>Valor bruto</label><input id="pay-gross" type="number" step="0.01" value="'+n(d.gross)+'"></div><div class="field"><label>Desconto</label><input id="pay-discount" type="number" step="0.01" value="'+n(d.discount)+'"></div><div class="field"><label>Forma</label><select id="pay-method">'+PAYMENT_METHODS.map(function(m){return '<option '+(d.method===m?'selected':'')+'>'+m+'</option>';}).join('')+'</select></div><div class="field"><label>Parcelas</label><input id="pay-installments" type="number" min="1" max="24" value="'+n(d.installments||1)+'"></div><div class="field"><label>Status</label><select id="pay-status"><option value="pago" '+(d.status==='pago'?'selected':'')+'>Pago</option><option value="pendente" '+(d.status==='pendente'?'selected':'')+'>Pendente</option></select></div><div class="field"><label>Data</label><input id="pay-date" type="date" value="'+escAttr(d.date||todayISO())+'"></div><div class="field"><label>Taxa manual % (opcional)</label><input id="pay-fee" type="number" step="0.01" value="'+escAttr(d.feeOverride==null?'':d.feeOverride)+'"></div><div class="field span-4"><label>Observações</label><input id="pay-notes" value="'+escAttr(d.notes||'')+'"></div></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost" data-action="cancel-payment">Cancelar</button><button class="btn btn-primary" data-action="save-payment">Salvar recebimento</button></div></div>';}
+  }else if(state.finTab==='despesas'){
+    out+='<div class="two-col"><div class="card"><h3 style="margin-top:0;">Lançar despesa</h3><div class="finance-form-grid"><div class="field span-2"><label>Descrição</label><input id="fx-desc" value="'+escAttr(state.finForm.desc)+'"></div><div class="field"><label>Categoria</label><select id="fx-cat">'+EXPENSE_CATS.map(function(c){return '<option '+(state.finForm.cat===c?'selected':'')+'>'+c+'</option>';}).join('')+'</select></div><div class="field"><label>Tipo</label><select id="fx-type"><option value="fixa">Fixa</option><option value="variavel" selected>Variável</option></select></div><div class="field"><label>Especialidade</label><select id="fx-specialty">'+SPECIALTIES.map(function(x){return '<option>'+x+'</option>';}).join('')+'</select></div><div class="field"><label>Fornecedor</label><input id="fx-supplier"></div><div class="field"><label>Valor</label><input id="fx-value" type="number" step="0.01"></div><div class="field"><label>Data</label><input id="fx-date" type="date" value="'+todayISO()+'"></div><div class="field"><label><input id="fx-deductible" type="checkbox" checked style="width:auto"> Dedutível no Livro Caixa</label></div><div class="field"><label><input id="fx-recurring" type="checkbox" style="width:auto"> Recorrente</label></div><div class="field"><label><input id="fx-paid" type="checkbox" checked style="width:auto"> Já paga</label></div></div><button class="btn btn-primary" data-action="add-expense">Adicionar despesa</button></div>';
+    var exps=(store.expenses||[]).filter(function(e){return inMonth(e.date,ref);}).sort(function(a,b){return a.date<b.date?1:-1;});out+='<div class="card"><h3 style="margin-top:0;">Despesas do mês</h3><div class="finance-table-wrap">';if(!exps.length)out+='<div class="empty-state">Nenhuma despesa lançada.</div>';else{out+='<table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Pago</th><th>Dedutível</th><th>Valor</th><th></th></tr></thead><tbody>';exps.forEach(function(e){out+='<tr><td>'+dayDisplay(e.date)+'</td><td>'+esc(e.desc)+'</td><td>'+(e.type==='fixa'?'Fixa':'Variável')+'</td><td>'+(e.paid===false?'Não':'Sim')+'</td><td>'+(e.deductible===false?'Não':'Sim')+'</td><td>'+fmtMoney(n(e.value))+'</td><td><button class="btn btn-ghost btn-sm" data-action="del-expense" data-id="'+e.id+'">Excluir</button></td></tr>';});out+='</tbody></table>';}out+='</div></div></div>';
+  }else if(state.finTab==='doutores'){
+    out+='<div class="finance-grid">';PROFESSIONALS.forEach(function(p){var d=f.doctor[p.id],cfg=f.cfg.doctorRates[p.id];out+=financeKpi(p.name,fmtMoney(d.revenue),d.hours.toFixed(1)+'h produtivas · custo '+fmtMoney(d.cost));});out+='</div><div class="card"><h3 style="margin-top:0;">Custo e produtividade por doutor</h3><div class="finance-table-wrap"><table><thead><tr><th>Profissional</th><th>Horas produtivas</th><th>Meta</th><th>Ocupação da meta</th><th>Receita</th><th>Custo hora</th><th>Comissão</th><th>Custo total</th></tr></thead><tbody>';PROFESSIONALS.forEach(function(p){var d=f.doctor[p.id],c=f.cfg.doctorRates[p.id],pct=n(c.targetHours)?d.hours/n(c.targetHours)*100:0;out+='<tr><td>'+p.name+'</td><td>'+d.hours.toFixed(1)+'h</td><td>'+n(c.targetHours)+'h</td><td>'+pct.toFixed(1)+'%</td><td>'+fmtMoney(d.revenue)+'</td><td>'+fmtMoney(n(c.hourly))+'</td><td>'+n(c.commission).toFixed(2)+'%</td><td>'+fmtMoney(d.cost)+'</td></tr>';});out+='</tbody></table></div><p class="mini-note">Horas produtivas são calculadas pela duração dos procedimentos realizados. O custo total soma valor por hora e comissão sobre a receita do profissional.</p></div>';
+  }else if(state.finTab==='impostos'){
+    out+='<div class="finance-grid">'+financeKpi('Base tributável estimada',fmtMoney(f.taxable),'recebido menos despesas dedutíveis e INSS')+financeKpi('IR estimado',fmtMoney(f.ir),'tabela mensal 2026 ou taxa personalizada','var(--danger)')+financeKpi('ISS estimado',fmtMoney(f.iss),f.cfg.issRate.toFixed(2)+'% configurado','var(--danger)')+financeKpi('INSS informado',fmtMoney(f.inss),'provisão mensal configurada','var(--danger)')+'</div><div class="card"><h3 style="margin-top:0;">Memória de cálculo</h3><div class="summary-line"><span>Recebido líquido de taxas</span><strong>'+fmtMoney(f.received)+'</strong></div><div class="summary-line"><span>Despesas marcadas como dedutíveis</span><strong>- '+fmtMoney(f.deductible)+'</strong></div><div class="summary-line"><span>INSS informado</span><strong>- '+fmtMoney(f.inss)+'</strong></div><div class="summary-line"><span>Base estimada</span><strong>'+fmtMoney(f.taxable)+'</strong></div><div class="summary-line"><span>IR estimado</span><strong>'+fmtMoney(f.ir)+'</strong></div><div class="summary-line"><span>ISS estimado</span><strong>'+fmtMoney(f.iss)+'</strong></div><p class="mini-note">Estimativa gerencial. A apuração oficial depende do regime, origem dos rendimentos, Livro Caixa, município, previdência, dependentes e demais dados fiscais. Valide com contador e Carnê-Leão.</p></div>';
+  }else{
+    var c=f.cfg;out+='<div class="card"><h3 style="margin-top:0;">Configurações financeiras</h3><div class="config-section"><h3>Tributos e reserva</h3><div class="finance-form-grid"><div class="field"><label>Modo de IR</label><select id="cfg-tax-mode"><option value="pf2026" '+(c.taxMode==='pf2026'?'selected':'')+'>Pessoa Física 2026</option><option value="custom" '+(c.taxMode==='custom'?'selected':'')+'>Taxa personalizada</option><option value="none" '+(c.taxMode==='none'?'selected':'')+'>Não calcular</option></select></div><div class="field"><label>Dependentes</label><input id="cfg-dependents" type="number" min="0" value="'+c.dependents+'"></div><div class="field"><label>INSS mensal (R$)</label><input id="cfg-inss" type="number" step="0.01" value="'+c.monthlyInss+'"></div><div class="field"><label>ISS (%)</label><input id="cfg-iss" type="number" step="0.01" value="'+c.issRate+'"></div><div class="field"><label>IR personalizado (%)</label><input id="cfg-custom-tax" type="number" step="0.01" value="'+c.customTaxRate+'"></div><div class="field"><label>Reserva de segurança (%)</label><input id="cfg-reserve" type="number" step="0.01" value="'+c.reserveRate+'"></div></div></div><div class="config-section"><h3>Taxas da máquina</h3><div class="finance-form-grid"><div class="field"><label>Débito %</label><input id="cfg-debit" type="number" step="0.01" value="'+c.cardRates.debit+'"></div><div class="field"><label>Crédito 1x %</label><input id="cfg-credit1" type="number" step="0.01" value="'+c.cardRates.credit1+'"></div><div class="field"><label>Crédito 2–6x %</label><input id="cfg-credit26" type="number" step="0.01" value="'+c.cardRates.credit2to6+'"></div><div class="field"><label>Crédito 7–12x %</label><input id="cfg-credit712" type="number" step="0.01" value="'+c.cardRates.credit7to12+'"></div></div></div><div class="config-section"><h3>Doutores</h3><div class="finance-form-grid">';PROFESSIONALS.forEach(function(p){var d=c.doctorRates[p.id];out+='<div class="card span-2"><strong>'+p.name+'</strong><div class="field"><label>Custo por hora (R$)</label><input id="cfg-hour-'+p.id+'" type="number" step="0.01" value="'+d.hourly+'"></div><div class="field"><label>Comissão sobre receita (%)</label><input id="cfg-commission-'+p.id+'" type="number" step="0.01" value="'+d.commission+'"></div><div class="field"><label>Meta mensal de horas</label><input id="cfg-target-'+p.id+'" type="number" step="1" value="'+d.targetHours+'"></div></div>';});out+='</div></div><button class="btn btn-primary" data-action="save-finance-config">Salvar configurações</button></div>';
   }
-  out += '</div></div>';
-
-  out += '<div class="section-title" style="margin-top:20px;">Receita e despesa por especialidade (mês)</div><div class="two-col">';
-  out += '<div class="card"><h3 style="margin-top:0;">Receita por especialidade</h3>';
-  var revBySpec = {}; var maxR=1;
-  SPECIALTIES.forEach(function(s){ revBySpec[s]=0; });
-  doneThisMonth.forEach(function(a){ var proc=procById(a.procedureId); var sp=proc.specialty||'Clínico Geral'; revBySpec[sp]=(revBySpec[sp]||0)+proc.price; if(revBySpec[sp]>maxR) maxR=revBySpec[sp]; });
-  SPECIALTIES.forEach(function(s){
-    var v = revBySpec[s]||0;
-    out += '<div class="bar-row"><div class="lbl"><span>'+s+'</span><span class="mono">'+fmtMoney(v)+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/maxR*100)+'%;background:var(--teal);"></div></div></div>';
-  });
-  out += '</div>';
-  out += '<div class="card"><h3 style="margin-top:0;">Despesas por especialidade</h3>';
-  var expBySpec = {}; var maxE=1;
-  SPECIALTIES.forEach(function(s){ expBySpec[s]=0; });
-  store.expenses.forEach(function(e){ if(isSameMonth(e.date,today)){ var sp=e.specialty||'Clínico Geral'; expBySpec[sp]=(expBySpec[sp]||0)+Number(e.value); if(expBySpec[sp]>maxE) maxE=expBySpec[sp]; } });
-  SPECIALTIES.forEach(function(s){
-    var v = expBySpec[s]||0;
-    out += '<div class="bar-row"><div class="lbl"><span>'+s+'</span><span class="mono">'+fmtMoney(v)+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/maxE*100)+'%;background:var(--coral);"></div></div></div>';
-  });
-  out += '</div></div>';
-
   return out;
 }
 
@@ -1182,6 +1206,12 @@ function attachEvents(){
     else if(a==='agenda-date'){ state.agendaDate = t.dataset.id; }
     else if(a==='agenda-block-prof'){ state.agendaBlockProf = t.dataset.id; }
     else if(a==='toggle-block'){ toggleBlock(t.dataset.id); return; }
+    else if(a==='finance-tab'){ state.finTab=t.dataset.id; state.financeMessage=''; render(); return; }
+    else if(a==='finance-month'){ var fm=document.getElementById('finance-month'); state.financeMonth=fm?fm.value:state.financeMonth; render(); return; }
+    else if(a==='prepare-payment'){ preparePayment(t.dataset.id); return; }
+    else if(a==='cancel-payment'){ state.financeDraft=null; render(); return; }
+    else if(a==='save-payment'){ savePayment(); return; }
+    else if(a==='save-finance-config'){ saveFinanceConfig(); return; }
     else if(a==='add-expense'){ addExpense(); return; }
     else if(a==='del-expense'){ delExpense(t.dataset.id); return; }
     else if(a==='new-patient'){ state.patientEditingId='new'; state.patientMessage=''; render(); return; }
@@ -1463,16 +1493,24 @@ function toggleBlock(time){
   persist();
 }
 
+function preparePayment(apptId){
+  var a=store.appointments.find(function(x){return x.id===apptId;}); if(!a)return; var p=paymentByAppointment(apptId);
+  state.financeDraft=p?Object.assign({},p):{id:'',appointmentId:a.id,patient:a.name,procedureId:a.procedureId,professionalId:a.professionalId,date:a.date,gross:procById(a.procedureId).price,discount:0,method:'Pix',installments:1,status:'pago',feeOverride:'',notes:''}; render();
+}
+function savePayment(){
+  function v(id){var e=document.getElementById(id);return e?e.value:'';}
+  var d=state.financeDraft||{}, rec=Object.assign({},d,{patient:v('pay-patient'),gross:n(v('pay-gross')),discount:n(v('pay-discount')),method:v('pay-method'),installments:Math.max(1,n(v('pay-installments'))),status:v('pay-status'),date:v('pay-date')||todayISO(),feeOverride:v('pay-fee'),notes:v('pay-notes'),updatedAt:new Date().toISOString()});
+  if(rec.gross<0){alert('Informe um valor válido.');return;} store.payments=store.payments||[]; var i=store.payments.findIndex(function(x){return x.appointmentId===rec.appointmentId;}); if(i>=0){rec.id=store.payments[i].id;store.payments[i]=rec;}else{rec.id='pay'+Date.now();rec.createdAt=new Date().toISOString();store.payments.push(rec);} state.financeDraft=null;state.financeMessage='Recebimento salvo e cálculos atualizados.';persist();
+}
+function saveFinanceConfig(){
+  function v(id){var e=document.getElementById(id);return e?e.value:'';} var c=mergeFinanceConfig(store.financeConfig);
+  c.taxMode=v('cfg-tax-mode');c.dependents=n(v('cfg-dependents'));c.monthlyInss=n(v('cfg-inss'));c.issRate=n(v('cfg-iss'));c.customTaxRate=n(v('cfg-custom-tax'));c.reserveRate=n(v('cfg-reserve'));c.cardRates={debit:n(v('cfg-debit')),credit1:n(v('cfg-credit1')),credit2to6:n(v('cfg-credit26')),credit7to12:n(v('cfg-credit712')),anticipation:0};
+  PROFESSIONALS.forEach(function(p){c.doctorRates[p.id]={hourly:n(v('cfg-hour-'+p.id)),commission:n(v('cfg-commission-'+p.id)),targetHours:n(v('cfg-target-'+p.id))||160};}); store.financeConfig=c;state.financeMessage='Configurações financeiras salvas.';persist();
+}
 function addExpense(){
-  var desc = document.getElementById('fx-desc').value.trim();
-  var cat = document.getElementById('fx-cat').value;
-  var specialty = document.getElementById('fx-specialty').value;
-  var value = parseFloat(document.getElementById('fx-value').value);
-  var date = document.getElementById('fx-date').value || todayISO();
-  if(!desc || !value || value<=0) return;
-  store.expenses.push({id:'e'+Date.now(), desc:desc, cat:cat, specialty:specialty, value:value, date:date});
-  state.finForm = {desc:'',cat:EXPENSE_CATS[0],specialty:SPECIALTIES[0],value:'',date:todayISO()};
-  persist();
+  function val(id){var e=document.getElementById(id);return e?e.value:'';} function chk(id){var e=document.getElementById(id);return !!(e&&e.checked);}
+  var desc=val('fx-desc').trim(),value=n(val('fx-value')),date=val('fx-date')||todayISO();if(!desc||value<=0){alert('Informe descrição e valor da despesa.');return;}
+  store.expenses.push({id:'e'+Date.now(),desc:desc,cat:val('fx-cat'),specialty:val('fx-specialty'),supplier:val('fx-supplier'),value:value,date:date,type:val('fx-type')||'variavel',deductible:chk('fx-deductible'),recurring:chk('fx-recurring'),paid:chk('fx-paid'),createdAt:new Date().toISOString()});state.financeMessage='Despesa adicionada e cálculos atualizados.';persist();
 }
 function delExpense(id){
   store.expenses = store.expenses.filter(function(e){ return e.id!==id; });
