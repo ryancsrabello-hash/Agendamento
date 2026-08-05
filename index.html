@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Instituto Lins Rabello</title>
+<title>Instituto Lins Rabello ERP</title>
+<meta name="theme-color" content="#122A3A">
+<meta name="description" content="Agenda, recepção, prontuário e gestão do Instituto Lins Rabello.">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -281,6 +285,40 @@
   .metric-table td:first-child{font-weight:600;}
   .positive{color:var(--success);}.negative{color:var(--danger);}
   @media(max-width:600px){.dash-grid{grid-template-columns:repeat(2,1fr)}.report-toolbar .field{width:100%;}.report-toolbar .btn{flex:1;}}
+
+  /* ERP v2.0 — Recepção Inteligente */
+  .pill.chegou{background:#E1F3EA;color:#16724B;}
+  .pill.atendimento{background:#E4ECFA;color:#315FAD;}
+  .reception-hero{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:18px;}
+  .day-title{font-size:28px;margin:0 0 6px;}
+  .day-sub{color:var(--ink-soft);margin:0;font-size:14px;}
+  .next-patient{background:linear-gradient(135deg,var(--ink),var(--teal-deep));color:#fff;border:none;}
+  .next-patient .muted{color:rgba(255,255,255,.72);font-size:12px;}
+  .next-patient .big{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;margin:8px 0 3px;}
+  .reception-kpis{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin-bottom:18px;}
+  .mini-kpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px;}
+  .mini-kpi .n{font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;}
+  .mini-kpi .l{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-top:4px;}
+  .flow-list{display:flex;flex-direction:column;gap:10px;}
+  .flow-card{display:grid;grid-template-columns:74px minmax(190px,1.3fr) minmax(150px,1fr) auto;gap:14px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:15px;padding:14px 16px;box-shadow:0 5px 18px -16px rgba(18,42,58,.5);}
+  .flow-card.late{border-left:5px solid var(--danger);}
+  .flow-time{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;}
+  .flow-name{font-weight:700;font-size:15px;}
+  .flow-meta{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .flow-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;}
+  .flow-btn{border:1px solid var(--border);background:#fff;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .flow-btn:hover{border-color:var(--teal);color:var(--teal-deep);}
+  .flow-btn.primary{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .flow-btn.success{background:var(--success-soft);border-color:transparent;color:#16724B;}
+  .flow-btn.blue{background:#E4ECFA;border-color:transparent;color:#315FAD;}
+  .flow-btn.danger{background:var(--danger-soft);border-color:transparent;color:var(--danger);}
+  .wait-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:18px;margin-top:22px;}
+  .wait-item{display:flex;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);}
+  .wait-item:last-child{border-bottom:none;}
+  .version-badge{display:inline-flex;margin-left:7px;padding:2px 7px;border-radius:999px;background:var(--teal-soft);color:var(--teal-deep);font-size:9px;font-weight:700;vertical-align:middle;}
+  .install-app{display:none;}
+  @media(max-width:900px){.reception-hero{grid-template-columns:1fr}.reception-kpis{grid-template-columns:repeat(2,1fr)}.flow-card{grid-template-columns:62px 1fr}.flow-card>div:nth-child(3){grid-column:2}.flow-actions{grid-column:1/-1;justify-content:flex-start}.wait-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -318,8 +356,8 @@ var SPECIALTIES = ['Clínico Geral', 'Endodontia', 'Prótese', 'Implante'];
 var EXPENSE_CATS = ['Materiais','Equipamentos','Laboratório (prótese)','Componentes de implante','Folha de pagamento','Aluguel','Condomínio','Energia','Água','Internet e telefone','Software','Contabilidade','Marketing','Manutenção','Limpeza','Impostos e taxas','Outros'];
 var PAYMENT_METHODS = ['Pix','Dinheiro','Débito','Crédito','Transferência','Boleto','Convênio','Outro'];
 
-var STATUS_LABEL = {confirmado:'Confirmado', realizado:'Realizado', falta:'Falta', cancelado:'Cancelado', pendente:'Pendente'};
-var STATUS_COLOR = {confirmado:'#34A671', realizado:'#1B5C56', falta:'#D64550', cancelado:'#98A6AC', pendente:'#E8A33D'};
+var STATUS_LABEL = {confirmado:'Confirmado', chegou:'Na recepção', atendimento:'Em atendimento', realizado:'Finalizado', falta:'Falta', cancelado:'Cancelado', pendente:'Pendente'};
+var STATUS_COLOR = {confirmado:'#E8A33D', chegou:'#34A671', atendimento:'#315FAD', realizado:'#1B5C56', falta:'#D64550', cancelado:'#98A6AC', pendente:'#E8A33D'};
 var ACCESS_CODES = { ryan: '1957', amanda: '2831' };
 
 /* ---------------- state ---------------- */
@@ -345,7 +383,7 @@ var state = {
   recordError: '',
   recordData: {prontuario:null,evolucoes:[],odontograma:[]},
   selectedTooth: null,
-  finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'',
+  finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
@@ -391,7 +429,8 @@ function seedStore(){
     payments: [],
     financeConfig: defaultFinanceConfig(),
     logs: [],
-    blocks: []
+    blocks: [],
+    waitlist: []
   };
 }
 
@@ -408,6 +447,7 @@ function normalizeStore(value){
   base.financeConfig = mergeFinanceConfig(value.financeConfig);
   base.logs = Array.isArray(value.logs) ? value.logs : [];
   base.blocks = Array.isArray(value.blocks) ? value.blocks : [];
+  base.waitlist = Array.isArray(value.waitlist) ? value.waitlist : [];
   return base;
 }
 
@@ -585,7 +625,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Sistema de gestão do Instituto Lins Rabello — agenda, pacientes, prontuário e financeiro.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.0.0 · agenda, recepção, prontuário e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -595,12 +635,12 @@ function renderHeader(){
   '<div class="topbar">' +
     '<div class="brand">' +
       '<div class="brand-mark"><img src="'+LOGO_ICON+'" alt="Instituto Lins Rabello"></div>' +
-      '<div class="brand-text"><div class="name">Instituto Lins Rabello</div><div class="sub">Odontologia integrada</div></div>' +
+      '<div class="brand-text"><div class="name">Instituto Lins Rabello <span class="version-badge">ERP 2.0</span></div><div class="sub">Odontologia integrada</div></div>' +
     '</div>' +
-    '<div class="role-toggle">' +
+    '<div style="display:flex;align-items:center;gap:8px;"><button class="btn btn-ghost btn-sm install-app" data-action="install-app">Instalar app</button><div class="role-toggle">' +
       '<button data-role="patient" class="'+(state.role==='patient'?'active':'')+'">Sou paciente</button>' +
       '<button data-role="gate" class="'+(state.role!=='patient'?'active':'')+'">Equipe clínica</button>' +
-    '</div>' +
+    '</div></div>' +
   '</div>';
 }
 
@@ -608,7 +648,7 @@ function renderHeader(){
 function renderPatient(){
   var b = state.booking;
   var out = '<div class="hero"><img class="hero-watermark" src="'+LOGO_ICON+'" alt=""><h1>Agende sua consulta em poucos passos</h1>' +
-    '<p>Escolha o procedimento, o profissional e o melhor horário. Você recebe confirmação e lembretes automáticos por mensagem.</p></div>';
+    '<p>Escolha o procedimento, o profissional e o melhor horário. A confirmação aparece imediatamente na tela.</p></div>';
 
   if(b.done){
     var proc = procById(b.procedureId), prof = profById(b.professionalId);
@@ -624,8 +664,8 @@ function renderPatient(){
       '</div>' +
       '<div class="log-preview">' +
         '<div>✅ Agendamento confirmado no sistema</div>' +
-        '<div>🔔 Lembrete automático agendado para 24h antes</div>' +
-        '<div>🔔 Lembrete automático agendado para 2h antes</div>' +
+        '<div>📅 Data e horário reservados na agenda</div>' +
+        '<div>🔎 Você pode consultar o agendamento pelo telefone</div>' +
       '</div>' +
       '<div style="margin-top:22px;"><button class="btn btn-primary" data-action="new-booking">Agendar outra consulta</button></div>' +
     '</div>';
@@ -768,12 +808,13 @@ function renderStaff(){
       '<span class="dot" style="background:var(--teal);"></span>Conectado(a) como <strong style="color:var(--ink);">'+esc(state.staffEmail)+'</strong>' +
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var tabs = [['visao','Visão geral'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios']];
+  var tabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios']];
   out += '<div class="tabs">';
   tabs.forEach(function(t){ out += '<button data-stafftab="'+t[0]+'" class="'+(state.staffTab===t[0]?'active':'')+'">'+t[1]+'</button>'; });
   out += '</div>';
 
   if(state.staffTab==='visao') out += renderVisaoGeral();
+  else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
   else if(state.staffTab==='pacientes') out += renderPacientes();
@@ -892,6 +933,54 @@ function renderVisaoGeral(){
 function kpi(label,val,sub){
   return '<div class="card kpi"><div class="label">'+label+'</div><div class="val">'+val+'</div><div class="sub">'+sub+'</div></div>';
 }
+
+
+function receptionStatus(a){ return a.status || 'confirmado'; }
+function isAppointmentLate(a){
+  if(a.date!==todayISO() || ['chegou','atendimento','realizado','falta','cancelado'].indexOf(a.status)>=0) return false;
+  var now=new Date(), mins=now.getHours()*60+now.getMinutes();
+  return mins > timeToMinutes(a.time)+10;
+}
+function renderRecepcao(){
+  var date=state.receptionDate||todayISO();
+  var list=(store.appointments||[]).filter(function(a){return a.date===date && a.status!=='cancelado';}).sort(function(a,b){return a.time>b.time?1:-1;});
+  var counts={confirmado:0,chegou:0,atendimento:0,realizado:0,falta:0};
+  list.forEach(function(a){var st=receptionStatus(a);counts[st]=(counts[st]||0)+1;});
+  var active=list.filter(function(a){return ['realizado','falta'].indexOf(a.status)<0;});
+  var next=active.find(function(a){return ['chegou','atendimento'].indexOf(a.status)>=0;}) || active[0] || null;
+  var predicted=list.filter(function(a){return a.status!=='falta';}).reduce(function(sum,a){return sum+Number(procById(a.procedureId).price||0);},0);
+  var out='<div class="reception-hero"><div class="card"><h1 class="day-title">Tela do Dia</h1><p class="day-sub">'+fullDisplay(date)+' · fluxo da recepção em uma única tela</p><div style="display:flex;gap:8px;margin-top:16px;align-items:end;max-width:270px;"><div class="field" style="margin:0;flex:1;"><label>Data</label><input type="date" id="reception-date" value="'+date+'"></div><button class="btn btn-ghost" data-action="reception-go-date">Abrir</button></div></div>';
+  out+='<div class="card next-patient"><div class="muted">PRÓXIMO / EM ANDAMENTO</div>';
+  if(next){out+='<div class="big">'+esc(next.name)+'</div><div>'+next.time+' · '+esc(procById(next.procedureId).name)+'</div><div class="muted" style="margin-top:5px;">'+esc(profById(next.professionalId).name)+'</div>';}
+  else out+='<div class="big">Agenda livre</div><div class="muted">Nenhum paciente pendente nesta data.</div>';
+  out+='</div></div>';
+  out+='<div class="reception-kpis">'+miniReceptionKpi(list.length,'Pacientes')+miniReceptionKpi(counts.chegou||0,'Aguardando')+miniReceptionKpi(counts.atendimento||0,'Em atendimento')+miniReceptionKpi(counts.realizado||0,'Finalizados')+miniReceptionKpi(fmtMoney(predicted),'Previsto')+'</div>';
+  out+='<div class="section-title">Fluxo de atendimento <span style="font-size:12px;color:var(--ink-soft);font-weight:500;">Verde: chegou · azul: atendendo · escuro: finalizado</span></div>';
+  out+='<div class="flow-list">';
+  if(!list.length) out+='<div class="card empty-state">Nenhum agendamento nesta data.</div>';
+  list.forEach(function(a){
+    var st=receptionStatus(a), late=isAppointmentLate(a), proc=procById(a.procedureId), prof=profById(a.professionalId);
+    out+='<div class="flow-card '+(late?'late':'')+'"><div><div class="flow-time">'+a.time+'</div>'+(late?'<div style="font-size:10px;color:var(--danger);font-weight:700;">ATRASADO</div>':'')+'</div>'+
+      '<div><div class="flow-name">'+esc(a.name)+'</div><div class="flow-meta">'+esc(a.phone||'')+' · '+esc(proc.name)+'</div></div>'+
+      '<div><span class="pill '+st+'">'+(STATUS_LABEL[st]||st)+'</span><div class="flow-meta">'+esc(prof.name)+'</div></div>'+
+      '<div class="flow-actions">';
+    if(st==='confirmado'||st==='pendente') out+='<button class="flow-btn success" data-action="reception-status" data-id="'+a.id+'" data-status="chegou">Chegou</button>';
+    if(st==='chegou') out+='<button class="flow-btn blue" data-action="reception-status" data-id="'+a.id+'" data-status="atendimento">Iniciar</button>';
+    if(st==='atendimento') out+='<button class="flow-btn primary" data-action="reception-status" data-id="'+a.id+'" data-status="realizado">Finalizar</button>';
+    if(st!=='realizado'&&st!=='falta') out+='<button class="flow-btn danger" data-action="reception-status" data-id="'+a.id+'" data-status="falta">Faltou</button>';
+    out+='<button class="flow-btn" data-action="reception-record" data-id="'+a.id+'">Prontuário</button>';
+    if(st==='realizado') out+='<button class="flow-btn" data-action="reception-payment" data-id="'+a.id+'">Receber</button>';
+    out+='</div></div>';
+  });
+  out+='</div>';
+  out+='<div class="wait-grid"><div><div class="section-title">Lista de espera</div><div class="card">';
+  var waits=store.waitlist||[];
+  if(!waits.length) out+='<div class="empty-state">Nenhum paciente aguardando encaixe.</div>';
+  waits.forEach(function(w){out+='<div class="wait-item"><div style="flex:1;"><strong>'+esc(w.name)+'</strong><div class="flow-meta">'+esc(w.phone)+' · '+esc(w.procedure||'Procedimento não informado')+' · '+esc(w.preference||'Sem preferência')+'</div></div><button class="btn btn-ghost btn-sm" data-action="waitlist-copy" data-id="'+w.id+'">Telefone</button><button class="btn btn-ghost btn-sm" data-action="waitlist-remove" data-id="'+w.id+'">Remover</button></div>';});
+  out+='</div></div><div><div class="section-title">Adicionar à espera</div><div class="card"><div class="field"><label>Nome</label><input id="wait-name" placeholder="Nome completo"></div><div class="field"><label>Telefone</label><input id="wait-phone" inputmode="numeric" placeholder="11999999999"></div><div class="field"><label>Procedimento</label><input id="wait-procedure" placeholder="Ex.: limpeza"></div><div class="field"><label>Preferência</label><input id="wait-preference" placeholder="Ex.: manhã ou após 16h"></div><button class="btn btn-primary" data-action="waitlist-add">Adicionar</button></div></div></div>';
+  return out;
+}
+function miniReceptionKpi(value,label){return '<div class="mini-kpi"><div class="n">'+value+'</div><div class="l">'+label+'</div></div>';}
 
 function renderAgenda(){
   var out = '<div class="section-title">Agenda por cadeira</div>';
@@ -1270,6 +1359,14 @@ function attachEvents(){
     else if(a==='comm-refresh'){ loadCommunicationDashboard(true); return; }
     else if(a==='comm-retry'){ retryCommunicationJob(t.dataset.id); return; }
     else if(a==='reset-demo'){ if(confirm('Zerar TODOS os agendamentos, pacientes, despesas e bloqueios? Essa ação não pode ser desfeita.')) resetDemo(); return; }
+    else if(a==='reception-go-date'){ var rd=document.getElementById('reception-date'); state.receptionDate=rd&&rd.value?rd.value:todayISO(); }
+    else if(a==='reception-status'){ setReceptionStatus(t.dataset.id,t.dataset.status); return; }
+    else if(a==='reception-record'){ openReceptionRecord(t.dataset.id); return; }
+    else if(a==='reception-payment'){ preparePayment(t.dataset.id); state.staffTab='financeiro'; state.finTab='recebimentos'; render(); return; }
+    else if(a==='waitlist-add'){ addWaitlist(); return; }
+    else if(a==='waitlist-remove'){ removeWaitlist(t.dataset.id); return; }
+    else if(a==='waitlist-copy'){ copyWaitlistPhone(t.dataset.id); return; }
+    else if(a==='install-app'){ installPwa(); return; }
 
     render();
   };
@@ -1509,6 +1606,38 @@ function restoreStaffSession(cb){
   }).catch(function(){ if(cb) cb(); });
 }
 
+
+function setReceptionStatus(id,status){
+  var a=(store.appointments||[]).find(function(x){return x.id===id;}); if(!a)return;
+  a.status=status; a.flowUpdatedAt=new Date().toISOString();
+  if(status==='chegou') a.checkedInAt=new Date().toISOString();
+  if(status==='atendimento') a.startedAt=new Date().toISOString();
+  if(status==='realizado') a.finishedAt=new Date().toISOString();
+  persist();
+}
+function openReceptionRecord(apptId){
+  var a=(store.appointments||[]).find(function(x){return x.id===apptId;}); if(!a)return;
+  var digits=(a.phone||'').replace(/\D/g,'');
+  var p=(store.patients||[]).find(function(x){return (x.phone||'').replace(/\D/g,'')===digits;});
+  if(!p){
+    p={id:'p'+Date.now(),name:a.name,phone:digits,email:'',cpf:'',birthDate:'',city:'',notes:'Cadastro criado automaticamente pela recepção.',createdAt:new Date().toISOString()};
+    store.patients=store.patients||[]; store.patients.push(p); persist(function(){ openClinicalRecord(p.id); }); return;
+  }
+  openClinicalRecord(p.id);
+}
+function addWaitlist(){
+  function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+  var name=v('wait-name'), phone=v('wait-phone').replace(/\D/g,''), procedure=v('wait-procedure'), preference=v('wait-preference');
+  if(name.length<3||phone.length<10){alert('Informe nome e telefone válidos.');return;}
+  store.waitlist=store.waitlist||[]; store.waitlist.push({id:'w'+Date.now(),name:name,phone:phone,procedure:procedure,preference:preference,createdAt:new Date().toISOString()}); persist();
+}
+function removeWaitlist(id){store.waitlist=(store.waitlist||[]).filter(function(w){return w.id!==id;});persist();}
+function copyWaitlistPhone(id){var w=(store.waitlist||[]).find(function(x){return x.id===id;});if(!w)return;navigator.clipboard?navigator.clipboard.writeText(w.phone).then(function(){alert('Telefone copiado.');}):prompt('Copie o telefone:',w.phone);}
+var deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstallPrompt=e;document.querySelectorAll('.install-app').forEach(function(b){b.style.display='inline-flex';});});
+function installPwa(){if(!deferredInstallPrompt){alert('No celular, use “Adicionar à tela inicial”. No computador, procure o ícone de instalação na barra do navegador.');return;}deferredInstallPrompt.prompt();deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js').catch(function(e){console.warn('PWA indisponível:',e);});});}
+
 function cycleOrSetStatus(t){
   var id = t.dataset.id;
   var appt = null;
@@ -1516,7 +1645,7 @@ function cycleOrSetStatus(t){
   if(!appt) return;
   if(t.dataset.status){ appt.status = t.dataset.status; }
   else {
-    var order = ['confirmado','realizado','falta'];
+    var order = ['confirmado','chegou','atendimento','realizado','falta'];
     var idx = order.indexOf(appt.status);
     appt.status = order[(idx+1) % order.length];
   }
