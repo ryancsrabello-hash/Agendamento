@@ -266,6 +266,21 @@
 
   .finance-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}.finance-tabs button{border:1px solid var(--border);background:#fff;padding:8px 12px;border-radius:9px;font-weight:600;color:var(--ink-soft)}.finance-tabs button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
   .finance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:18px}.finance-kpi{padding:17px}.finance-kpi .k-label{font-size:11px;text-transform:uppercase;color:var(--ink-soft);font-weight:700}.finance-kpi .k-value{font-family:'Space Grotesk';font-size:23px;font-weight:700;margin-top:5px}.finance-kpi .k-sub{font-size:11px;color:var(--ink-soft);margin-top:3px}.finance-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.finance-form-grid .span-2{grid-column:span 2}.finance-form-grid .span-4{grid-column:span 4}.mini-note{font-size:11.5px;color:var(--ink-soft);line-height:1.5}.alert-card{background:var(--amber-soft);border:1px solid #efd19d;border-radius:12px;padding:12px 14px;font-size:12.5px}.good-card{background:var(--success-soft);border:1px solid #b9e4cf;border-radius:12px;padding:12px 14px;font-size:12.5px}.danger-card{background:var(--danger-soft);border:1px solid #efb7bd;border-radius:12px;padding:12px 14px;font-size:12.5px}.finance-table-wrap{overflow-x:auto}.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.config-section{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}.config-section:last-child{border-bottom:none}@media(max-width:760px){.finance-form-grid{grid-template-columns:1fr 1fr}.finance-form-grid .span-4{grid-column:span 2}.finance-form-grid .span-2{grid-column:span 2}}
+
+  /* DASHBOARD E RELATÓRIOS */
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px;}
+  .dash-card{padding:18px;position:relative;overflow:hidden;}
+  .dash-card .d-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);font-weight:700;}
+  .dash-card .d-value{font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;margin-top:7px;}
+  .dash-card .d-sub{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .alert-list{display:grid;gap:8px;}
+  .alert-item{padding:11px 13px;border-radius:10px;background:var(--amber-soft);font-size:13px;color:#775117;}
+  .report-toolbar{display:flex;align-items:end;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .report-toolbar .field{margin:0;min-width:180px;}
+  .metric-table td:first-child{font-weight:600;}
+  .positive{color:var(--success);}.negative{color:var(--danger);}
+  @media(max-width:600px){.dash-grid{grid-template-columns:repeat(2,1fr)}.report-toolbar .field{width:100%;}.report-toolbar .btn{flex:1;}}
 </style>
 </head>
 <body>
@@ -315,7 +330,7 @@ var state = {
   gateLoading: false,
   staffUser: null,
   staffEmail: null,
-  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', whatsappConsent:false, done:false, error:null },
+  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', done:false, error:null },
   lookupPhone: '',
   lookupResults: [],
   lookupLoading: false,
@@ -331,7 +346,6 @@ var state = {
   recordData: {prontuario:null,evolucoes:[],odontograma:[]},
   selectedTooth: null,
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'',
-  commLoading:false, commLoaded:false, commError:'', commData:null,
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
@@ -571,7 +585,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Protótipo funcional do sistema de agendamento e gestão do Instituto Lins Rabello.</footer>';
+  html += '<footer class="note">Sistema de gestão do Instituto Lins Rabello — agenda, pacientes, prontuário e financeiro.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -668,7 +682,6 @@ function renderPatient(){
     out += '<h3 style="margin-top:0;">5. Seus dados</h3>';
     out += '<div class="field"><label>Nome completo</label><input type="text" id="inp-name" value="'+esc(b.name)+'" placeholder="Como podemos te chamar"></div>';
     out += '<div class="field"><label>WhatsApp / telefone (DDD + 9 dígitos, sem espaço ou traço)</label><input type="text" inputmode="numeric" id="inp-phone" value="'+esc(b.phone)+'" placeholder="11999998888" maxlength="11"></div>';
-    out += '<label style="display:flex;align-items:flex-start;gap:9px;font-weight:500;color:var(--ink);margin:8px 0 14px;line-height:1.4;"><input type="checkbox" id="inp-whatsapp-consent" '+(b.whatsappConsent?'checked':'')+' style="width:auto;margin-top:3px;"> <span>Quero receber confirmação e lembretes desta consulta pelo WhatsApp. Posso cancelar essas mensagens a qualquer momento.</span></label>';
     if(b.error) out += '<p style="color:var(--danger);font-size:13px;margin:-6px 0 10px;">'+esc(b.error)+'</p>';
     out += '<div class="card" style="background:var(--grey-soft);border:none;margin-top:16px;">' +
       '<div class="summary-line"><span>Procedimento</span><strong>'+proc2.name+'</strong></div>' +
@@ -755,7 +768,7 @@ function renderStaff(){
       '<span class="dot" style="background:var(--teal);"></span>Conectado(a) como <strong style="color:var(--ink);">'+esc(state.staffEmail)+'</strong>' +
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var tabs = [['visao','Visão geral'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['comunicacao','WhatsApp'],['relatorios','Relatórios']];
+  var tabs = [['visao','Visão geral'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios']];
   out += '<div class="tabs">';
   tabs.forEach(function(t){ out += '<button data-stafftab="'+t[0]+'" class="'+(state.staffTab===t[0]?'active':'')+'">'+t[1]+'</button>'; });
   out += '</div>';
@@ -765,7 +778,6 @@ function renderStaff(){
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
-  else if(state.staffTab==='comunicacao') out += renderCommunicationCenter();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
 
   return out;
@@ -832,37 +844,49 @@ function monthTotals(){
   return {revenue:revenue, expenses:expenses, saldo:revenue-expenses};
 }
 
+function dateInRange(date,start,end){ return (!start || date>=start) && (!end || date<=end); }
+function uniquePatientsCount(items){
+  var seen={}; items.forEach(function(a){var k=(a.phone||a.name||'').toLowerCase();if(k)seen[k]=true;});
+  return Object.keys(seen).length;
+}
+function dashboardNumbers(){
+  var today=todayISO(), month=today.slice(0,7), fs=financeSummary(month);
+  var todayItems=store.appointments.filter(function(a){return a.date===today && a.status!=='cancelado';});
+  var monthItems=store.appointments.filter(function(a){return inMonth(a.date,month);});
+  var confirmed=todayItems.filter(function(a){return a.status==='confirmado';}).length;
+  var done=todayItems.filter(function(a){return a.status==='realizado';}).length;
+  var absent=monthItems.filter(function(a){return a.status==='falta';}).length;
+  var canceled=monthItems.filter(function(a){return a.status==='cancelado';}).length;
+  var newPatients=(store.patients||[]).filter(function(p){return inMonth((p.createdAt||p.criado_em||''),month);}).length;
+  return {today:today,month:month,fs:fs,todayItems:todayItems,monthItems:monthItems,confirmed:confirmed,done:done,absent:absent,canceled:canceled,newPatients:newPatients};
+}
+function dashboardCard(label,value,sub,cls){return '<div class="card dash-card"><div class="d-label">'+label+'</div><div class="d-value '+(cls||'')+'">'+value+'</div><div class="d-sub">'+sub+'</div></div>';}
+
 function renderVisaoGeral(){
-  var today = todayISO();
-  var apptsToday = store.appointments.filter(function(a){ return a.date===today && a.status!=='cancelado'; });
-  var confirmedToday = apptsToday.filter(function(a){ return a.status==='confirmado'; }).length;
-  var totalSlots = PROFESSIONALS.length * timeSlots().length;
-  var occ = Math.round((apptsToday.length/totalSlots)*100);
-  var faltasMes = store.appointments.filter(function(a){ return a.status==='falta' && isSameMonth(a.date,today); }).length;
-  var fin = monthTotals();
-
-  var out = '<div class="kpi-grid">';
-  out += kpi('Consultas hoje', apptsToday.length, apptsToday.length+' agendamento(s)');
-  out += kpi('Confirmadas hoje', confirmedToday, 'aguardando atendimento');
-  out += kpi('Taxa de ocupação', occ+'%', 'da agenda de hoje');
-  out += kpi('Faltas no mês', faltasMes, 'sem cancelamento prévio');
-  out += kpi('Receita do mês', fmtMoney(fin.revenue), 'consultas realizadas');
-  out += '</div>';
-
-  out += '<div class="section-title">Próximos agendamentos<button class="btn btn-ghost btn-sm" data-action="reset-demo">Zerar todos os dados</button></div>';
-  var upcoming = store.appointments.filter(function(a){ return a.date>=today && a.status!=='cancelado'; })
-    .sort(function(a,b){ return (a.date+a.time) > (b.date+b.time) ? 1 : -1; }).slice(0,6);
-  out += '<div class="card">';
-  if(upcoming.length===0) out += '<div class="empty-state">Nenhum agendamento futuro.</div>';
-  else{
-    out += '<table><thead><tr><th>Paciente</th><th>Procedimento</th><th>Profissional</th><th>Quando</th><th>Status</th></tr></thead><tbody>';
-    upcoming.forEach(function(a){
-      out += '<tr><td>'+esc(a.name)+'</td><td>'+procById(a.procedureId).name+'</td><td>'+profById(a.professionalId).name+'</td>' +
-        '<td>'+dayDisplay(a.date)+' às '+a.time+'</td><td><span class="pill '+a.status+'">'+STATUS_LABEL[a.status]+'</span></td></tr>';
-    });
-    out += '</tbody></table>';
-  }
-  out += '</div>';
+  var d=dashboardNumbers(), fs=d.fs;
+  var out='<div class="section-title">Painel de hoje <span style="font-size:12px;color:var(--ink-soft);font-weight:500;">'+fullDisplay(d.today)+'</span></div>';
+  out+='<div class="dash-grid">';
+  out+=dashboardCard('Consultas hoje',d.todayItems.length,d.confirmed+' confirmada(s)');
+  out+=dashboardCard('Atendidas hoje',d.done,'consultas realizadas');
+  out+=dashboardCard('Recebido no mês',fmtMoney(fs.received),'já descontadas taxas','positive');
+  out+=dashboardCard('A receber',fmtMoney(fs.pending),'valores pendentes',fs.pending>0?'negative':'positive');
+  out+=dashboardCard('Despesas no mês',fmtMoney(fs.expenses),fmtMoney(fs.unpaidExp)+' em aberto',fs.unpaidExp>0?'negative':'');
+  out+=dashboardCard('Resultado estimado',fmtMoney(fs.result),'após custos e provisões',fs.result>=0?'positive':'negative');
+  out+='</div>';
+  out+='<div class="quick-actions"><button class="btn btn-primary" data-stafftab="agenda">Abrir agenda</button><button class="btn btn-ghost" data-stafftab="pacientes">Buscar paciente</button><button class="btn btn-ghost" data-stafftab="financeiro">Abrir financeiro</button><button class="btn btn-ghost" data-stafftab="relatorios">Relatórios e backup</button></div>';
+  var alerts=[];
+  if(d.todayItems.length===0) alerts.push('Nenhuma consulta marcada para hoje.');
+  if(fs.pending>0) alerts.push('Existem '+fmtMoney(fs.pending)+' em recebimentos pendentes.');
+  if(fs.unpaidExp>0) alerts.push('Existem '+fmtMoney(fs.unpaidExp)+' em despesas ainda não pagas.');
+  if(d.absent>0) alerts.push(d.absent+' falta(s) registrada(s) neste mês.');
+  if(alerts.length){out+='<div class="section-title">Atenção</div><div class="alert-list">'+alerts.map(function(x){return '<div class="alert-item">'+x+'</div>';}).join('')+'</div><br>';}
+  out+='<div class="section-title">Próximos agendamentos</div>';
+  var upcoming=store.appointments.filter(function(a){return a.date>=d.today&&a.status!=='cancelado';}).sort(function(a,b){return (a.date+a.time)>(b.date+b.time)?1:-1;}).slice(0,8);
+  out+='<div class="card">';
+  if(!upcoming.length)out+='<div class="empty-state">Nenhum agendamento futuro.</div>';
+  else{out+='<table><thead><tr><th>Paciente</th><th>Procedimento</th><th>Profissional</th><th>Quando</th><th>Status</th></tr></thead><tbody>';
+    upcoming.forEach(function(a){out+='<tr><td>'+esc(a.name)+'</td><td>'+procById(a.procedureId).name+'</td><td>'+profById(a.professionalId).name+'</td><td>'+dayDisplay(a.date)+' às '+a.time+'</td><td><span class="pill '+a.status+'">'+STATUS_LABEL[a.status]+'</span></td></tr>';});out+='</tbody></table>';}
+  out+='</div>';
   return out;
 }
 function kpi(label,val,sub){
@@ -1153,73 +1177,39 @@ function commStatusLabel(v){
   var map={pending:'Pendente',processing:'Processando',sent:'Enviado',failed:'Falhou',cancelled:'Cancelado'};
   return map[v]||v||'—';
 }
-function renderCommunicationCenter(){
-  if(!state.commLoaded && !state.commLoading) setTimeout(function(){loadCommunicationDashboard(false);},0);
-  var out='<div class="section-title">Central de Comunicação <button class="btn btn-ghost btn-sm" data-action="comm-refresh">Atualizar</button></div>';
-  out+='<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,var(--teal-soft),#fff);"><h3 style="margin:0 0 8px;">WhatsApp automático</h3><p style="margin:0;color:var(--ink-soft);font-size:13.5px;line-height:1.55;">A central já está preparada para confirmação, lembrete de 24 horas, lembrete de 2 horas e mensagem pós-atendimento. As credenciais da Meta ficam somente nas Edge Functions do Supabase, nunca no GitHub.</p></div>';
-  if(state.commLoading) return out+'<div class="card"><div class="loading" style="padding:36px 0;">Carregando comunicação…</div></div>';
-  if(state.commError) return out+'<div class="card"><p style="color:var(--danger);">'+esc(state.commError)+'</p><p style="color:var(--ink-soft);font-size:13px;">Execute o arquivo SQL do pacote no Supabase para ativar este módulo.</p></div>';
-  var d=state.commData||{}, c=d.counts||{}, cfg=d.settings||{};
-  out+='<div class="kpi-grid">'+kpi('Automação',cfg.enabled?'Ativa':'Aguardando Meta',cfg.enabled?'envios liberados':'nenhuma mensagem será enviada')+kpi('Pendentes',c.pending||0,'mensagens na fila')+kpi('Enviadas',c.sent||0,'últimos 30 dias')+kpi('Falhas',c.failed||0,'exigem revisão')+'</div>';
-  out+='<div class="two-col"><div class="card"><h3 style="margin-top:0;">Configuração</h3>'+
-    '<div class="summary-line"><span>Número de produção</span><strong>'+(cfg.phone_number_id?'Configurado':'Pendente')+'</strong></div>'+
-    '<div class="summary-line"><span>Confirmação</span><strong>'+esc(cfg.template_confirmation||'A definir')+'</strong></div>'+
-    '<div class="summary-line"><span>Lembrete 24h</span><strong>'+esc(cfg.template_reminder_24h||'A definir')+'</strong></div>'+
-    '<div class="summary-line"><span>Lembrete 2h</span><strong>'+esc(cfg.template_reminder_2h||'A definir')+'</strong></div>'+
-    '<div class="summary-line"><span>Pós-consulta</span><strong>'+esc(cfg.template_post_visit||'A definir')+'</strong></div>'+
-    '<p style="color:var(--ink-soft);font-size:12.5px;margin:14px 0 0;">A ativação será feita somente após o número oficial e os modelos serem aprovados pela Meta.</p></div>';
-  out+='<div class="card"><h3 style="margin-top:0;">Fluxo simples para o paciente</h3><div class="log-item"><div class="msg">1. Agenda pelo site e escolhe receber WhatsApp.</div></div><div class="log-item"><div class="msg">2. Recebe confirmação acolhedora.</div></div><div class="log-item"><div class="msg">3. Recebe lembretes antes da consulta.</div></div><div class="log-item"><div class="msg">4. Após o atendimento, recebe agradecimento e avaliação.</div></div></div></div>';
-  var jobs=d.jobs||[];
-  out+='<div class="section-title" style="margin-top:20px;">Fila de mensagens</div><div class="card">';
-  if(!jobs.length) out+='<div class="empty-state">Nenhuma mensagem na fila ainda.</div>';
-  else { out+='<table><thead><tr><th>Quando</th><th>Paciente</th><th>Tipo</th><th>Status</th><th>Ação</th></tr></thead><tbody>';
-    jobs.forEach(function(j){out+='<tr><td>'+esc((j.scheduled_for||'').replace('T',' ').slice(0,16))+'</td><td>'+esc(j.patient_name||'Paciente')+'</td><td>'+esc(j.template_key||'')+'</td><td><span class="pill '+(j.status==='sent'?'confirmado':j.status==='failed'?'falta':'pendente')+'">'+commStatusLabel(j.status)+'</span></td><td>'+(j.status==='failed'?'<button class="btn btn-ghost btn-sm" data-action="comm-retry" data-id="'+j.id+'">Tentar novamente</button>':'—')+'</td></tr>';});
-    out+='</tbody></table>';
-  }
-  return out+'</div>';
+function csvCell(v){v=(v==null?'':String(v));return '"'+v.replace(/"/g,'""')+'"';}
+function downloadText(filename,text,type){var blob=new Blob([text],{type:type||'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},500);}
+function exportAppointmentsCSV(){
+  var rows=[['Data','Hora','Paciente','Telefone','Procedimento','Profissional','Status']];
+  store.appointments.slice().sort(function(a,b){return (a.date+a.time)>(b.date+b.time)?1:-1;}).forEach(function(a){rows.push([a.date,a.time,a.name,a.phone,procById(a.procedureId).name,profById(a.professionalId).name,STATUS_LABEL[a.status]||a.status]);});
+  downloadText('agendamentos-'+todayISO()+'.csv','\ufeff'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\n'),'text/csv;charset=utf-8');
 }
-function loadCommunicationDashboard(force){
-  if(state.commLoading) return;
-  state.commLoading=true; state.commError=''; if(force) state.commLoaded=false; render();
-  waitForSupabase(6000).then(function(api){if(!api||!api.loadCommunicationDashboard) throw new Error('Módulo de comunicação ainda não instalado no Supabase.'); return api.loadCommunicationDashboard();})
-    .then(function(data){state.commData=data;state.commLoaded=true;state.commLoading=false;render();})
-    .catch(function(e){state.commLoading=false;state.commLoaded=true;state.commError=e&&e.message?e.message:'Não foi possível carregar a comunicação.';render();});
+function exportFinanceCSV(){
+  var rows=[['Data','Paciente/Descrição','Tipo','Forma','Bruto','Desconto','Taxa','Líquido','Status']];var cfg=mergeFinanceConfig(store.financeConfig);
+  (store.payments||[]).forEach(function(p){var z=paymentNumbers(p,cfg);rows.push([p.date||p.paidDate,p.patientName||p.patient||'', 'Recebimento',p.method||'',z.gross,z.discount,z.fee,z.net,p.status||'']);});
+  (store.expenses||[]).forEach(function(e){rows.push([e.date,e.desc||e.description||'',e.type==='fixa'?'Despesa fixa':'Despesa variável','',e.value,'','','-'+n(e.value),e.paid===false?'Pendente':'Pago']);});
+  downloadText('financeiro-'+todayISO()+'.csv','\ufeff'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\n'),'text/csv;charset=utf-8');
 }
-function retryCommunicationJob(id){
-  waitForSupabase(5000).then(function(api){if(!api||!api.retryCommunicationJob) throw new Error('Serviço indisponível.'); return api.retryCommunicationJob(id);})
-    .then(function(){loadCommunicationDashboard(true);}).catch(function(e){alert(e.message||'Não foi possível reagendar.');});
+function exportPatientsCSV(){
+  var rows=[['Nome','CPF','Telefone','E-mail','Nascimento','Cidade','Observações']];(store.patients||[]).forEach(function(p){rows.push([p.name||p.nome,p.cpf,p.phone||p.telefone,p.email,p.birthDate||p.nascimento,p.city||p.cidade,p.notes||p.observacoes]);});
+  downloadText('pacientes-'+todayISO()+'.csv','\ufeff'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\n'),'text/csv;charset=utf-8');
 }
-
+function exportBackup(){downloadText('backup-instituto-lins-rabello-'+todayISO()+'.json',JSON.stringify({version:1,exportedAt:new Date().toISOString(),store:store},null,2),'application/json');}
+function restoreBackupFile(file){
+  if(!file)return;var reader=new FileReader();reader.onload=function(){try{var data=JSON.parse(reader.result),incoming=data.store||data;if(!incoming||!Array.isArray(incoming.appointments))throw new Error('Arquivo inválido.');if(!confirm('Restaurar este backup substituirá os dados atuais do sistema. Deseja continuar?'))return;store=incoming;persist();alert('Backup restaurado com sucesso.');}catch(e){alert('Não foi possível restaurar: '+e.message);}};reader.readAsText(file);
+}
 function renderRelatorios(){
-  var out = '<div class="section-title">Relatórios</div><div class="two-col">';
-
-  out += '<div class="card"><h3 style="margin-top:0;">Consultas por profissional</h3>';
-  var counts = {}; var max=1;
-  PROFESSIONALS.forEach(function(p){ counts[p.id]=0; });
-  store.appointments.forEach(function(a){ if(a.status!=='cancelado'){ counts[a.professionalId]=(counts[a.professionalId]||0)+1; if(counts[a.professionalId]>max) max=counts[a.professionalId]; } });
-  PROFESSIONALS.forEach(function(p){
-    var v = counts[p.id]||0;
-    out += '<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+v+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max*100)+'%;background:'+p.color+';"></div></div></div>';
-  });
-  out += '</div>';
-
-  out += '<div class="card"><h3 style="margin-top:0;">Faturamento por procedimento</h3>';
-  var rev = {}; var max2=1;
-  PROCEDURES.forEach(function(p){ rev[p.id]=0; });
-  store.appointments.forEach(function(a){ if(a.status==='realizado'){ rev[a.procedureId]+=procById(a.procedureId).price; if(rev[a.procedureId]>max2) max2=rev[a.procedureId]; } });
-  PROCEDURES.forEach(function(p){
-    var v = rev[p.id]||0;
-    out += '<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+fmtMoney(v)+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max2*100)+'%;background:var(--coral);"></div></div></div>';
-  });
-  out += '</div></div>';
-
-  var totalAll = store.appointments.filter(function(a){ return a.status!=='cancelado'; }).length;
-  var faltas = store.appointments.filter(function(a){ return a.status==='falta'; }).length;
-  var taxa = totalAll ? Math.round((faltas/totalAll)*100) : 0;
-  out += '<div class="card" style="margin-top:16px;"><div class="section-title" style="margin:0;">Taxa geral de faltas</div>' +
-    '<div class="bar-row"><div class="bar-track"><div class="bar-fill" style="width:'+taxa+'%;background:var(--danger);"></div></div></div>' +
-    '<div class="sub" style="color:var(--ink-soft);font-size:12.5px;">'+taxa+'% dos agendamentos resultaram em falta ('+faltas+' de '+totalAll+')</div></div>';
-
+  var month=monthRef(), fs=financeSummary(month), monthAppts=store.appointments.filter(function(a){return inMonth(a.date,month);});
+  var total=monthAppts.filter(function(a){return a.status!=='cancelado';}).length, done=monthAppts.filter(function(a){return a.status==='realizado';}).length, abs=monthAppts.filter(function(a){return a.status==='falta';}).length;
+  var out='<div class="section-title">Relatórios e segurança dos dados</div>';
+  out+='<div class="report-toolbar"><div class="field"><label>Mês analisado</label><input type="month" id="finance-month" value="'+month+'"></div><button class="btn btn-ghost" data-action="finance-month">Atualizar</button><button class="btn btn-primary" data-action="export-backup">Baixar backup completo</button><button class="btn btn-ghost" data-action="restore-backup">Restaurar backup</button><input id="restore-file" type="file" accept="application/json,.json" style="display:none"></div>';
+  out+='<div class="dash-grid">'+dashboardCard('Agendamentos',total,'no mês selecionado')+dashboardCard('Realizados',done,total?Math.round(done/total*100)+'% de conclusão':'sem consultas')+dashboardCard('Faltas',abs,total?Math.round(abs/total*100)+'% do total':'sem consultas',abs?'negative':'positive')+dashboardCard('Resultado',fmtMoney(fs.result),'estimativa financeira',fs.result>=0?'positive':'negative')+'</div>';
+  out+='<div class="quick-actions"><button class="btn btn-ghost" data-action="export-appointments">Exportar agenda CSV</button><button class="btn btn-ghost" data-action="export-patients">Exportar pacientes CSV</button><button class="btn btn-ghost" data-action="export-finance">Exportar financeiro CSV</button></div>';
+  out+='<div class="two-col"><div class="card"><h3 style="margin-top:0;">Consultas por profissional</h3>';
+  var counts={},max=1;PROFESSIONALS.forEach(function(p){counts[p.id]=0;});monthAppts.forEach(function(a){if(a.status!=='cancelado'){counts[a.professionalId]=(counts[a.professionalId]||0)+1;max=Math.max(max,counts[a.professionalId]);}});PROFESSIONALS.forEach(function(p){var v=counts[p.id]||0;out+='<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+v+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max*100)+'%;background:'+p.color+';"></div></div></div>';});out+='</div>';
+  out+='<div class="card"><h3 style="margin-top:0;">Procedimentos realizados</h3>';var procCounts={},max2=1;PROCEDURES.forEach(function(p){procCounts[p.id]=0;});monthAppts.forEach(function(a){if(a.status==='realizado'){procCounts[a.procedureId]=(procCounts[a.procedureId]||0)+1;max2=Math.max(max2,procCounts[a.procedureId]);}});PROCEDURES.forEach(function(p){var v=procCounts[p.id]||0;out+='<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+v+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max2*100)+'%;background:var(--coral);"></div></div></div>';});out+='</div></div>';
+  out+='<div class="card" style="margin-top:16px;"><h3 style="margin-top:0;">Resumo financeiro do mês</h3><table class="metric-table"><tbody><tr><td>Receita recebida</td><td>'+fmtMoney(fs.received)+'</td></tr><tr><td>A receber</td><td>'+fmtMoney(fs.pending)+'</td></tr><tr><td>Taxas de cartão</td><td>'+fmtMoney(fs.fees)+'</td></tr><tr><td>Despesas</td><td>'+fmtMoney(fs.expenses)+'</td></tr><tr><td>Provisões e impostos</td><td>'+fmtMoney(fs.taxes+fs.reserve)+'</td></tr><tr><td>Resultado estimado</td><td class="'+(fs.result>=0?'positive':'negative')+'"><strong>'+fmtMoney(fs.result)+'</strong></td></tr></tbody></table></div>';
+  out+='<p style="font-size:11.5px;color:var(--ink-soft);margin-top:14px;">Os arquivos CSV podem ser abertos no Excel. O backup JSON deve ser guardado em local seguro e contém dados pessoais e clínicos.</p>';
   return out;
 }
 
@@ -1235,6 +1225,11 @@ function attachEvents(){
 
     var a = t.dataset.action;
     var b = state.booking;
+    if(a==='export-backup'){ exportBackup(); return; }
+    if(a==='restore-backup'){ var rf=document.getElementById('restore-file'); if(rf) rf.click(); return; }
+    if(a==='export-appointments'){ exportAppointmentsCSV(); return; }
+    if(a==='export-patients'){ exportPatientsCSV(); return; }
+    if(a==='export-finance'){ exportFinanceCSV(); return; }
 
     if(a==='pick-proc'){ b.procedureId = t.dataset.id; }
     else if(a==='pick-prof'){ b.professionalId = t.dataset.id; }
@@ -1242,7 +1237,7 @@ function attachEvents(){
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
     else if(a==='wiz-next'){ b.step = Math.min(5,b.step+1); }
     else if(a==='wiz-back'){ b.step = Math.max(1,b.step-1); }
-    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', whatsappConsent:false, done:false, error:null }; }
+    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', done:false, error:null }; }
     else if(a==='wiz-confirm'){ confirmBooking(); return; }
     else if(a==='do-lookup'){ doLookup(); return; }
     else if(a==='do-gate'){ doGate(); return; }
@@ -1353,8 +1348,6 @@ function confirmBooking(){
   var nameEl = document.getElementById('inp-name'), phoneEl = document.getElementById('inp-phone');
   b.name = nameEl ? nameEl.value : b.name;
   var rawPhone = phoneEl ? phoneEl.value : b.phone;
-  var consentEl = document.getElementById('inp-whatsapp-consent');
-  b.whatsappConsent = consentEl ? !!consentEl.checked : !!b.whatsappConsent;
   var digits = rawPhone.replace(/\D/g,'');
 
   if(b.name.trim().length<3){ b.error = 'Informe seu nome completo.'; render(); return; }
@@ -1375,7 +1368,7 @@ function confirmBooking(){
     if(!api || typeof api.createPublicBooking !== 'function') throw new Error('Serviço de agendamento indisponível.');
     return api.createPublicBooking({
       procedureId:b.procedureId, professionalId:b.professionalId,
-      date:b.date, time:b.time, name:b.name, phone:b.phone, whatsappConsent:b.whatsappConsent
+      date:b.date, time:b.time, name:b.name, phone:b.phone
     });
   }).then(function(newAppt){
     if(newAppt) store.appointments.push(newAppt);
@@ -1528,11 +1521,6 @@ function cycleOrSetStatus(t){
     appt.status = order[(idx+1) % order.length];
   }
   persist();
-  waitForSupabase(5000).then(function(api){
-    if(!api) return;
-    if((appt.status==='cancelado'||appt.status==='falta') && api.cancelAppointmentMessages) return api.cancelAppointmentMessages(appt.id);
-    if(appt.status==='realizado' && api.queuePostVisitMessage) return api.queuePostVisitMessage(appt);
-  }).catch(function(e){ console.warn('WhatsApp:',e); });
 }
 
 function toggleBlock(time){
