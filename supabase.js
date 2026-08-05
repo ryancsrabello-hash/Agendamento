@@ -148,3 +148,63 @@ window.ILRSupabase = {
   loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution
 };
 window.dispatchEvent(new Event('ilr-supabase-ready'));
+
+async function loadCommunicationDashboard() {
+  await requireTeamUser();
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const [settingsRes, jobsRes, sentRes] = await Promise.all([
+    client.from('communication_settings').select('*').eq('id', 'main').maybeSingle(),
+    client.from('whatsapp_jobs').select('*').order('created_at', { ascending: false }).limit(80),
+    client.from('whatsapp_jobs').select('status').gte('created_at', since)
+  ]);
+  if (settingsRes.error) throw settingsRes.error;
+  if (jobsRes.error) throw jobsRes.error;
+  if (sentRes.error) throw sentRes.error;
+  const counts = { pending: 0, processing: 0, sent: 0, failed: 0, cancelled: 0 };
+  (sentRes.data || []).forEach((row) => { counts[row.status] = (counts[row.status] || 0) + 1; });
+  return { settings: settingsRes.data || {}, jobs: jobsRes.data || [], counts };
+}
+
+async function retryCommunicationJob(id) {
+  await requireTeamUser();
+  const { error } = await client.from('whatsapp_jobs').update({
+    status: 'pending', attempts: 0, last_error: null,
+    scheduled_for: new Date().toISOString(), updated_at: new Date().toISOString()
+  }).eq('id', id);
+  if (error) throw error;
+}
+
+async function cancelAppointmentMessages(appointmentId) {
+  await requireTeamUser();
+  const { error } = await client.from('whatsapp_jobs').update({
+    status: 'cancelled', updated_at: new Date().toISOString()
+  }).eq('appointment_id', appointmentId).in('status', ['pending', 'failed']);
+  if (error) throw error;
+}
+
+async function queuePostVisitMessage(appointment) {
+  await requireTeamUser();
+  const { data: existing, error: readError } = await client.from('whatsapp_jobs')
+    .select('id').eq('appointment_id', appointment.id).eq('template_key', 'post_visit').limit(1);
+  if (readError) throw readError;
+  if (existing && existing.length) return existing[0];
+  const { data, error } = await client.from('whatsapp_jobs').insert({
+    appointment_id: appointment.id,
+    phone: appointment.phone || '',
+    patient_name: appointment.name || 'Paciente',
+    template_key: 'post_visit',
+    scheduled_for: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    payload: {
+      patient_name: appointment.name || 'Paciente',
+      appointment_id: appointment.id
+    },
+    status: 'pending'
+  }).select().single();
+  if (error) throw error;
+  return data;
+}
+
+Object.assign(window.ILRSupabase, {
+  loadCommunicationDashboard, retryCommunicationJob,
+  cancelAppointmentMessages, queuePostVisitMessage
+});

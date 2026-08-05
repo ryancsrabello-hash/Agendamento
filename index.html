@@ -271,7 +271,7 @@
 <body>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
-<script type="module" src="./supabase.js?v=financeiro-20260804-1"></script>
+<script type="module" src="./supabase.js?v=comunicacao-20260805-1"></script>
 
 <script>
 (function(){
@@ -315,7 +315,7 @@ var state = {
   gateLoading: false,
   staffUser: null,
   staffEmail: null,
-  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', done:false, error:null },
+  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', whatsappConsent:false, done:false, error:null },
   lookupPhone: '',
   lookupResults: [],
   lookupLoading: false,
@@ -331,6 +331,7 @@ var state = {
   recordData: {prontuario:null,evolucoes:[],odontograma:[]},
   selectedTooth: null,
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'',
+  commLoading:false, commLoaded:false, commError:'', commData:null,
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
@@ -667,6 +668,7 @@ function renderPatient(){
     out += '<h3 style="margin-top:0;">5. Seus dados</h3>';
     out += '<div class="field"><label>Nome completo</label><input type="text" id="inp-name" value="'+esc(b.name)+'" placeholder="Como podemos te chamar"></div>';
     out += '<div class="field"><label>WhatsApp / telefone (DDD + 9 dígitos, sem espaço ou traço)</label><input type="text" inputmode="numeric" id="inp-phone" value="'+esc(b.phone)+'" placeholder="11999998888" maxlength="11"></div>';
+    out += '<label style="display:flex;align-items:flex-start;gap:9px;font-weight:500;color:var(--ink);margin:8px 0 14px;line-height:1.4;"><input type="checkbox" id="inp-whatsapp-consent" '+(b.whatsappConsent?'checked':'')+' style="width:auto;margin-top:3px;"> <span>Quero receber confirmação e lembretes desta consulta pelo WhatsApp. Posso cancelar essas mensagens a qualquer momento.</span></label>';
     if(b.error) out += '<p style="color:var(--danger);font-size:13px;margin:-6px 0 10px;">'+esc(b.error)+'</p>';
     out += '<div class="card" style="background:var(--grey-soft);border:none;margin-top:16px;">' +
       '<div class="summary-line"><span>Procedimento</span><strong>'+proc2.name+'</strong></div>' +
@@ -753,7 +755,7 @@ function renderStaff(){
       '<span class="dot" style="background:var(--teal);"></span>Conectado(a) como <strong style="color:var(--ink);">'+esc(state.staffEmail)+'</strong>' +
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var tabs = [['visao','Visão geral'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios']];
+  var tabs = [['visao','Visão geral'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['comunicacao','WhatsApp'],['relatorios','Relatórios']];
   out += '<div class="tabs">';
   tabs.forEach(function(t){ out += '<button data-stafftab="'+t[0]+'" class="'+(state.staffTab===t[0]?'active':'')+'">'+t[1]+'</button>'; });
   out += '</div>';
@@ -763,6 +765,7 @@ function renderStaff(){
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
+  else if(state.staffTab==='comunicacao') out += renderCommunicationCenter();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
 
   return out;
@@ -1145,6 +1148,48 @@ function renderConfirmacoes(){
   return out;
 }
 
+
+function commStatusLabel(v){
+  var map={pending:'Pendente',processing:'Processando',sent:'Enviado',failed:'Falhou',cancelled:'Cancelado'};
+  return map[v]||v||'—';
+}
+function renderCommunicationCenter(){
+  if(!state.commLoaded && !state.commLoading) setTimeout(function(){loadCommunicationDashboard(false);},0);
+  var out='<div class="section-title">Central de Comunicação <button class="btn btn-ghost btn-sm" data-action="comm-refresh">Atualizar</button></div>';
+  out+='<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,var(--teal-soft),#fff);"><h3 style="margin:0 0 8px;">WhatsApp automático</h3><p style="margin:0;color:var(--ink-soft);font-size:13.5px;line-height:1.55;">A central já está preparada para confirmação, lembrete de 24 horas, lembrete de 2 horas e mensagem pós-atendimento. As credenciais da Meta ficam somente nas Edge Functions do Supabase, nunca no GitHub.</p></div>';
+  if(state.commLoading) return out+'<div class="card"><div class="loading" style="padding:36px 0;">Carregando comunicação…</div></div>';
+  if(state.commError) return out+'<div class="card"><p style="color:var(--danger);">'+esc(state.commError)+'</p><p style="color:var(--ink-soft);font-size:13px;">Execute o arquivo SQL do pacote no Supabase para ativar este módulo.</p></div>';
+  var d=state.commData||{}, c=d.counts||{}, cfg=d.settings||{};
+  out+='<div class="kpi-grid">'+kpi('Automação',cfg.enabled?'Ativa':'Aguardando Meta',cfg.enabled?'envios liberados':'nenhuma mensagem será enviada')+kpi('Pendentes',c.pending||0,'mensagens na fila')+kpi('Enviadas',c.sent||0,'últimos 30 dias')+kpi('Falhas',c.failed||0,'exigem revisão')+'</div>';
+  out+='<div class="two-col"><div class="card"><h3 style="margin-top:0;">Configuração</h3>'+
+    '<div class="summary-line"><span>Número de produção</span><strong>'+(cfg.phone_number_id?'Configurado':'Pendente')+'</strong></div>'+
+    '<div class="summary-line"><span>Confirmação</span><strong>'+esc(cfg.template_confirmation||'A definir')+'</strong></div>'+
+    '<div class="summary-line"><span>Lembrete 24h</span><strong>'+esc(cfg.template_reminder_24h||'A definir')+'</strong></div>'+
+    '<div class="summary-line"><span>Lembrete 2h</span><strong>'+esc(cfg.template_reminder_2h||'A definir')+'</strong></div>'+
+    '<div class="summary-line"><span>Pós-consulta</span><strong>'+esc(cfg.template_post_visit||'A definir')+'</strong></div>'+
+    '<p style="color:var(--ink-soft);font-size:12.5px;margin:14px 0 0;">A ativação será feita somente após o número oficial e os modelos serem aprovados pela Meta.</p></div>';
+  out+='<div class="card"><h3 style="margin-top:0;">Fluxo simples para o paciente</h3><div class="log-item"><div class="msg">1. Agenda pelo site e escolhe receber WhatsApp.</div></div><div class="log-item"><div class="msg">2. Recebe confirmação acolhedora.</div></div><div class="log-item"><div class="msg">3. Recebe lembretes antes da consulta.</div></div><div class="log-item"><div class="msg">4. Após o atendimento, recebe agradecimento e avaliação.</div></div></div></div>';
+  var jobs=d.jobs||[];
+  out+='<div class="section-title" style="margin-top:20px;">Fila de mensagens</div><div class="card">';
+  if(!jobs.length) out+='<div class="empty-state">Nenhuma mensagem na fila ainda.</div>';
+  else { out+='<table><thead><tr><th>Quando</th><th>Paciente</th><th>Tipo</th><th>Status</th><th>Ação</th></tr></thead><tbody>';
+    jobs.forEach(function(j){out+='<tr><td>'+esc((j.scheduled_for||'').replace('T',' ').slice(0,16))+'</td><td>'+esc(j.patient_name||'Paciente')+'</td><td>'+esc(j.template_key||'')+'</td><td><span class="pill '+(j.status==='sent'?'confirmado':j.status==='failed'?'falta':'pendente')+'">'+commStatusLabel(j.status)+'</span></td><td>'+(j.status==='failed'?'<button class="btn btn-ghost btn-sm" data-action="comm-retry" data-id="'+j.id+'">Tentar novamente</button>':'—')+'</td></tr>';});
+    out+='</tbody></table>';
+  }
+  return out+'</div>';
+}
+function loadCommunicationDashboard(force){
+  if(state.commLoading) return;
+  state.commLoading=true; state.commError=''; if(force) state.commLoaded=false; render();
+  waitForSupabase(6000).then(function(api){if(!api||!api.loadCommunicationDashboard) throw new Error('Módulo de comunicação ainda não instalado no Supabase.'); return api.loadCommunicationDashboard();})
+    .then(function(data){state.commData=data;state.commLoaded=true;state.commLoading=false;render();})
+    .catch(function(e){state.commLoading=false;state.commLoaded=true;state.commError=e&&e.message?e.message:'Não foi possível carregar a comunicação.';render();});
+}
+function retryCommunicationJob(id){
+  waitForSupabase(5000).then(function(api){if(!api||!api.retryCommunicationJob) throw new Error('Serviço indisponível.'); return api.retryCommunicationJob(id);})
+    .then(function(){loadCommunicationDashboard(true);}).catch(function(e){alert(e.message||'Não foi possível reagendar.');});
+}
+
 function renderRelatorios(){
   var out = '<div class="section-title">Relatórios</div><div class="two-col">';
 
@@ -1197,7 +1242,7 @@ function attachEvents(){
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
     else if(a==='wiz-next'){ b.step = Math.min(5,b.step+1); }
     else if(a==='wiz-back'){ b.step = Math.max(1,b.step-1); }
-    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', done:false, error:null }; }
+    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', whatsappConsent:false, done:false, error:null }; }
     else if(a==='wiz-confirm'){ confirmBooking(); return; }
     else if(a==='do-lookup'){ doLookup(); return; }
     else if(a==='do-gate'){ doGate(); return; }
@@ -1227,6 +1272,8 @@ function attachEvents(){
     else if(a==='save-anamnesis'){ saveAnamnesis(); return; }
     else if(a==='save-tooth'){ saveTooth(t.dataset.id); return; }
     else if(a==='add-evolution'){ addEvolution(); return; }
+    else if(a==='comm-refresh'){ loadCommunicationDashboard(true); return; }
+    else if(a==='comm-retry'){ retryCommunicationJob(t.dataset.id); return; }
     else if(a==='reset-demo'){ if(confirm('Zerar TODOS os agendamentos, pacientes, despesas e bloqueios? Essa ação não pode ser desfeita.')) resetDemo(); return; }
 
     render();
@@ -1306,6 +1353,8 @@ function confirmBooking(){
   var nameEl = document.getElementById('inp-name'), phoneEl = document.getElementById('inp-phone');
   b.name = nameEl ? nameEl.value : b.name;
   var rawPhone = phoneEl ? phoneEl.value : b.phone;
+  var consentEl = document.getElementById('inp-whatsapp-consent');
+  b.whatsappConsent = consentEl ? !!consentEl.checked : !!b.whatsappConsent;
   var digits = rawPhone.replace(/\D/g,'');
 
   if(b.name.trim().length<3){ b.error = 'Informe seu nome completo.'; render(); return; }
@@ -1326,7 +1375,7 @@ function confirmBooking(){
     if(!api || typeof api.createPublicBooking !== 'function') throw new Error('Serviço de agendamento indisponível.');
     return api.createPublicBooking({
       procedureId:b.procedureId, professionalId:b.professionalId,
-      date:b.date, time:b.time, name:b.name, phone:b.phone
+      date:b.date, time:b.time, name:b.name, phone:b.phone, whatsappConsent:b.whatsappConsent
     });
   }).then(function(newAppt){
     if(newAppt) store.appointments.push(newAppt);
@@ -1479,6 +1528,11 @@ function cycleOrSetStatus(t){
     appt.status = order[(idx+1) % order.length];
   }
   persist();
+  waitForSupabase(5000).then(function(api){
+    if(!api) return;
+    if((appt.status==='cancelado'||appt.status==='falta') && api.cancelAppointmentMessages) return api.cancelAppointmentMessages(appt.id);
+    if(appt.status==='realizado' && api.queuePostVisitMessage) return api.queuePostVisitMessage(appt);
+  }).catch(function(e){ console.warn('WhatsApp:',e); });
 }
 
 function toggleBlock(time){
