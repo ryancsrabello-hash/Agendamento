@@ -97,15 +97,17 @@ async function requireTeamUser() {
 
 async function loadClinicalRecord(patientId) {
   await requireTeamUser();
-  const [recordRes, evolutionRes, toothRes] = await Promise.all([
+  const [recordRes, evolutionRes, toothRes, documentRes] = await Promise.all([
     client.from('prontuarios').select('*').eq('paciente_id', patientId).order('atualizado_em', { ascending: false }).limit(1).maybeSingle(),
     client.from('evolucoes_clinicas').select('*').eq('paciente_id', patientId).order('data_atendimento', { ascending: false }).order('criado_em', { ascending: false }),
-    client.from('odontograma').select('*').eq('paciente_id', patientId).order('dente')
+    client.from('odontograma').select('*').eq('paciente_id', patientId).order('dente'),
+    client.from('clinical_documents').select('*').eq('paciente_id', patientId).order('created_at', { ascending: false })
   ]);
   if (recordRes.error) throw recordRes.error;
   if (evolutionRes.error) throw evolutionRes.error;
   if (toothRes.error) throw toothRes.error;
-  return { prontuario: recordRes.data || null, evolucoes: evolutionRes.data || [], odontograma: toothRes.data || [] };
+  if (documentRes.error) throw documentRes.error;
+  return { prontuario: recordRes.data || null, evolucoes: evolutionRes.data || [], odontograma: toothRes.data || [], documentos: documentRes.data || [] };
 }
 
 async function saveAnamnesis(patientId, values) {
@@ -142,9 +144,62 @@ async function addEvolution(patientId, values) {
   return data;
 }
 
+
+const CLINICAL_BUCKET = 'clinical-files';
+function safeName(name) { return String(name || 'arquivo').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 120); }
+async function uploadPrivateClinicalBlob(patientId, file, prefix='files') {
+  await requireTeamUser();
+  const path = `${patientId}/${prefix}/${Date.now()}-${safeName(file.name || 'arquivo')}`;
+  const { error } = await client.storage.from(CLINICAL_BUCKET).upload(path, file, { upsert: false, contentType: file.type || undefined });
+  if (error) throw error;
+  return path;
+}
+async function saveGeneratedClinicalDocument(patientId, values, signatureBlob) {
+  const user = await requireTeamUser();
+  let signature_path = null;
+  if (signatureBlob) {
+    const named = new File([signatureBlob], 'assinatura.png', { type: 'image/png' });
+    signature_path = await uploadPrivateClinicalBlob(patientId, named, 'signatures');
+  }
+  const { data, error } = await client.from('clinical_documents').insert({
+    paciente_id: patientId, tipo: values.tipo, titulo: values.titulo, descricao: values.descricao || null,
+    document_date: values.document_date, content_text: values.content_text, signature_path,
+    professional_email: user.email || null
+  }).select().single();
+  if (error) { if (signature_path) await client.storage.from(CLINICAL_BUCKET).remove([signature_path]); throw error; }
+  return data;
+}
+async function uploadClinicalFile(patientId, values, file) {
+  const user = await requireTeamUser();
+  const storage_path = await uploadPrivateClinicalBlob(patientId, file, values.tipo || 'files');
+  const { data, error } = await client.from('clinical_documents').insert({
+    paciente_id: patientId, tipo: values.tipo, titulo: values.titulo || file.name, descricao: values.descricao || null,
+    document_date: values.document_date, storage_path, file_name: file.name, mime_type: file.type || null,
+    size_bytes: file.size || null, professional_email: user.email || null
+  }).select().single();
+  if (error) { await client.storage.from(CLINICAL_BUCKET).remove([storage_path]); throw error; }
+  return data;
+}
+async function signedUrl(path) {
+  if (!path) return null;
+  const { data, error } = await client.storage.from(CLINICAL_BUCKET).createSignedUrl(path, 300);
+  if (error) throw error;
+  return data?.signedUrl || null;
+}
+async function getClinicalDocumentUrl(document) { await requireTeamUser(); return signedUrl(document.storage_path || document.signature_path); }
+async function deleteClinicalDocument(document) {
+  await requireTeamUser();
+  const paths = [document.storage_path, document.signature_path].filter(Boolean);
+  if (paths.length) { const { error: storageError } = await client.storage.from(CLINICAL_BUCKET).remove(paths); if (storageError) throw storageError; }
+  const { error } = await client.from('clinical_documents').delete().eq('id', document.id);
+  if (error) throw error;
+  return true;
+}
+
 window.ILRSupabase = {
   client, loadStore, saveStore, subscribeStore, createPublicBooking, lookupAppointments,
   signIn, signOut, getCurrentUser, isAuthorizedTeamMember, onAuthChange,
-  loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution
+  loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution,
+  saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument
 };
 window.dispatchEvent(new Event('ilr-supabase-ready'));

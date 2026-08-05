@@ -319,6 +319,26 @@
   .install-app{display:none;}
   @media(max-width:900px){.reception-hero{grid-template-columns:1fr}.reception-kpis{grid-template-columns:repeat(2,1fr)}.flow-card{grid-template-columns:62px 1fr}.flow-card>div:nth-child(3){grid-column:2}.flow-actions{grid-column:1/-1;justify-content:flex-start}.wait-grid{grid-template-columns:1fr}}
 
+
+
+  /* DOCUMENTAÇÃO CLÍNICA v2.1 */
+  .clinical-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  .clinical-doc-card{background:var(--grey-soft);border:1px solid var(--border);border-radius:14px;padding:16px;}
+  .clinical-doc-card h3{margin:0 0 12px;font-size:16px;}
+  .clinical-doc-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .clinical-doc-form .full{grid-column:1/-1;}
+  .clinical-doc-list{display:grid;gap:10px;margin-top:14px;}
+  .clinical-doc-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff;}
+  .clinical-doc-icon{width:42px;height:42px;border-radius:11px;background:var(--teal-soft);display:flex;align-items:center;justify-content:center;font-size:21px;}
+  .clinical-doc-title{font-weight:700;font-size:14px;}
+  .clinical-doc-meta{color:var(--ink-soft);font-size:12px;margin-top:3px;}
+  .signature-wrap{border:1px dashed var(--ink-soft);border-radius:12px;background:#fff;padding:8px;}
+  #clinical-signature{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;}
+  .upload-zone{border:2px dashed var(--border);border-radius:12px;padding:14px;background:#fff;text-align:center;}
+  .doc-badge{display:inline-flex;padding:3px 8px;border-radius:999px;background:var(--teal-soft);color:var(--teal-deep);font-size:11px;font-weight:700;text-transform:uppercase;}
+  .clinical-alert{padding:12px 14px;border-radius:10px;margin-bottom:12px;background:var(--success-soft);color:var(--teal-deep);font-size:13px;}
+  @media(max-width:760px){.clinical-doc-grid,.clinical-doc-form{grid-template-columns:1fr}.clinical-doc-form .full{grid-column:auto}.clinical-doc-item{grid-template-columns:auto 1fr}.clinical-doc-item .row-actions{grid-column:1/-1}}
+
 </style>
 </head>
 <body>
@@ -381,7 +401,8 @@ var state = {
   recordTab: 'anamnese',
   recordLoading: false,
   recordError: '',
-  recordData: {prontuario:null,evolucoes:[],odontograma:[]},
+  recordData: {prontuario:null,evolucoes:[],odontograma:[],documentos:[]},
+  clinicalDocMessage:'',
   selectedTooth: null,
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
@@ -625,7 +646,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.0.0 · agenda, recepção, prontuário e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.1.0 · agenda, recepção, prontuário e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -635,7 +656,7 @@ function renderHeader(){
   '<div class="topbar">' +
     '<div class="brand">' +
       '<div class="brand-mark"><img src="'+LOGO_ICON+'" alt="Instituto Lins Rabello"></div>' +
-      '<div class="brand-text"><div class="name">Instituto Lins Rabello <span class="version-badge">ERP 2.0</span></div><div class="sub">Odontologia integrada</div></div>' +
+      '<div class="brand-text"><div class="name">Instituto Lins Rabello <span class="version-badge">ERP 2.1</span></div><div class="sub">Odontologia integrada</div></div>' +
     '</div>' +
     '<div style="display:flex;align-items:center;gap:8px;"><button class="btn btn-ghost btn-sm install-app" data-action="install-app">Instalar app</button><div class="role-toggle">' +
       '<button data-role="patient" class="'+(state.role==='patient'?'active':'')+'">Sou paciente</button>' +
@@ -1198,10 +1219,11 @@ function renderClinicalRecord(){
   out+='<div class="record-head"><div><h2>Prontuário — '+esc(p.name||'Paciente')+'</h2><div style="color:var(--ink-soft);font-size:13px;">'+esc(p.phone||'Sem telefone')+(p.birthDate?' · Nascimento: '+dayDisplay(p.birthDate):'')+'</div></div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="close-record">Fechar</button></div></div>';
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
-  out+='<div class="record-tabs">'+[['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="record-tabs">'+[['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(state.recordTab==='anamnese') out+=renderAnamnesis();
   else if(state.recordTab==='odontograma') out+=renderOdontogram();
   else if(state.recordTab==='evolucoes') out+=renderEvolutions();
+  else if(state.recordTab==='documentos') out+=renderClinicalDocuments(p);
   else out+=renderRecordHistory(p);
   out+='</div>';
   return out;
@@ -1240,6 +1262,80 @@ function renderEvolutions(){
   list.forEach(function(e){out+='<div class="evolution-item"><div class="evolution-meta">'+(e.data_atendimento?dayDisplay(e.data_atendimento):'')+(e.profissional_email?' · '+esc(e.profissional_email):'')+'</div><strong>'+esc(e.procedimento||'Atendimento clínico')+'</strong><div style="margin-top:6px;white-space:pre-wrap;">'+esc(e.descricao||'')+'</div>'+(e.conduta?'<div style="margin-top:7px;"><strong>Conduta:</strong> '+esc(e.conduta)+'</div>':'')+(e.observacoes?'<div style="margin-top:5px;color:var(--ink-soft);">'+esc(e.observacoes)+'</div>':'')+'</div>';});
   return out;
 }
+
+function clinicalDocIcon(type){var m={receita:'💊',atestado:'📄',declaracao:'📝',orientacao:'📋',foto:'📷',radiografia:'🩻',exame:'🔬',pdf:'📎',outro:'📁'};return m[type]||'📁';}
+function clinicalDocLabel(type){var m={receita:'Receita',atestado:'Atestado',declaracao:'Declaração',orientacao:'Orientação',foto:'Foto',radiografia:'Radiografia',exame:'Exame',pdf:'PDF / Documento',outro:'Outro'};return m[type]||type||'Documento';}
+function documentTemplates(type,p){
+  var name=(p&&p.name)||'Paciente';
+  if(type==='receita') return 'USO ORAL\n\n1. __________________________________________\n   Tomar _____________________________________\n\nOrientações: _________________________________';
+  if(type==='atestado') return 'Atesto, para os devidos fins, que '+name+' esteve sob atendimento odontológico nesta data, necessitando de afastamento de suas atividades por ____ dia(s).';
+  if(type==='declaracao') return 'Declaro, para os devidos fins, que '+name+' compareceu ao Instituto Lins Rabello para atendimento odontológico nesta data, no período das ____ às ____.';
+  if(type==='orientacao') return 'ORIENTAÇÕES AO PACIENTE\n\n• Siga corretamente as recomendações profissionais.\n• Em caso de dor intensa, sangramento persistente ou alteração inesperada, entre em contato com a clínica.\n• Retorno conforme orientação.';
+  return '';
+}
+function renderClinicalDocuments(p){
+  var list=state.recordData.documentos||[], out='';
+  if(state.clinicalDocMessage) out+='<div class="clinical-alert">'+esc(state.clinicalDocMessage)+'</div>';
+  out+='<div class="clinical-doc-grid">';
+  out+='<div class="clinical-doc-card"><h3>Gerar documento clínico</h3><div class="clinical-doc-form">';
+  out+='<div class="field"><label>Tipo</label><select id="doc-type"><option value="receita">Receita</option><option value="atestado">Atestado</option><option value="declaracao">Declaração de comparecimento</option><option value="orientacao">Orientações</option></select></div>';
+  out+='<div class="field"><label>Data</label><input id="doc-date" type="date" value="'+todayISO()+'"></div>';
+  out+='<div class="field full"><label>Título</label><input id="doc-title" value="Receita odontológica" placeholder="Título do documento"></div>';
+  out+='<div class="field full"><label>Conteúdo</label><textarea id="doc-content" class="record-textarea" style="min-height:190px;">'+esc(documentTemplates('receita',p))+'</textarea></div>';
+  out+='<div class="field full"><label>Assinatura na tela (opcional)</label><div class="signature-wrap"><canvas id="clinical-signature" width="900" height="260"></canvas></div><button class="btn btn-ghost btn-sm" style="margin-top:7px" data-action="clear-signature">Limpar assinatura</button></div>';
+  out+='</div><button class="btn btn-primary" data-action="save-generated-document">Salvar documento</button></div>';
+  out+='<div class="clinical-doc-card"><h3>Anexar foto, radiografia ou arquivo</h3><div class="clinical-doc-form">';
+  out+='<div class="field"><label>Categoria</label><select id="upload-type"><option value="foto">Foto clínica</option><option value="radiografia">Radiografia</option><option value="exame">Exame / Tomografia</option><option value="pdf">PDF / Documento</option><option value="outro">Outro</option></select></div>';
+  out+='<div class="field"><label>Data</label><input id="upload-date" type="date" value="'+todayISO()+'"></div>';
+  out+='<div class="field full"><label>Título</label><input id="upload-title" placeholder="Ex: Radiografia panorâmica"></div>';
+  out+='<div class="field full"><label>Descrição</label><textarea id="upload-description" class="record-textarea" placeholder="Observações sobre o arquivo"></textarea></div>';
+  out+='<div class="field full upload-zone"><label>Selecione o arquivo</label><input id="clinical-file" type="file" accept="image/*,.pdf,.doc,.docx,.odt"></div>';
+  out+='</div><button class="btn btn-primary" data-action="upload-clinical-file">Enviar arquivo</button></div></div>';
+  out+='<h3>Arquivos e documentos do paciente</h3>';
+  if(!list.length) return out+'<div class="empty-note">Nenhum documento ou imagem anexado.</div>';
+  out+='<div class="clinical-doc-list">';
+  list.forEach(function(d){
+    out+='<div class="clinical-doc-item"><div class="clinical-doc-icon">'+clinicalDocIcon(d.tipo)+'</div><div><div class="clinical-doc-title">'+esc(d.titulo||clinicalDocLabel(d.tipo))+'</div><div class="clinical-doc-meta"><span class="doc-badge">'+esc(clinicalDocLabel(d.tipo))+'</span> · '+(d.document_date?dayDisplay(d.document_date):'')+(d.professional_email?' · '+esc(d.professional_email):'')+'</div>'+(d.descricao?'<div class="clinical-doc-meta">'+esc(d.descricao)+'</div>':'')+'</div><div class="row-actions"><button class="btn btn-primary btn-sm" data-action="open-clinical-document" data-id="'+escAttr(d.id)+'">'+(d.content_text?'Imprimir':'Abrir')+'</button><button class="btn btn-ghost btn-sm" data-action="delete-clinical-document" data-id="'+escAttr(d.id)+'">Excluir</button></div></div>';
+  });
+  out+='</div>'; return out;
+}
+
+function initSignatureCanvas(){
+  var canvas=document.getElementById('clinical-signature'); if(!canvas||canvas.dataset.ready)return; canvas.dataset.ready='1';
+  var ctx=canvas.getContext('2d');ctx.lineWidth=4;ctx.lineCap='round';ctx.strokeStyle='#122A3A';var drawing=false;
+  function point(e){var r=canvas.getBoundingClientRect(),p=e.touches?e.touches[0]:e;return {x:(p.clientX-r.left)*(canvas.width/r.width),y:(p.clientY-r.top)*(canvas.height/r.height)};}
+  function start(e){drawing=true;var p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}
+  function move(e){if(!drawing)return;var p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();}
+  function end(){drawing=false;}
+  canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',end);
+}
+function clearClinicalSignature(){var c=document.getElementById('clinical-signature');if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+function canvasSignatureBlob(){return new Promise(function(resolve){var c=document.getElementById('clinical-signature');if(!c){resolve(null);return;}var blank=document.createElement('canvas');blank.width=c.width;blank.height=c.height;if(c.toDataURL()===blank.toDataURL()){resolve(null);return;}c.toBlob(resolve,'image/png');});}
+function readVal(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+function saveGeneratedClinicalDocument(){
+  var p=patientById(state.recordPatientId), type=readVal('doc-type'), title=readVal('doc-title'), content=readVal('doc-content'), date=readVal('doc-date')||todayISO();
+  if(!title||!content){alert('Informe o título e o conteúdo do documento.');return;}
+  canvasSignatureBlob().then(function(blob){return waitForSupabase(5000).then(function(api){return api.saveGeneratedClinicalDocument(state.recordPatientId,{tipo:type,titulo:title,descricao:'Documento gerado no ERP',document_date:date,content_text:content},blob);});})
+   .then(function(saved){state.recordData.documentos=[saved].concat(state.recordData.documentos||[]);state.clinicalDocMessage='Documento salvo com sucesso.';render();})
+   .catch(function(e){alert('Não foi possível salvar o documento: '+e.message);});
+}
+function uploadClinicalFile(){
+  var f=document.getElementById('clinical-file'),file=f&&f.files?f.files[0]:null;if(!file){alert('Selecione um arquivo.');return;}
+  if(file.size>15*1024*1024){alert('O arquivo deve ter no máximo 15 MB.');return;}
+  var data={tipo:readVal('upload-type'),titulo:readVal('upload-title')||file.name,descricao:readVal('upload-description'),document_date:readVal('upload-date')||todayISO()};
+  waitForSupabase(5000).then(function(api){return api.uploadClinicalFile(state.recordPatientId,data,file);}).then(function(saved){state.recordData.documentos=[saved].concat(state.recordData.documentos||[]);state.clinicalDocMessage='Arquivo enviado com sucesso.';render();}).catch(function(e){alert('Não foi possível enviar o arquivo: '+e.message);});
+}
+function docById(id){return (state.recordData.documentos||[]).find(function(d){return String(d.id)===String(id);});}
+function htmlDocText(v){return esc(v||'').replace(/\n/g,'<br>');}
+function printGeneratedDocument(d,url){
+  var p=patientById(state.recordPatientId), w=window.open('','_blank');if(!w){alert('Permita pop-ups para imprimir o documento.');return;}
+  var signature=url?'<img src="'+url+'" style="max-width:260px;max-height:90px;display:block;margin-top:30px">':'';
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.titulo)+'</title><style>body{font-family:Arial,sans-serif;color:#142b3a;margin:50px;line-height:1.55}.head{text-align:center;border-bottom:2px solid #1b5c56;padding-bottom:16px;margin-bottom:28px}.head h1{margin:0;font-size:22px}.meta{font-size:13px;color:#536b78}.content{white-space:normal;min-height:360px;font-size:16px}.sign{margin-top:35px}.line{width:300px;border-top:1px solid #222;margin-top:8px}.foot{margin-top:45px;border-top:1px solid #ddd;padding-top:10px;font-size:11px;color:#667}</style></head><body><div class="head"><h1>Instituto Lins Rabello</h1><div>Odontologia integrada</div></div><h2>'+esc(d.titulo)+'</h2><div class="meta">Paciente: <strong>'+esc(p?p.name:'')+'</strong> · Data: '+(d.document_date?dayDisplay(d.document_date):'')+'</div><div class="content"><p>'+htmlDocText(d.content_text)+'</p></div><div class="sign">'+signature+'<div class="line"></div><div>Profissional responsável'+(d.professional_email?' · '+esc(d.professional_email):'')+'</div></div><div class="foot">Documento emitido pelo Instituto Lins Rabello ERP.</div><script>setTimeout(function(){window.print()},500)<\/script></body></html>');w.document.close();
+}
+function openClinicalDocument(id){var d=docById(id);if(!d)return;waitForSupabase(5000).then(function(api){return api.getClinicalDocumentUrl(d);}).then(function(url){if(d.content_text)printGeneratedDocument(d,url);else if(url)window.open(url,'_blank');else alert('Arquivo não disponível.');}).catch(function(e){alert('Não foi possível abrir: '+e.message);});}
+function deleteClinicalDocument(id){if(!confirm('Excluir este documento definitivamente?'))return;var d=docById(id);waitForSupabase(5000).then(function(api){return api.deleteClinicalDocument(d);}).then(function(){state.recordData.documentos=(state.recordData.documentos||[]).filter(function(x){return String(x.id)!==String(id);});state.clinicalDocMessage='Documento excluído.';render();}).catch(function(e){alert('Não foi possível excluir: '+e.message);});}
+function updateDocumentTemplate(){var type=readVal('doc-type'),p=patientById(state.recordPatientId),title=document.getElementById('doc-title'),content=document.getElementById('doc-content');var names={receita:'Receita odontológica',atestado:'Atestado odontológico',declaracao:'Declaração de comparecimento',orientacao:'Orientações ao paciente'};if(title)title.value=names[type]||'Documento clínico';if(content)content.value=documentTemplates(type,p);}
+
 function renderRecordHistory(p){
   var hist=patientHistory(p), out='';
   if(!hist.length) return '<div class="empty-note">Nenhuma consulta vinculada a este paciente.</div>';
@@ -1356,6 +1452,11 @@ function attachEvents(){
     else if(a==='save-anamnesis'){ saveAnamnesis(); return; }
     else if(a==='save-tooth'){ saveTooth(t.dataset.id); return; }
     else if(a==='add-evolution'){ addEvolution(); return; }
+    else if(a==='clear-signature'){ clearClinicalSignature(); return; }
+    else if(a==='save-generated-document'){ saveGeneratedClinicalDocument(); return; }
+    else if(a==='upload-clinical-file'){ uploadClinicalFile(); return; }
+    else if(a==='open-clinical-document'){ openClinicalDocument(t.dataset.id); return; }
+    else if(a==='delete-clinical-document'){ deleteClinicalDocument(t.dataset.id); return; }
     else if(a==='comm-refresh'){ loadCommunicationDashboard(true); return; }
     else if(a==='comm-retry'){ retryCommunicationJob(t.dataset.id); return; }
     else if(a==='reset-demo'){ if(confirm('Zerar TODOS os agendamentos, pacientes, despesas e bloqueios? Essa ação não pode ser desfeita.')) resetDemo(); return; }
@@ -1370,6 +1471,9 @@ function attachEvents(){
 
     render();
   };
+
+  root.onchange=function(e){if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();};
+  setTimeout(initSignatureCanvas,0);
 }
 
 
@@ -1377,7 +1481,7 @@ function openClinicalRecord(id){
   if(String(id||'').indexOf('auto-')===0){ alert('Abra e salve o cadastro do paciente antes de criar o prontuário.'); return; }
   state.recordPatientId=id; state.recordTab='anamnese'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
   waitForSupabase(5000).then(function(api){ if(!api||!api.loadClinicalRecord) throw new Error('Módulo do prontuário não foi carregado. Atualize também o arquivo supabase.js.'); return api.loadClinicalRecord(id); })
-    .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[]};state.recordLoading=false;render();})
+    .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};state.recordLoading=false;render();})
     .catch(function(e){state.recordLoading=false;state.recordError=e.message||'Erro ao carregar prontuário.';render();});
 }
 function saveAnamnesis(){
