@@ -196,10 +196,47 @@ async function deleteClinicalDocument(document) {
   return true;
 }
 
+
+async function getTeamProfile(){
+  const user=await requireTeamUser();
+  const {data,error}=await client.from('team_profiles').select('*').eq('user_id',user.id).maybeSingle();
+  if(error) throw error;
+  if(data) return data;
+  const email=(user.email||'').toLowerCase();
+  const role=(email.includes('amanda')||email.includes('ryancsrabello'))?'admin':(email.includes('institutolinsrabello')?'recepcao':'admin');
+  return {user_id:user.id,email:user.email,display_name:user.email,role};
+}
+async function writeAudit(action,entity,entityId,details={}){
+  const user=await requireTeamUser();
+  const {error}=await client.from('audit_logs').insert({user_id:user.id,user_email:user.email||null,action,entity:entity||null,entity_id:entityId?String(entityId):null,details});
+  if(error) throw error;
+  return true;
+}
+async function listAudit(limit=150){
+  await requireTeamUser();
+  const {data,error}=await client.from('audit_logs').select('*').order('created_at',{ascending:false}).limit(limit);
+  if(error) throw error; return data||[];
+}
+async function loadEvolutionDraft(patientId){
+  const user=await requireTeamUser();
+  const {data,error}=await client.from('clinical_drafts').select('data').eq('patient_id',patientId).eq('user_id',user.id).maybeSingle();
+  if(error) throw error; return data?.data||null;
+}
+async function saveEvolutionDraft(patientId,data){
+  const user=await requireTeamUser();
+  const {error}=await client.from('clinical_drafts').upsert({patient_id:patientId,user_id:user.id,data,updated_at:new Date().toISOString()},{onConflict:'patient_id,user_id'});
+  if(error) throw error; return true;
+}
+async function deleteEvolutionDraft(patientId){
+  const user=await requireTeamUser();
+  const {error}=await client.from('clinical_drafts').delete().eq('patient_id',patientId).eq('user_id',user.id);
+  if(error) throw error; return true;
+}
+
 window.ILRSupabase = {
   client, loadStore, saveStore, subscribeStore, createPublicBooking, lookupAppointments,
   signIn, signOut, getCurrentUser, isAuthorizedTeamMember, onAuthChange,
-  loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution,
+  loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution, getTeamProfile, writeAudit, listAudit, loadEvolutionDraft, saveEvolutionDraft, deleteEvolutionDraft,
   saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument
 };
 window.dispatchEvent(new Event('ilr-supabase-ready'));

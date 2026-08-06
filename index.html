@@ -339,6 +339,28 @@
   .clinical-alert{padding:12px 14px;border-radius:10px;margin-bottom:12px;background:var(--success-soft);color:var(--teal-deep);font-size:13px;}
   @media(max-width:760px){.clinical-doc-grid,.clinical-doc-form{grid-template-columns:1fr}.clinical-doc-form .full{grid-column:auto}.clinical-doc-item{grid-template-columns:auto 1fr}.clinical-doc-item .row-actions{grid-column:1/-1}}
 
+
+  /* v2.2 Segurança e produtividade clínica */
+  .profile-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--teal-soft);color:var(--teal-deep);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+  .clinical-alerts{display:grid;gap:8px;margin:14px 0 18px;}
+  .clinical-alert{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:11px;background:var(--danger-soft);color:var(--danger);font-size:13px;font-weight:600;border:1px solid rgba(214,69,80,.18);}
+  .clinical-alert.warning{background:var(--amber-soft);color:#8a5c14;border-color:rgba(232,163,61,.25);}
+  .template-row{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0 14px;}
+  .template-chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 10px;font-size:11.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+  .template-chip:hover{border-color:var(--teal);color:var(--teal-deep);}
+  .autosave-status{font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;}
+  .autosave-dot{width:7px;height:7px;border-radius:50%;background:var(--success);}
+  .timeline-clinical{position:relative;padding-left:25px;margin:8px 0;}
+  .timeline-clinical:before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--border);}
+  .timeline-entry{position:relative;padding:0 0 18px 8px;}
+  .timeline-entry:before{content:"";position:absolute;left:-22px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--teal);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--border);}
+  .timeline-entry .date{font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+  .timeline-entry .title{font-weight:700;margin:3px 0;}
+  .audit-list{display:grid;gap:9px;}
+  .audit-item{padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;}
+  .audit-item .meta{font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;}
+  .permission-note{padding:14px;border-radius:12px;background:var(--amber-soft);color:#805510;font-size:13px;}
+
 </style>
 </head>
 <body>
@@ -404,6 +426,8 @@ var state = {
   recordData: {prontuario:null,evolucoes:[],odontograma:[],documentos:[]},
   clinicalDocMessage:'',
   selectedTooth: null,
+  staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false,
+  evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
@@ -822,16 +846,47 @@ function renderGate(){
 }
 
 /* ---- STAFF ---- */
+
+function currentStaffRole(){ return (state.staffProfile&&state.staffProfile.role)||'admin'; }
+function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepcao:'Recepção'}[r]||'Equipe'; }
+function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
+function allowedStaffTabs(){
+  var role=currentStaffRole();
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes'];
+  if(role==='dentista') return ['visao','recepcao','agenda','pacientes','confirmacoes','relatorios'];
+  return ['visao','recepcao','agenda','financeiro','pacientes','confirmacoes','relatorios','auditoria'];
+}
+function auditAction(action,entity,entityId,details){
+  waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
+}
+function clinicalAlerts(){
+  var r=state.recordData.prontuario||{}, alerts=[];
+  if(r.alergias&&r.alergias.trim()) alerts.push({text:'Alergias: '+r.alergias,kind:'danger'});
+  if(r.anticoagulante) alerts.push({text:'Paciente em uso de anticoagulante.',kind:'danger'});
+  if(r.hipertensao) alerts.push({text:'Hipertensão relatada.',kind:'warning'});
+  if(r.diabetes) alerts.push({text:'Diabetes relatado.',kind:'warning'});
+  if(r.gestante) alerts.push({text:'Paciente gestante.',kind:'warning'});
+  if(r.medicamentos&&r.medicamentos.trim()) alerts.push({text:'Medicamentos em uso: '+r.medicamentos,kind:'warning'});
+  return alerts;
+}
+function renderClinicalAlerts(){
+  var a=clinicalAlerts(); if(!a.length)return '';
+  return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':'')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
+}
+
 function renderStaff(){
   var out = '';
   if(state.staffEmail){
-    out += '<div style="display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:13px;margin-bottom:10px;">' +
-      '<span class="dot" style="background:var(--teal);"></span>Conectado(a) como <strong style="color:var(--ink);">'+esc(state.staffEmail)+'</strong>' +
+    out += '<div style="display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:13px;margin-bottom:10px;flex-wrap:wrap;">' +
+      '<span class="dot" style="background:var(--teal);"></span>Conectado(a) como <strong style="color:var(--ink);">'+esc(state.staffProfile.display_name||state.staffEmail)+'</strong>' +
+      '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var tabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios']];
+  var allTabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['auditoria','Auditoria']];
+  var allowed=allowedStaffTabs();
+  if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
-  tabs.forEach(function(t){ out += '<button data-stafftab="'+t[0]+'" class="'+(state.staffTab===t[0]?'active':'')+'">'+t[1]+'</button>'; });
+  allTabs.filter(function(t){return allowed.indexOf(t[0])>=0;}).forEach(function(t){ out += '<button data-stafftab="'+t[0]+'" class="'+(state.staffTab===t[0]?'active':'')+'">'+t[1]+'</button>'; });
   out += '</div>';
 
   if(state.staffTab==='visao') out += renderVisaoGeral();
@@ -841,7 +896,7 @@ function renderStaff(){
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
-
+  else if(state.staffTab==='auditoria') out += renderAudit();
   return out;
 }
 
@@ -989,7 +1044,7 @@ function renderRecepcao(){
     if(st==='chegou') out+='<button class="flow-btn blue" data-action="reception-status" data-id="'+a.id+'" data-status="atendimento">Iniciar</button>';
     if(st==='atendimento') out+='<button class="flow-btn primary" data-action="reception-status" data-id="'+a.id+'" data-status="realizado">Finalizar</button>';
     if(st!=='realizado'&&st!=='falta') out+='<button class="flow-btn danger" data-action="reception-status" data-id="'+a.id+'" data-status="falta">Faltou</button>';
-    out+='<button class="flow-btn" data-action="reception-record" data-id="'+a.id+'">Prontuário</button>';
+    if(canAccessClinical()) out+='<button class="flow-btn" data-action="reception-record" data-id="'+a.id+'">Prontuário</button>';
     if(st==='realizado') out+='<button class="flow-btn" data-action="reception-payment" data-id="'+a.id+'">Receber</button>';
     out+='</div></div>';
   });
@@ -1188,10 +1243,10 @@ function renderPacientes(){
     out+='<div class="patients-table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>CPF</th><th>Consultas</th><th>Última visita</th><th>Ações</th></tr></thead><tbody>';
     list.forEach(function(p){
       var h=patientHistory(p), faltas=h.filter(function(a){return a.status==='falta';}).length;
-      out+='<tr><td>'+esc(p.name||'Sem nome')+(faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone||'—')+'</td><td class="mono">'+esc(p.cpf||'—')+'</td><td>'+h.length+'</td><td>'+(h.length?dayDisplay(h[0].date):'—')+'</td><td><div class="row-actions"><button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></td></tr>';
+      out+='<tr><td>'+esc(p.name||'Sem nome')+(faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone||'—')+'</td><td class="mono">'+esc(p.cpf||'—')+'</td><td>'+h.length+'</td><td>'+(h.length?dayDisplay(h[0].date):'—')+'</td><td><div class="row-actions">'+(canAccessClinical()?'<button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button>':'')+'<button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></td></tr>';
     });
     out+='</tbody></table></div><div class="patient-card-list">';
-    list.forEach(function(p){var h=patientHistory(p);out+='<div class="patient-mobile-card"><strong>'+esc(p.name||'Sem nome')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0;">'+esc(p.phone||'Sem telefone')+' · '+h.length+' consulta(s)</div><div class="row-actions"><button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></div>';});
+    list.forEach(function(p){var h=patientHistory(p);out+='<div class="patient-mobile-card"><strong>'+esc(p.name||'Sem nome')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0;">'+esc(p.phone||'Sem telefone')+' · '+h.length+' consulta(s)</div><div class="row-actions">'+(canAccessClinical()?'<button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button>':'')+'<button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></div>';});
     out+='</div>';
   }
   if(state.patientEditingId && state.patientEditingId!=='new'){
@@ -1219,11 +1274,13 @@ function renderClinicalRecord(){
   out+='<div class="record-head"><div><h2>Prontuário — '+esc(p.name||'Paciente')+'</h2><div style="color:var(--ink-soft);font-size:13px;">'+esc(p.phone||'Sem telefone')+(p.birthDate?' · Nascimento: '+dayDisplay(p.birthDate):'')+'</div></div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="close-record">Fechar</button></div></div>';
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
-  out+='<div class="record-tabs">'+[['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+=renderClinicalAlerts();
+  out+='<div class="record-tabs">'+[['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(state.recordTab==='anamnese') out+=renderAnamnesis();
   else if(state.recordTab==='odontograma') out+=renderOdontogram();
   else if(state.recordTab==='evolucoes') out+=renderEvolutions();
   else if(state.recordTab==='documentos') out+=renderClinicalDocuments(p);
+  else if(state.recordTab==='timeline') out+=renderPatientTimeline(p);
   else out+=renderRecordHistory(p);
   out+='</div>';
   return out;
@@ -1254,13 +1311,34 @@ function renderOdontogram(){
   }
   return out;
 }
+function evolutionTemplates(){return [
+  {id:'consulta',label:'Consulta / avaliação',procedure:'Avaliação clínica',description:'Paciente compareceu para avaliação odontológica. Realizado exame clínico e levantamento das necessidades de tratamento.',conduct:'Orientações fornecidas e plano de tratamento discutido com o paciente.'},
+  {id:'restauracao',label:'Restauração',procedure:'Restauração',description:'Realizado procedimento restaurador no elemento dental informado, com remoção de tecido cariado, preparo, condicionamento, sistema adesivo e inserção de resina composta. Ajustes oclusais realizados.',conduct:'Orientado sobre sensibilidade transitória, higiene oral e retorno caso apresente desconforto.'},
+  {id:'exodontia',label:'Exodontia',procedure:'Exodontia',description:'Realizada exodontia sob anestesia local, com técnica compatível ao caso. Hemostasia obtida e procedimento concluído sem intercorrências imediatas.',conduct:'Fornecidas orientações pós-operatórias, prescrição quando indicada e retorno para acompanhamento.'},
+  {id:'endodontia',label:'Endodontia',procedure:'Tratamento endodôntico',description:'Realizada etapa do tratamento endodôntico conforme planejamento, com isolamento, acesso, instrumentação e/ou medicação intracanal.',conduct:'Paciente orientado quanto aos cuidados e à necessidade de continuidade/retorno.'},
+  {id:'retorno',label:'Retorno',procedure:'Retorno clínico',description:'Paciente compareceu para retorno. Evolução clínica avaliada, sem intercorrências relevantes no momento.',conduct:'Mantidas orientações e acompanhamento conforme necessidade.'}
+];}
 function renderEvolutions(){
-  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px;"><h3 style="margin-top:0;">Nova evolução clínica</h3><div class="record-grid"><div class="field"><label>Data do atendimento</label><input type="date" id="ev-date" value="'+todayISO()+'"></div><div class="field"><label>Procedimento</label><input id="ev-procedure" placeholder="Ex: restauração do 36"></div><div class="field full"><label>Descrição / evolução *</label><textarea class="record-textarea" id="ev-description" placeholder="Registre achados clínicos, sintomas e procedimentos realizados"></textarea></div><div class="field"><label>Conduta</label><textarea class="record-textarea" id="ev-conduct" placeholder="Orientações, prescrição e plano"></textarea></div><div class="field"><label>Observações</label><textarea class="record-textarea" id="ev-notes"></textarea></div></div><div class="patient-actions"><span></span><button class="btn btn-primary" data-action="add-evolution">Salvar evolução</button></div></div>';
+  var d=state.evolutionDraft||{}, templates=evolutionTemplates();
+  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px;"><h3 style="margin-top:0;">Nova evolução clínica</h3>'+
+    '<div class="template-row">'+templates.map(function(x){return '<button class="template-chip" data-action="evolution-template" data-id="'+x.id+'">'+x.label+'</button>';}).join('')+'</div>'+
+    '<div class="record-grid"><div class="field"><label>Data do atendimento</label><input type="date" id="ev-date" value="'+escAttr(d.data_atendimento||todayISO())+'"></div><div class="field"><label>Procedimento</label><input id="ev-procedure" value="'+escAttr(d.procedimento||'')+'" placeholder="Ex: restauração do 36"></div><div class="field full"><label>Descrição / evolução *</label><textarea class="record-textarea" id="ev-description" placeholder="Registre achados clínicos, sintomas e procedimentos realizados">'+esc(d.descricao||'')+'</textarea></div><div class="field"><label>Conduta</label><textarea class="record-textarea" id="ev-conduct" placeholder="Orientações, prescrição e plano">'+esc(d.conduta||'')+'</textarea></div><div class="field"><label>Observações</label><textarea class="record-textarea" id="ev-notes">'+esc(d.observacoes||'')+'</textarea></div></div>'+
+    '<div class="patient-actions"><span class="autosave-status"><span class="autosave-dot"></span>'+(state.draftStatus||'Rascunho salvo automaticamente')+'</span><button class="btn btn-primary" data-action="add-evolution">Salvar evolução</button></div></div>';
   var list=state.recordData.evolucoes||[];
   out+='<h3>Histórico de evoluções</h3>';
   if(!list.length) return out+'<div class="empty-note">Nenhuma evolução clínica registrada.</div>';
   list.forEach(function(e){out+='<div class="evolution-item"><div class="evolution-meta">'+(e.data_atendimento?dayDisplay(e.data_atendimento):'')+(e.profissional_email?' · '+esc(e.profissional_email):'')+'</div><strong>'+esc(e.procedimento||'Atendimento clínico')+'</strong><div style="margin-top:6px;white-space:pre-wrap;">'+esc(e.descricao||'')+'</div>'+(e.conduta?'<div style="margin-top:7px;"><strong>Conduta:</strong> '+esc(e.conduta)+'</div>':'')+(e.observacoes?'<div style="margin-top:5px;color:var(--ink-soft);">'+esc(e.observacoes)+'</div>':'')+'</div>';});
   return out;
+}
+
+function renderPatientTimeline(p){
+  var items=[];
+  patientHistory(p).forEach(function(a){items.push({date:a.date,title:procById(a.procedureId).name,detail:'Consulta às '+a.time+' · '+STATUS_LABEL[a.status],type:'consulta'});});
+  (state.recordData.evolucoes||[]).forEach(function(e){items.push({date:e.data_atendimento||String(e.criado_em||'').slice(0,10),title:e.procedimento||'Evolução clínica',detail:e.descricao||'',type:'evolucao'});});
+  (state.recordData.documentos||[]).forEach(function(d){items.push({date:d.document_date||String(d.created_at||'').slice(0,10),title:d.titulo||clinicalDocLabel(d.tipo),detail:clinicalDocLabel(d.tipo),type:'documento'});});
+  items.sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));});
+  if(!items.length)return '<div class="empty-note">Nenhum evento registrado na linha do tempo.</div>';
+  return '<div class="timeline-clinical">'+items.map(function(x){return '<div class="timeline-entry"><div class="date">'+(x.date?dayDisplay(x.date):'Sem data')+' · '+esc(x.type)+'</div><div class="title">'+esc(x.title)+'</div><div style="color:var(--ink-soft);font-size:13px;white-space:pre-wrap;">'+esc(x.detail||'')+'</div></div>';}).join('')+'</div>';
 }
 
 function clinicalDocIcon(type){var m={receita:'💊',atestado:'📄',declaracao:'📝',orientacao:'📋',foto:'📷',radiografia:'🩻',exame:'🔬',pdf:'📎',outro:'📁'};return m[type]||'📁';}
@@ -1383,6 +1461,21 @@ function exportBackup(){downloadText('backup-instituto-lins-rabello-'+todayISO()
 function restoreBackupFile(file){
   if(!file)return;var reader=new FileReader();reader.onload=function(){try{var data=JSON.parse(reader.result),incoming=data.store||data;if(!incoming||!Array.isArray(incoming.appointments))throw new Error('Arquivo inválido.');if(!confirm('Restaurar este backup substituirá os dados atuais do sistema. Deseja continuar?'))return;store=incoming;persist();alert('Backup restaurado com sucesso.');}catch(e){alert('Não foi possível restaurar: '+e.message);}};reader.readAsText(file);
 }
+
+function renderAudit(){
+  if(currentStaffRole()!=='admin') return '<div class="permission-note">Somente administradores podem consultar a auditoria.</div>';
+  var out='<div class="section-title">Log de auditoria <button class="btn btn-ghost btn-sm" data-action="audit-refresh">Atualizar</button></div>';
+  if(state.auditLoading)return out+'<div class="loading">Carregando auditoria…</div>';
+  if(!state.auditLogs.length)return out+'<div class="card empty-state">Nenhuma ação registrada ainda.</div>';
+  out+='<div class="audit-list">';
+  state.auditLogs.forEach(function(x){out+='<div class="audit-item"><div class="meta">'+esc(x.user_email||'Usuário')+' · '+new Date(x.created_at).toLocaleString('pt-BR')+'</div><strong>'+esc(x.action||'Ação')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin-top:3px;">'+esc(x.entity||'')+(x.entity_id?' · '+esc(String(x.entity_id)):'')+'</div></div>';});
+  return out+'</div>';
+}
+function loadAudit(){
+  state.auditLoading=true;render();
+  waitForSupabase(5000).then(function(api){return api.listAudit(150);}).then(function(rows){state.auditLogs=rows||[];state.auditLoading=false;render();}).catch(function(e){state.auditLoading=false;alert('Não foi possível carregar auditoria: '+e.message);render();});
+}
+
 function renderRelatorios(){
   var month=monthRef(), fs=financeSummary(month), monthAppts=store.appointments.filter(function(a){return inMonth(a.date,month);});
   var total=monthAppts.filter(function(a){return a.status!=='cancelado';}).length, done=monthAppts.filter(function(a){return a.status==='realizado';}).length, abs=monthAppts.filter(function(a){return a.status==='falta';}).length;
@@ -1406,7 +1499,7 @@ function attachEvents(){
     if(!t) return;
 
     if(t.dataset.role){ state.role = t.dataset.role; render(); return; }
-    if(t.dataset.stafftab){ state.staffTab = t.dataset.stafftab; render(); return; }
+    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='auditoria')loadAudit(); else render(); return; }
 
     var a = t.dataset.action;
     var b = state.booking;
@@ -1445,13 +1538,15 @@ function attachEvents(){
     else if(a==='save-patient'){ savePatient(t.dataset.id); return; }
     else if(a==='delete-patient'){ deletePatient(t.dataset.id); return; }
     else if(a==='patient-search'){ var ps=document.getElementById('pt-search'); state.patientSearch=ps?ps.value:''; render(); return; }
-    else if(a==='open-record'){ openClinicalRecord(t.dataset.id); return; }
+    else if(a==='open-record'){ if(!canAccessClinical()){alert('Seu perfil não possui acesso ao prontuário clínico.');return;} openClinicalRecord(t.dataset.id); return; }
     else if(a==='close-record'){ state.recordPatientId=null; state.selectedTooth=null; render(); return; }
     else if(a==='record-tab'){ state.recordTab=t.dataset.id; render(); return; }
     else if(a==='select-tooth'){ state.selectedTooth=t.dataset.id; render(); return; }
     else if(a==='save-anamnesis'){ saveAnamnesis(); return; }
     else if(a==='save-tooth'){ saveTooth(t.dataset.id); return; }
     else if(a==='add-evolution'){ addEvolution(); return; }
+    else if(a==='evolution-template'){ applyEvolutionTemplate(t.dataset.id); return; }
+    else if(a==='audit-refresh'){ loadAudit(); return; }
     else if(a==='clear-signature'){ clearClinicalSignature(); return; }
     else if(a==='save-generated-document'){ saveGeneratedClinicalDocument(); return; }
     else if(a==='upload-clinical-file'){ uploadClinicalFile(); return; }
@@ -1473,32 +1568,50 @@ function attachEvents(){
   };
 
   root.onchange=function(e){if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();};
+  root.oninput=function(e){if(e.target&&['ev-date','ev-procedure','ev-description','ev-conduct','ev-notes'].indexOf(e.target.id)>=0)scheduleEvolutionDraftSave();};
   setTimeout(initSignatureCanvas,0);
 }
 
+
+
+var evolutionDraftTimer=null;
+function readEvolutionDraft(){function v(id){var e=document.getElementById(id);return e?e.value:'';}return {data_atendimento:v('ev-date')||todayISO(),procedimento:v('ev-procedure'),descricao:v('ev-description'),conduta:v('ev-conduct'),observacoes:v('ev-notes')};}
+function scheduleEvolutionDraftSave(){
+  state.evolutionDraft=readEvolutionDraft(); state.draftStatus='Salvando rascunho…';
+  clearTimeout(evolutionDraftTimer); evolutionDraftTimer=setTimeout(function(){
+    var draft=state.evolutionDraft;
+    try{localStorage.setItem('ilr-evolution-draft-'+state.recordPatientId,JSON.stringify(draft));}catch(e){}
+    waitForSupabase(2000).then(function(api){return api&&api.saveEvolutionDraft?api.saveEvolutionDraft(state.recordPatientId,draft):null;}).then(function(){state.draftStatus='Rascunho salvo às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});var el=document.querySelector('.autosave-status');if(el)el.innerHTML='<span class="autosave-dot"></span>'+state.draftStatus;}).catch(function(){state.draftStatus='Rascunho salvo neste dispositivo';});
+  },1200);
+}
+function applyEvolutionTemplate(id){
+  var t=evolutionTemplates().find(function(x){return x.id===id;});if(!t)return;
+  var p=document.getElementById('ev-procedure'),d=document.getElementById('ev-description'),c=document.getElementById('ev-conduct');
+  if(p)p.value=t.procedure;if(d)d.value=t.description;if(c)c.value=t.conduct;scheduleEvolutionDraftSave();
+}
 
 function openClinicalRecord(id){
   if(String(id||'').indexOf('auto-')===0){ alert('Abra e salve o cadastro do paciente antes de criar o prontuário.'); return; }
   state.recordPatientId=id; state.recordTab='anamnese'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
   waitForSupabase(5000).then(function(api){ if(!api||!api.loadClinicalRecord) throw new Error('Módulo do prontuário não foi carregado. Atualize também o arquivo supabase.js.'); return api.loadClinicalRecord(id); })
-    .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};state.recordLoading=false;render();})
+    .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};return waitForSupabase(2000).then(function(api){return api&&api.loadEvolutionDraft?api.loadEvolutionDraft(id):null;}).catch(function(){return null;});}).then(function(draft){var local=null;try{local=JSON.parse(localStorage.getItem('ilr-evolution-draft-'+id)||'null');}catch(e){} state.evolutionDraft=draft||local||{data_atendimento:todayISO(),procedimento:'',descricao:'',conduta:'',observacoes:''};state.draftStatus='Rascunho salvo automaticamente';state.recordLoading=false;render();})
     .catch(function(e){state.recordLoading=false;state.recordError=e.message||'Erro ao carregar prontuário.';render();});
 }
 function saveAnamnesis(){
   function val(id){var e=document.getElementById(id);return e?e.value.trim():'';} function checked(id){var e=document.getElementById(id);return !!(e&&e.checked);}
   var data={queixa_principal:val('rec-queixa'),historico_medico:val('rec-historico'),alergias:val('rec-alergias'),medicamentos:val('rec-medicamentos'),hipertensao:checked('rec-hipertensao'),diabetes:checked('rec-diabetes'),anticoagulante:checked('rec-anticoagulante'),gestante:checked('rec-gestante'),cirurgia_previa:checked('rec-cirurgia'),observacoes:val('rec-observacoes')};
-  waitForSupabase(5000).then(function(api){return api.saveAnamnesis(state.recordPatientId,data);}).then(function(saved){state.recordData.prontuario=saved;state.patientMessage='Anamnese salva com sucesso.';render();}).catch(function(e){alert('Não foi possível salvar a anamnese: '+e.message);});
+  waitForSupabase(5000).then(function(api){return api.saveAnamnesis(state.recordPatientId,data);}).then(function(saved){state.recordData.prontuario=saved;state.patientMessage='Anamnese salva com sucesso.';auditAction('salvou anamnese','prontuario',state.recordPatientId,{});render();}).catch(function(e){alert('Não foi possível salvar a anamnese: '+e.message);});
 }
 function saveTooth(tooth){
   var c=document.getElementById('tooth-condition'),n=document.getElementById('tooth-notes');
   var data={condicao:c?c.value:'Saudável',observacoes:n?n.value.trim():''};
-  waitForSupabase(5000).then(function(api){return api.saveTooth(state.recordPatientId,tooth,data);}).then(function(saved){var list=state.recordData.odontograma||[],idx=list.findIndex(function(x){return String(x.dente)===String(tooth);});if(idx>=0)list[idx]=saved;else list.push(saved);state.recordData.odontograma=list;render();}).catch(function(e){alert('Não foi possível salvar o dente: '+e.message);});
+  waitForSupabase(5000).then(function(api){return api.saveTooth(state.recordPatientId,tooth,data);}).then(function(saved){var list=state.recordData.odontograma||[],idx=list.findIndex(function(x){return String(x.dente)===String(tooth);});if(idx>=0)list[idx]=saved;else list.push(saved);state.recordData.odontograma=list;auditAction('atualizou odontograma','dente',tooth,{condicao:data.condicao});render();}).catch(function(e){alert('Não foi possível salvar o dente: '+e.message);});
 }
 function addEvolution(){
   function val(id){var e=document.getElementById(id);return e?e.value.trim():'';}
   var data={data_atendimento:val('ev-date')||todayISO(),procedimento:val('ev-procedure'),descricao:val('ev-description'),conduta:val('ev-conduct'),observacoes:val('ev-notes')};
   if(!data.descricao){alert('Preencha a descrição da evolução clínica.');return;}
-  waitForSupabase(5000).then(function(api){return api.addEvolution(state.recordPatientId,data);}).then(function(saved){state.recordData.evolucoes=[saved].concat(state.recordData.evolucoes||[]);render();}).catch(function(e){alert('Não foi possível salvar a evolução: '+e.message);});
+  waitForSupabase(5000).then(function(api){return api.addEvolution(state.recordPatientId,data);}).then(function(saved){state.recordData.evolucoes=[saved].concat(state.recordData.evolucoes||[]);state.evolutionDraft={data_atendimento:todayISO(),procedimento:'',descricao:'',conduta:'',observacoes:''};try{localStorage.removeItem('ilr-evolution-draft-'+state.recordPatientId);}catch(e){} waitForSupabase(1000).then(function(api){if(api&&api.deleteEvolutionDraft)return api.deleteEvolutionDraft(state.recordPatientId);});auditAction('registrou evolução clínica','evolucao',saved.id,{procedimento:data.procedimento});render();}).catch(function(e){alert('Não foi possível salvar a evolução: '+e.message);});
 }
 
 function readPatientForm(){
@@ -1529,7 +1642,7 @@ function savePatient(id){
   record.updatedAt=new Date().toISOString();
   if(savedIndex>=0) store.patients[savedIndex]=record; else store.patients.push(record);
   state.patientEditingId=record.id;
-  state.patientMessage='Paciente salvo com sucesso.';
+  state.patientMessage='Paciente salvo com sucesso.';auditAction('salvou paciente','paciente',record.id,{nome:record.name});
   persist();
 }
 
@@ -1646,14 +1759,14 @@ function doGate(){
         if(fullStore) store = normalizeStore(fullStore);
         writeLocalStore(store);
         realtimeStarted = false;
-        state.role = 'staff';
-        state.staffTab = 'visao';
+        return waitForSupabase(2000).then(function(api){return api&&api.getTeamProfile?api.getTeamProfile():null;}).then(function(profile){state.staffProfile=profile||{role:'admin',display_name:''};state.role = 'staff';
+        state.staffTab = allowedStaffTabs()[0];
         state.staffUser = user ? user.id : null;
         state.staffEmail = user ? user.email : email;
         state.gateLoading = false;
         state.gateError = false;
         waitForSupabase(1000).then(startRealtime);
-        render();
+        auditAction('entrou no sistema','sessao',state.staffUser,{});render();});
       });
     });
   }).catch(function(error){
@@ -1683,6 +1796,7 @@ function doLogout(){
     state.role = 'gate';
     state.staffUser = null;
     state.staffEmail = null;
+    state.staffProfile={role:'admin',display_name:''};
     state.gateError = false;
     realtimeStarted = false;
     render();
@@ -1702,6 +1816,7 @@ function restoreStaffSession(cb){
       if(authorized){
         state.staffUser = user.id;
         state.staffEmail = user.email || '';
+        return waitForSupabase(2000).then(function(api){return api&&api.getTeamProfile?api.getTeamProfile():null;}).then(function(p){state.staffProfile=p||{role:'admin',display_name:''};return true;});
       }
       return authorized;
     });
@@ -1713,13 +1828,14 @@ function restoreStaffSession(cb){
 
 function setReceptionStatus(id,status){
   var a=(store.appointments||[]).find(function(x){return x.id===id;}); if(!a)return;
-  a.status=status; a.flowUpdatedAt=new Date().toISOString();
+  a.status=status; auditAction('alterou status de consulta','agendamento',id,{status:status}); a.flowUpdatedAt=new Date().toISOString();
   if(status==='chegou') a.checkedInAt=new Date().toISOString();
   if(status==='atendimento') a.startedAt=new Date().toISOString();
   if(status==='realizado') a.finishedAt=new Date().toISOString();
   persist();
 }
 function openReceptionRecord(apptId){
+  if(!canAccessClinical()){alert('Seu perfil não possui acesso ao prontuário clínico.');return;}
   var a=(store.appointments||[]).find(function(x){return x.id===apptId;}); if(!a)return;
   var digits=(a.phone||'').replace(/\D/g,'');
   var p=(store.patients||[]).find(function(x){return (x.phone||'').replace(/\D/g,'')===digits;});
