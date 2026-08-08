@@ -911,8 +911,8 @@ function loadPatientPortal(){
   waitForSupabase(7000).then(function(api){
     if(!api||!api.loadPatientPortal||!api.verifyPatientPortal)throw new Error('Portal Seguro ainda não está configurado.');
     if(state.portalSession) return api.loadPatientPortal(state.portalSession).then(function(data){return {data:data,api:api};});
-    var birth=(document.getElementById('portal-birth')||{}).value||'';
-    var last4=((document.getElementById('portal-last4')||{}).value||'').replace(/\D/g,'').slice(-4);
+    var birth=((document.getElementById('portal-birth')||{}).value||'').trim();
+    var last4=((document.getElementById('portal-last4')||{}).value||'').replace(/[^0-9]/g,'').slice(-4);
     if(!birth||last4.length!==4) throw new Error('Informe sua data de nascimento e os últimos 4 números do telefone.');
     return api.verifyPatientPortal(state.portalToken,birth,last4).then(function(v){
       if(!v||!v.ok||!v.session_token) throw new Error((v&&v.message)||'Não foi possível validar sua identidade.');
@@ -1647,7 +1647,7 @@ function restoreBackupFile(file){
 
 
 function renderPortalAdmin(){
-  var out='<div class="section-title">Portal do paciente <span class="pill realizado">v2.6.1</span></div>';
+  var out='<div class="section-title">Portal do paciente <span class="pill realizado">v2.6.2</span></div>';
   out+='<div class="card"><h3 style="margin-top:0;">Links individuais</h3><p class="mini-note">Na aba Pacientes, use o botão <strong>Portal</strong>. O ERP gera um novo link seguro e invalida o anterior. Para entrar, o paciente confirma data de nascimento + últimos 4 números do telefone. A sessão dura 30 minutos e o link vence em 30 dias.</p></div>';
   out+='<div class="card"><div class="row-actions" style="justify-content:space-between;"><div><h3 style="margin:0;">Solicitações recebidas</h3><p class="mini-note" style="margin:4px 0 0;">Confirmações, pedidos de reagendamento e cancelamento.</p></div><button class="btn btn-ghost btn-sm" data-action="portal-admin-refresh">Atualizar</button></div>';
   if(state.portalAdminLoading)out+='<div class="loading" style="padding:24px;">Carregando…</div>';
@@ -1662,7 +1662,7 @@ function generatePatientPortal(patientId){
   var last4=String(p.phone||p.sourcePhone||'').replace(/\D/g,'').slice(-4);
   if(last4.length!==4){alert('Cadastre um telefone válido antes de gerar o Portal Seguro.');return;}
   var hist=patientHistory(p).map(function(a){return {id:a.id,date:a.date,time:a.time,status:a.status,procedure:procById(a.procedureId).name,professional:profById(a.professionalId).name};});
-  waitForSupabase(5000).then(function(api){if(!api||!api.upsertPatientPortal)throw new Error('Atualize o supabase.js desta versão.');return api.upsertPatientPortal(patientId,p.name||'Paciente',last4,p.birthDate,hist);}).then(function(token){var url=location.origin+location.pathname+'?portal='+encodeURIComponent(token);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert('Novo link seguro copiado! O link anterior foi invalidado.\n\n'+url+'\n\nO paciente deverá informar a data de nascimento e os últimos 4 números do telefone.');}).catch(function(){prompt('Copie o novo link seguro:',url);});}else prompt('Copie o novo link seguro:',url);auditAction('portal_seguro_gerado','patient',patientId,{patient:p.name});}).catch(function(e){alert(e.message||'Não foi possível gerar o portal.');});
+  waitForSupabase(5000).then(function(api){if(!api||!api.upsertPatientPortal)throw new Error('Atualize o supabase.js desta versão.');return api.upsertPatientPortal(patientId,p.name||'Paciente',last4,p.birthDate,hist);}).then(function(token){var url=location.origin+location.pathname+'?portal='+encodeURIComponent(token);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert('Novo link seguro copiado! O link anterior foi invalidado.\n\n'+url+'\n\nValidação cadastrada: nascimento '+dayDisplay(p.birthDate)+' e telefone final '+last4+'.\n\nO paciente deve informar exatamente esses dados.');}).catch(function(){prompt('Copie o novo link seguro:',url);});}else prompt('Copie o novo link seguro:',url);auditAction('portal_seguro_gerado','patient',patientId,{patient:p.name});}).catch(function(e){alert(e.message||'Não foi possível gerar o portal.');});
 }
 function revokePatientPortal(patientId){
   var p=patientById(patientId);if(!p)return;

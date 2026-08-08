@@ -253,7 +253,7 @@ async function adminUpdateTeamProfile(userId,changes={}){
 }
 
 
-// ---------- Portal Seguro do Paciente v2.6.1 ----------
+// ---------- Portal Seguro do Paciente v2.6.2 ----------
 async function verifyPatientPortal(token,birthDate,phoneLast4){
   const {data,error}=await client.rpc('portal_verify',{p_token:String(token||''),p_birth_date:birthDate||null,p_phone_last4:String(phoneLast4||'')});
   if(error) throw error; return data||null;
