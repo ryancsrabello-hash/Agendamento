@@ -420,7 +420,7 @@ var state = {
   patientEditingId: null,
   patientMessage: '',
   recordPatientId: null,
-  recordTab: 'anamnese',
+  recordTab: 'saude',
   recordLoading: false,
   recordError: '',
   recordData: {prontuario:null,evolucoes:[],odontograma:[],documentos:[]},
@@ -870,7 +870,8 @@ function clinicalAlerts(){
   return alerts;
 }
 function renderClinicalAlerts(){
-  var a=clinicalAlerts(); if(!a.length)return '';
+  var a=clinicalAlerts();
+  if(!a.length) return '<div class="clinical-alerts"><div class="clinical-alert" style="background:var(--success-soft);color:var(--teal-deep);border-color:rgba(32,149,132,.18);"><span>✓</span><span><strong>Alertas clínicos:</strong> nenhum alerta registrado para este paciente.</span></div></div>';
   return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':'')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
 }
 
@@ -1276,8 +1277,9 @@ function renderClinicalRecord(){
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
   out+=renderClinicalAlerts();
-  out+='<div class="record-tabs">'+[['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
-  if(state.recordTab==='anamnese') out+=renderAnamnesis();
+  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  if(state.recordTab==='saude') out+=renderHealthAlerts();
+  else if(state.recordTab==='anamnese') out+=renderAnamnesis();
   else if(state.recordTab==='odontograma') out+=renderOdontogram();
   else if(state.recordTab==='evolucoes') out+=renderEvolutions();
   else if(state.recordTab==='documentos') out+=renderClinicalDocuments(p);
@@ -1286,6 +1288,26 @@ function renderClinicalRecord(){
   out+='</div>';
   return out;
 }
+
+function renderHealthAlerts(){
+  var r=state.recordData.prontuario||{};
+  function txt(id,label,val,placeholder){return '<div class="field"><label>'+label+'</label><textarea class="record-textarea" id="'+id+'" placeholder="'+escAttr(placeholder||'')+'">'+esc(val||'')+'</textarea></div>';}
+  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px;">'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">'+
+    '<div><h3 style="margin:0 0 6px;">Saúde e alertas clínicos</h3><p style="margin:0;color:var(--ink-soft);font-size:13px;">Registre aqui alergias, medicamentos e condições sistêmicas. Qualquer item marcado aparecerá em destaque no topo do prontuário.</p></div>'+ 
+    '<span class="profile-badge">SEGURANÇA CLÍNICA</span></div></div>';
+  out+='<div class="record-grid">';
+  out+=txt('rec-alergias','Alergias',r.alergias,'Ex.: penicilina, dipirona, látex...');
+  out+=txt('rec-medicamentos','Medicamentos em uso',r.medicamentos,'Inclua anticoagulantes, anti-hipertensivos e outros medicamentos relevantes.');
+  out+='<div class="full"><label>Condições de saúde</label><div class="record-checks">';
+  [['rec-hipertensao','Hipertensão','hipertensao'],['rec-diabetes','Diabetes','diabetes'],['rec-anticoagulante','Uso de anticoagulante','anticoagulante'],['rec-gestante','Gestante','gestante'],['rec-cirurgia','Cirurgia prévia','cirurgia_previa']].forEach(function(x){out+='<label class="record-check"><input type="checkbox" id="'+x[0]+'" '+(r[x[2]]?'checked':'')+'> '+x[1]+'</label>';});
+  out+='</div></div>';
+  out+=txt('rec-historico','Histórico médico',r.historico_medico,'Doenças, internações, cirurgias, acompanhamento médico...');
+  out+=txt('rec-observacoes','Observações clínicas',r.observacoes,'Outras informações relevantes para o atendimento.');
+  out+='<div class="full"><div class="patient-actions"><span style="font-size:12.5px;color:var(--ink-soft);">Esses dados alimentam automaticamente os alertas do prontuário.</span><button class="btn btn-primary" data-action="save-health-alerts">Salvar saúde e alertas</button></div></div></div>';
+  return out;
+}
+
 function renderAnamnesis(){
   var r=state.recordData.prontuario||{};
   function area(id,label,val){return '<div class="field"><label>'+label+'</label><textarea class="record-textarea" id="'+id+'">'+esc(val||'')+'</textarea></div>';}
@@ -1571,6 +1593,7 @@ function attachEvents(){
     else if(a==='close-record'){ state.recordPatientId=null; state.selectedTooth=null; render(); return; }
     else if(a==='record-tab'){ state.recordTab=t.dataset.id; render(); return; }
     else if(a==='select-tooth'){ state.selectedTooth=t.dataset.id; render(); return; }
+    else if(a==='save-health-alerts'){ saveHealthAlerts(); return; }
     else if(a==='save-anamnesis'){ saveAnamnesis(); return; }
     else if(a==='save-tooth'){ saveTooth(t.dataset.id); return; }
     else if(a==='add-evolution'){ addEvolution(); return; }
@@ -1623,11 +1646,35 @@ function applyEvolutionTemplate(id){
 
 function openClinicalRecord(id){
   if(String(id||'').indexOf('auto-')===0){ alert('Abra e salve o cadastro do paciente antes de criar o prontuário.'); return; }
-  state.recordPatientId=id; state.recordTab='anamnese'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
+  state.recordPatientId=id; state.recordTab='saude'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
   waitForSupabase(5000).then(function(api){ if(!api||!api.loadClinicalRecord) throw new Error('Módulo do prontuário não foi carregado. Atualize também o arquivo supabase.js.'); return api.loadClinicalRecord(id); })
     .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};return waitForSupabase(2000).then(function(api){return api&&api.loadEvolutionDraft?api.loadEvolutionDraft(id):null;}).catch(function(){return null;});}).then(function(draft){var local=null;try{local=JSON.parse(localStorage.getItem('ilr-evolution-draft-'+id)||'null');}catch(e){} state.evolutionDraft=draft||local||{data_atendimento:todayISO(),procedimento:'',descricao:'',conduta:'',observacoes:''};state.draftStatus='Rascunho salvo automaticamente';state.recordLoading=false;render();})
     .catch(function(e){state.recordLoading=false;state.recordError=e.message||'Erro ao carregar prontuário.';render();});
 }
+function saveHealthAlerts(){
+  function val(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+  function checked(id){var e=document.getElementById(id);return !!(e&&e.checked);}
+  var current=state.recordData.prontuario||{};
+  var data={
+    queixa_principal:current.queixa_principal||'',
+    historico_medico:val('rec-historico'),
+    alergias:val('rec-alergias'),
+    medicamentos:val('rec-medicamentos'),
+    hipertensao:checked('rec-hipertensao'),
+    diabetes:checked('rec-diabetes'),
+    anticoagulante:checked('rec-anticoagulante'),
+    gestante:checked('rec-gestante'),
+    cirurgia_previa:checked('rec-cirurgia'),
+    observacoes:val('rec-observacoes')
+  };
+  waitForSupabase(5000).then(function(api){return api.saveAnamnesis(state.recordPatientId,data);}).then(function(saved){
+    state.recordData.prontuario=saved||Object.assign({},current,data);
+    state.patientMessage='Saúde e alertas salvos com sucesso.';
+    auditAction('salvou saúde e alertas','prontuario',state.recordPatientId,{});
+    render();
+  }).catch(function(e){alert('Não foi possível salvar saúde e alertas: '+e.message);});
+}
+
 function saveAnamnesis(){
   function val(id){var e=document.getElementById(id);return e?e.value.trim():'';} function checked(id){var e=document.getElementById(id);return !!(e&&e.checked);}
   var data={queixa_principal:val('rec-queixa'),historico_medico:val('rec-historico'),alergias:val('rec-alergias'),medicamentos:val('rec-medicamentos'),hipertensao:checked('rec-hipertensao'),diabetes:checked('rec-diabetes'),anticoagulante:checked('rec-anticoagulante'),gestante:checked('rec-gestante'),cirurgia_previa:checked('rec-cirurgia'),observacoes:val('rec-observacoes')};
