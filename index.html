@@ -372,6 +372,11 @@
   /* v2.4 Estoque Inteligente */
   .stock-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:14px 0 18px}.stock-kpi{padding:16px}.stock-kpi .k{font-size:11px;text-transform:uppercase;color:var(--ink-soft);font-weight:700}.stock-kpi .v{font-family:'Space Grotesk';font-size:23px;font-weight:700;margin-top:4px}.stock-toolbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.stock-toolbar .field{margin:0;min-width:180px}.stock-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stock-form .span-2{grid-column:span 2}.stock-form .span-4{grid-column:span 4}.stock-alert{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:800}.stock-alert.low{background:var(--danger-soft);color:var(--danger)}.stock-alert.exp{background:var(--amber-soft);color:#8a5c14}.stock-alert.ok{background:var(--success-soft);color:var(--teal-deep)}.stock-move{font-size:12px;color:var(--ink-soft)}.recipe-row{display:grid;grid-template-columns:1.4fr .6fr auto;gap:8px;align-items:end;margin:8px 0}.stock-table-wrap{overflow-x:auto}.stock-table-wrap table{min-width:850px}@media(max-width:760px){.stock-form{grid-template-columns:1fr 1fr}.stock-form .span-4,.stock-form .span-2{grid-column:span 2}.recipe-row{grid-template-columns:1fr 90px auto}}
 
+
+/* v2.6 Portal do Paciente */
+.portal-hero{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:30px;border-radius:22px;background:linear-gradient(135deg,#0f3f3b,#1b6b62);color:#fff;margin-bottom:18px;box-shadow:0 18px 48px rgba(15,63,59,.18)}
+.portal-hero h1{margin:4px 0 8px;font-size:clamp(26px,4vw,42px);line-height:1.08}.portal-hero p{margin:0;max-width:720px;color:rgba(255,255,255,.86)}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;opacity:.72}.portal-lock{width:108px;height:108px;border-radius:24px;background:rgba(255,255,255,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;text-align:center}.portal-lock small{font-size:10px;margin-top:7px;color:#fff}.portal-welcome{display:flex;justify-content:space-between;align-items:center;gap:16px}.portal-welcome h2{margin:4px 0}.portal-welcome p{margin:0;color:var(--ink-soft)}.portal-kpi{text-align:center;background:var(--teal-soft);border-radius:16px;padding:14px 18px;min-width:130px}.portal-kpi strong{display:block;font-size:28px;color:var(--teal-deep)}.portal-kpi span{font-size:11px;color:var(--ink-soft)}.portal-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,.8fr);gap:16px;margin-top:16px}.portal-appt{display:grid;grid-template-columns:72px 1fr auto;gap:14px;align-items:center;border-top:1px solid var(--border);padding:16px 0}.portal-appt:first-of-type{border-top:0}.portal-date{width:64px;border-radius:14px;background:var(--grey-soft);padding:10px;text-align:center}.portal-date strong{display:block;font-size:17px}.portal-date span{font-size:12px;color:var(--ink-soft)}.portal-appt-main{display:flex;flex-direction:column;gap:4px}.portal-appt-main>span:not(.pill){font-size:12px;color:var(--ink-soft)}.portal-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.portal-info{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}.portal-info:last-child{border-bottom:0}.portal-info>span{font-size:22px}.portal-info p{margin:3px 0 0;font-size:12.5px;color:var(--ink-soft);line-height:1.45}@media(max-width:760px){.portal-hero{grid-template-columns:1fr;padding:22px}.portal-lock{display:none}.portal-grid{grid-template-columns:1fr}.portal-welcome{align-items:flex-start}.portal-appt{grid-template-columns:58px 1fr}.portal-actions{grid-column:1/-1;justify-content:flex-start}.portal-date{width:54px;padding:8px}.portal-kpi{min-width:100px;padding:10px}.portal-kpi strong{font-size:22px}}
+
 </style>
 </head>
 <body>
@@ -415,7 +420,9 @@ var ACCESS_CODES = { ryan: '1957', amanda: '2831' };
 
 /* ---------------- state ---------------- */
 var state = {
-  role: 'patient', // patient | gate | staff
+  role: (new URLSearchParams(location.search).get('portal') ? 'portal' : 'patient'), // patient | portal | gate | staff
+  portalToken: new URLSearchParams(location.search).get('portal') || '',
+  portalLoading: false, portalError:'', portalData:null, portalRequestMessage:'', portalRequests:[], portalAdminLoading:false,
   staffTab: 'visao',
   gateError: false,
   gateLoading: false,
@@ -703,10 +710,11 @@ function escAttr(s){ return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 function render(){
   var root = document.getElementById('root');
   var html = renderHeader();
-  if(state.role==='patient') html += renderPatient();
+  if(state.role==='portal') html += renderPortal();
+  else if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.0 · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.6.0 · clínica, financeiro, estoque e portal do paciente.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -716,12 +724,11 @@ function renderHeader(){
   '<div class="topbar">' +
     '<div class="brand">' +
       '<div class="brand-mark"><img src="'+LOGO_ICON+'" alt="Instituto Lins Rabello"></div>' +
-      '<div class="brand-text"><div class="name">Instituto Lins Rabello <span class="version-badge">ERP 2.5</span></div><div class="sub">Odontologia integrada</div></div>' +
+      '<div class="brand-text"><div class="name">Instituto Lins Rabello <span class="version-badge">ERP 2.6</span></div><div class="sub">Odontologia integrada</div></div>' +
     '</div>' +
-    '<div style="display:flex;align-items:center;gap:8px;"><button class="btn btn-ghost btn-sm install-app" data-action="install-app">Instalar app</button><div class="role-toggle">' +
-      '<button data-role="patient" class="'+(state.role==='patient'?'active':'')+'">Sou paciente</button>' +
-      '<button data-role="gate" class="'+(state.role!=='patient'?'active':'')+'">Equipe clínica</button>' +
-    '</div></div>' +
+    '<div style="display:flex;align-items:center;gap:8px;"><button class="btn btn-ghost btn-sm install-app" data-action="install-app">Instalar app</button>' +
+      (state.role==='portal' ? '<a class="btn btn-ghost btn-sm" href="'+location.pathname+'">Agendar consulta</a>' : '<div class="role-toggle"><button data-role="patient" class="'+(state.role==='patient'?'active':'')+'">Sou paciente</button><button data-role="gate" class="'+(state.role!=='patient'?'active':'')+'">Equipe clínica</button></div>') +
+    '</div>' +
   '</div>';
 }
 
@@ -869,6 +876,39 @@ function renderLookupResults(){
   return out;
 }
 
+
+/* ---- PORTAL DO PACIENTE ---- */
+function portalStatusLabel(s){return STATUS_LABEL[s]||s||'Agendado';}
+function renderPortal(){
+  var out='<div class="portal-hero"><div><div class="eyebrow">PORTAL DO PACIENTE</div><h1>Seu cuidado, de forma simples.</h1><p>Acompanhe seus próximos horários e envie solicitações ao Instituto Lins Rabello sem acessar informações internas da clínica.</p></div><div class="portal-lock">🔐<small>Acesso individual e protegido</small></div></div>';
+  if(state.portalLoading) return out+'<div class="card loading" style="padding:34px;">Carregando seu portal…</div>';
+  if(state.portalError) return out+'<div class="card"><div class="clinical-alert"><span>⚠</span><span><strong>Não foi possível abrir este acesso.</strong><br>'+esc(state.portalError)+'</span></div><div style="margin-top:16px;"><a class="btn btn-primary" href="'+location.pathname+'">Ir para agendamento</a></div></div>';
+  var d=state.portalData;
+  if(!d) return out+'<div class="card"><button class="btn btn-primary" data-action="portal-load">Abrir meu portal</button></div>';
+  var ap=Array.isArray(d.appointments)?d.appointments:[], today=todayISO();
+  var upcoming=ap.filter(function(a){return a.date>=today&&a.status!=='cancelado'&&a.status!=='falta';}).sort(function(a,b){return (a.date+a.time)>(b.date+b.time)?1:-1;});
+  var history=ap.filter(function(a){return a.date<today||a.status==='realizado'||a.status==='cancelado'||a.status==='falta';}).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?1:-1;}).slice(0,8);
+  out+='<div class="portal-welcome card"><div><div class="eyebrow">BEM-VINDO(A)</div><h2>'+esc(d.display_name||'Paciente')+'</h2><p>Telefone final •••• '+esc(d.phone_last4||'')+'</p></div><div class="portal-kpi"><strong>'+upcoming.length+'</strong><span>próxima(s) consulta(s)</span></div></div>';
+  if(state.portalRequestMessage)out+='<div class="good-card" style="margin-bottom:14px;">'+esc(state.portalRequestMessage)+'</div>';
+  out+='<div class="portal-grid"><div class="card"><h3 style="margin-top:0;">Próximos agendamentos</h3>';
+  if(!upcoming.length) out+='<div class="empty-note">Você não possui consulta futura neste momento.</div><a class="btn btn-primary" href="'+location.pathname+'" style="margin-top:12px;">Agendar consulta</a>';
+  upcoming.forEach(function(a){out+='<div class="portal-appt"><div class="portal-date"><strong>'+dayDisplay(a.date)+'</strong><span>'+a.time+'</span></div><div class="portal-appt-main"><strong>'+esc(a.procedure||'Consulta')+'</strong><span>'+esc(a.professional||'Equipe clínica')+'</span><span class="pill '+escAttr(a.status||'confirmado')+'">'+esc(portalStatusLabel(a.status))+'</span></div><div class="portal-actions"><button class="btn btn-ghost btn-sm" data-action="portal-request" data-type="confirmar" data-id="'+escAttr(a.id)+'">Confirmar</button><button class="btn btn-ghost btn-sm" data-action="portal-request" data-type="reagendar" data-id="'+escAttr(a.id)+'">Reagendar</button><button class="btn btn-ghost btn-sm" data-action="portal-request" data-type="cancelar" data-id="'+escAttr(a.id)+'">Cancelar</button></div></div>';});
+  out+='</div><div class="card"><h3 style="margin-top:0;">Informações rápidas</h3><div class="portal-info"><span>📍</span><div><strong>Instituto Lins Rabello</strong><p>Chegue alguns minutos antes do horário e, se precisar alterar sua consulta, envie uma solicitação por aqui.</p></div></div><div class="portal-info"><span>🦷</span><div><strong>Seu prontuário é privado</strong><p>Informações clínicas internas não são exibidas no portal. O acesso fica restrito à equipe autorizada.</p></div></div><div class="portal-info"><span>📄</span><div><strong>Documentos compartilhados</strong><p>A liberação de documentos pelo portal será feita pela equipe em uma próxima etapa.</p></div></div></div></div>';
+  if(history.length){out+='<div class="card"><h3 style="margin-top:0;">Histórico recente</h3>';history.forEach(function(a){out+='<div class="patient-history-row"><span><strong>'+dayDisplay(a.date)+' às '+a.time+'</strong> · '+esc(a.procedure||'Consulta')+'</span><span class="pill '+escAttr(a.status||'realizado')+'">'+esc(portalStatusLabel(a.status))+'</span></div>';});out+='</div>';}
+  out+='<div class="mini-note" style="text-align:center;margin:18px 0;">Por segurança, não compartilhe o link deste portal com terceiros.</div>';
+  return out;
+}
+function loadPatientPortal(){
+  if(!state.portalToken)return;
+  state.portalLoading=true;state.portalError='';render();
+  waitForSupabase(7000).then(function(api){if(!api||!api.loadPatientPortal)throw new Error('Portal ainda não está configurado.');return api.loadPatientPortal(state.portalToken);}).then(function(data){if(!data)throw new Error('Link inválido, expirado ou desativado.');state.portalData=data;state.portalLoading=false;render();}).catch(function(e){state.portalLoading=false;state.portalError=e.message||'Não foi possível carregar o portal.';render();});
+}
+function submitPortalRequest(type,appointmentId){
+  var msg=type==='cancelar'?'Deseja solicitar o cancelamento desta consulta?':type==='reagendar'?'Deseja solicitar um novo horário?':'Deseja confirmar sua presença?';
+  if(!confirm(msg))return;
+  waitForSupabase(5000).then(function(api){if(!api||!api.submitPortalRequest)throw new Error('Serviço indisponível.');return api.submitPortalRequest(state.portalToken,type,appointmentId,'');}).then(function(){state.portalRequestMessage=type==='confirmar'?'Confirmação enviada à clínica.':'Solicitação enviada à clínica. A equipe poderá entrar em contato com você.';render();}).catch(function(e){alert(e.message||'Não foi possível enviar a solicitação.');});
+}
+
 /* ---- GATE ---- */
 function renderGate(){
   return '<div class="gate-wrap card">' +
@@ -888,9 +928,9 @@ function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepca
 function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
 function allowedStaffTabs(){
   var role=currentStaffRole();
-  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
-  if(role==='dentista') return ['visao','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
-  return ['visao','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','portal','estoque'];
+  if(role==='dentista') return ['visao','recepcao','agenda','pacientes','confirmacoes','portal','estoque','relatorios'];
+  return ['visao','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','portal','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -919,7 +959,7 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['portal','Portal'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
@@ -933,6 +973,7 @@ function renderStaff(){
   else if(state.staffTab==='estoque') out += renderEstoque();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
+  else if(state.staffTab==='portal') out += renderPortalAdmin();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
   else if(state.staffTab==='administracao') out += renderAdministracao();
   else if(state.staffTab==='auditoria') out += renderAudit();
@@ -1341,10 +1382,10 @@ function renderPacientes(){
     out+='<div class="patients-table-wrap"><table><thead><tr><th>Nome</th><th>Telefone</th><th>CPF</th><th>Consultas</th><th>Última visita</th><th>Ações</th></tr></thead><tbody>';
     list.forEach(function(p){
       var h=patientHistory(p), faltas=h.filter(function(a){return a.status==='falta';}).length;
-      out+='<tr><td>'+esc(p.name||'Sem nome')+(faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone||'—')+'</td><td class="mono">'+esc(p.cpf||'—')+'</td><td>'+h.length+'</td><td>'+(h.length?dayDisplay(h[0].date):'—')+'</td><td><div class="row-actions">'+(canAccessClinical()?'<button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button>':'')+'<button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></td></tr>';
+      out+='<tr><td>'+esc(p.name||'Sem nome')+(faltas>=2?'<span class="warn-badge">ATENÇÃO</span>':'')+'</td><td class="mono">'+esc(p.phone||'—')+'</td><td class="mono">'+esc(p.cpf||'—')+'</td><td>'+h.length+'</td><td>'+(h.length?dayDisplay(h[0].date):'—')+'</td><td><div class="row-actions">'+(canAccessClinical()?'<button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button>':'')+'<button class="btn btn-ghost btn-sm" data-action="generate-portal" data-id="'+escAttr(p.id)+'">Portal</button><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></td></tr>';
     });
     out+='</tbody></table></div><div class="patient-card-list">';
-    list.forEach(function(p){var h=patientHistory(p);out+='<div class="patient-mobile-card"><strong>'+esc(p.name||'Sem nome')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0;">'+esc(p.phone||'Sem telefone')+' · '+h.length+' consulta(s)</div><div class="row-actions">'+(canAccessClinical()?'<button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button>':'')+'<button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></div>';});
+    list.forEach(function(p){var h=patientHistory(p);out+='<div class="patient-mobile-card"><strong>'+esc(p.name||'Sem nome')+'</strong><div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0;">'+esc(p.phone||'Sem telefone')+' · '+h.length+' consulta(s)</div><div class="row-actions">'+(canAccessClinical()?'<button class="btn btn-primary btn-sm" data-action="open-record" data-id="'+escAttr(p.id)+'">Prontuário</button>':'')+'<button class="btn btn-ghost btn-sm" data-action="generate-portal" data-id="'+escAttr(p.id)+'">Portal</button><button class="btn btn-ghost btn-sm" data-action="edit-patient" data-id="'+escAttr(p.id)+'">Editar</button><button class="btn btn-ghost btn-sm" data-action="delete-patient" data-id="'+escAttr(p.id)+'">Excluir</button></div></div>';});
     out+='</div>';
   }
   if(state.patientEditingId && state.patientEditingId!=='new'){
@@ -1582,6 +1623,26 @@ function restoreBackupFile(file){
 }
 
 
+
+function renderPortalAdmin(){
+  var out='<div class="section-title">Portal do paciente <span class="pill realizado">v2.6</span></div>';
+  out+='<div class="card"><h3 style="margin-top:0;">Links individuais</h3><p class="mini-note">Na aba Pacientes, use o botão <strong>Portal</strong>. O ERP cria ou atualiza um link individual e o copia para a área de transferência. O link mostra somente os horários daquele paciente e não expõe prontuário, financeiro da clínica ou dados de terceiros.</p></div>';
+  out+='<div class="card"><div class="row-actions" style="justify-content:space-between;"><div><h3 style="margin:0;">Solicitações recebidas</h3><p class="mini-note" style="margin:4px 0 0;">Confirmações, pedidos de reagendamento e cancelamento.</p></div><button class="btn btn-ghost btn-sm" data-action="portal-admin-refresh">Atualizar</button></div>';
+  if(state.portalAdminLoading)out+='<div class="loading" style="padding:24px;">Carregando…</div>';
+  else if(!(state.portalRequests||[]).length)out+='<div class="empty-note" style="margin-top:14px;">Nenhuma solicitação pendente.</div>';
+  else{out+='<div class="stock-table-wrap" style="margin-top:14px;"><table><thead><tr><th>Data</th><th>Paciente</th><th>Solicitação</th><th>Consulta</th><th>Ação</th></tr></thead><tbody>';(state.portalRequests||[]).forEach(function(r){out+='<tr><td>'+new Date(r.created_at).toLocaleString('pt-BR')+'</td><td><strong>'+esc(r.patient_name||'Paciente')+'</strong></td><td>'+esc(r.action||'')+'</td><td>'+esc(r.appointment_label||'—')+'</td><td><button class="btn btn-primary btn-sm" data-action="portal-resolve" data-id="'+r.id+'">Marcar resolvida</button></td></tr>';});out+='</tbody></table></div>';}
+  out+='</div>';return out;
+}
+function generatePatientPortal(patientId){
+  if(String(patientId||'').indexOf('auto-')===0){alert('Abra e salve o cadastro do paciente antes de gerar o portal.');return;}
+  var p=patientById(patientId);if(!p)return;
+  var hist=patientHistory(p).map(function(a){return {id:a.id,date:a.date,time:a.time,status:a.status,procedure:procById(a.procedureId).name,professional:profById(a.professionalId).name};});
+  var last4=String(p.phone||p.sourcePhone||'').replace(/\D/g,'').slice(-4);
+  waitForSupabase(5000).then(function(api){if(!api||!api.upsertPatientPortal)throw new Error('Atualize o supabase.js desta versão.');return api.upsertPatientPortal(patientId,p.name||'Paciente',last4,hist);}).then(function(token){var url=location.origin+location.pathname+'?portal='+encodeURIComponent(token);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert('Link do portal copiado!\n\n'+url);}).catch(function(){prompt('Copie o link do portal:',url);});}else prompt('Copie o link do portal:',url);auditAction('portal_gerado','patient',patientId,{patient:p.name});}).catch(function(e){alert(e.message||'Não foi possível gerar o portal.');});
+}
+function loadPortalRequests(){state.portalAdminLoading=true;render();waitForSupabase(4000).then(function(api){if(!api||!api.listPortalRequests)throw new Error('Módulo do portal indisponível.');return api.listPortalRequests();}).then(function(rows){state.portalRequests=rows||[];state.portalAdminLoading=false;render();}).catch(function(e){state.portalAdminLoading=false;alert(e.message||'Erro ao carregar solicitações.');render();});}
+function resolvePortalRequest(id){waitForSupabase(3000).then(function(api){return api.resolvePortalRequest(id);}).then(loadPortalRequests).catch(function(e){alert(e.message||'Não foi possível atualizar.');});}
+
 function renderAdministracao(){
   if(currentStaffRole()!=='admin') return '<div class="permission-note">Somente sócios administradores podem gerenciar a equipe.</div>';
   var out='<div class="section-title">Administração da equipe <button class="btn btn-ghost btn-sm" data-action="team-refresh">Atualizar</button></div>';
@@ -1650,6 +1711,11 @@ function attachEvents(){
 
     var a = t.dataset.action;
     var b = state.booking;
+    if(a==='portal-load'){loadPatientPortal();return;}
+    if(a==='portal-request'){submitPortalRequest(t.dataset.type,t.dataset.id);return;}
+    if(a==='generate-portal'){generatePatientPortal(t.dataset.id);return;}
+    if(a==='portal-admin-refresh'){loadPortalRequests();return;}
+    if(a==='portal-resolve'){resolvePortalRequest(t.dataset.id);return;}
     if(a==='export-backup'){ exportBackup(); return; }
     if(a==='restore-backup'){ var rf=document.getElementById('restore-file'); if(rf) rf.click(); return; }
     if(a==='export-appointments'){ exportAppointmentsCSV(); return; }

@@ -252,10 +252,37 @@ async function adminUpdateTeamProfile(userId,changes={}){
   return data;
 }
 
+
+// ---------- Portal do Paciente v2.6 ----------
+async function loadPatientPortal(token){
+  const {data,error}=await client.rpc('portal_view',{p_token:String(token||'')});
+  if(error) throw error; return data||null;
+}
+async function submitPortalRequest(token,action,appointmentId,note=''){
+  const {data,error}=await client.rpc('portal_request',{p_token:String(token||''),p_action:String(action||''),p_appointment_id:String(appointmentId||''),p_note:String(note||'')});
+  if(error) throw error; return data;
+}
+async function upsertPatientPortal(patientId,displayName,phoneLast4,appointments){
+  await requireTeamUser();
+  const {data,error}=await client.rpc('team_upsert_patient_portal',{p_patient_id:String(patientId),p_display_name:String(displayName||'Paciente'),p_phone_last4:String(phoneLast4||''),p_appointments:appointments||[]});
+  if(error) throw error; return data;
+}
+async function listPortalRequests(){
+  await requireTeamUser();
+  const {data,error}=await client.rpc('team_list_portal_requests');
+  if(error) throw error; return data||[];
+}
+async function resolvePortalRequest(id){
+  await requireTeamUser();
+  const {data,error}=await client.rpc('team_resolve_portal_request',{p_id:Number(id)});
+  if(error) throw error; return data;
+}
+
 window.ILRSupabase = {
   client, loadStore, saveStore, subscribeStore, createPublicBooking, lookupAppointments,
   signIn, signOut, getCurrentUser, isAuthorizedTeamMember, onAuthChange,
   loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution, getTeamProfile, listTeamProfiles, adminUpdateTeamProfile, writeAudit, listAudit, loadEvolutionDraft, saveEvolutionDraft, deleteEvolutionDraft,
-  saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument
+  saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument,
+  loadPatientPortal, submitPortalRequest, upsertPatientPortal, listPortalRequests, resolvePortalRequest
 };
 window.dispatchEvent(new Event('ilr-supabase-ready'));
