@@ -361,12 +361,15 @@
   .audit-item .meta{font-size:11.5px;color:var(--ink-soft);margin-bottom:4px;}
   .permission-note{padding:14px;border-radius:12px;background:var(--amber-soft);color:#805510;font-size:13px;}
 
+  /* v2.4 Estoque Inteligente */
+  .stock-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:14px 0 18px}.stock-kpi{padding:16px}.stock-kpi .k{font-size:11px;text-transform:uppercase;color:var(--ink-soft);font-weight:700}.stock-kpi .v{font-family:'Space Grotesk';font-size:23px;font-weight:700;margin-top:4px}.stock-toolbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.stock-toolbar .field{margin:0;min-width:180px}.stock-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stock-form .span-2{grid-column:span 2}.stock-form .span-4{grid-column:span 4}.stock-alert{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:800}.stock-alert.low{background:var(--danger-soft);color:var(--danger)}.stock-alert.exp{background:var(--amber-soft);color:#8a5c14}.stock-alert.ok{background:var(--success-soft);color:var(--teal-deep)}.stock-move{font-size:12px;color:var(--ink-soft)}.recipe-row{display:grid;grid-template-columns:1.4fr .6fr auto;gap:8px;align-items:end;margin:8px 0}.stock-table-wrap{overflow-x:auto}.stock-table-wrap table{min-width:850px}@media(max-width:760px){.stock-form{grid-template-columns:1fr 1fr}.stock-form .span-4,.stock-form .span-2{grid-column:span 2}.recipe-row{grid-template-columns:1fr 90px auto}}
+
 </style>
 </head>
 <body>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
-<script type="module" src="./supabase.js?v=comunicacao-20260805-1"></script>
+<script type="module" src="./supabase.js?v=erp240-estoque-20260808-1"></script>
 
 <script>
 (function(){
@@ -429,6 +432,7 @@ var state = {
   staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false, teamProfiles:[], teamLoading:false, teamMessage:'',
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
+  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia',
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
@@ -466,6 +470,24 @@ function timeSlots(){
 function timeToMinutes(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]); }
 
 /* ---------------- storage (Supabase + cache local) ---------------- */
+function defaultInventoryItems(){
+  return [
+    {id:'mat-anestesico',name:'Tubete anestésico',category:'Anestesia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-gaze',name:'Gaze estéril',category:'Descartáveis',unit:'pct',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-luva',name:'Luva de procedimento',category:'EPI',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lamina',name:'Lâmina de bisturi',category:'Cirurgia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-sutura',name:'Fio de sutura',category:'Cirurgia',unit:'un',qty:0,minQty:8,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-resina',name:'Resina composta',category:'Dentística',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''}
+  ];
+}
+function defaultProcedureRecipes(){
+  return {
+    limpeza:[{itemId:'mat-luva',qty:.04},{itemId:'mat-gaze',qty:.05}],
+    restauracao:[{itemId:'mat-luva',qty:.04},{itemId:'mat-resina',qty:.08}],
+    exodontia:[{itemId:'mat-anestesico',qty:2},{itemId:'mat-lamina',qty:1},{itemId:'mat-sutura',qty:1},{itemId:'mat-gaze',qty:.1},{itemId:'mat-luva',qty:.04}],
+    canal:[{itemId:'mat-anestesico',qty:2},{itemId:'mat-luva',qty:.04},{itemId:'mat-gaze',qty:.05}]
+  };
+}
 function seedStore(){
   return {
     appointments: [],
@@ -475,7 +497,10 @@ function seedStore(){
     financeConfig: defaultFinanceConfig(),
     logs: [],
     blocks: [],
-    waitlist: []
+    waitlist: [],
+    inventory: defaultInventoryItems(),
+    inventoryMovements: [],
+    procedureRecipes: defaultProcedureRecipes()
   };
 }
 
@@ -493,6 +518,9 @@ function normalizeStore(value){
   base.logs = Array.isArray(value.logs) ? value.logs : [];
   base.blocks = Array.isArray(value.blocks) ? value.blocks : [];
   base.waitlist = Array.isArray(value.waitlist) ? value.waitlist : [];
+  base.inventory = Array.isArray(value.inventory) ? value.inventory : defaultInventoryItems();
+  base.inventoryMovements = Array.isArray(value.inventoryMovements) ? value.inventoryMovements : [];
+  base.procedureRecipes = value.procedureRecipes && typeof value.procedureRecipes==='object' ? value.procedureRecipes : defaultProcedureRecipes();
   return base;
 }
 
@@ -670,7 +698,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.1.0 · agenda, recepção, prontuário e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.4.0 · clínica, estoque, financeiro e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -680,7 +708,7 @@ function renderHeader(){
   '<div class="topbar">' +
     '<div class="brand">' +
       '<div class="brand-mark"><img src="'+LOGO_ICON+'" alt="Instituto Lins Rabello"></div>' +
-      '<div class="brand-text"><div class="name">Instituto Lins Rabello <span class="version-badge">ERP 2.1</span></div><div class="sub">Odontologia integrada</div></div>' +
+      '<div class="brand-text"><div class="name">Instituto Lins Rabello <span class="version-badge">ERP 2.4</span></div><div class="sub">Odontologia integrada</div></div>' +
     '</div>' +
     '<div style="display:flex;align-items:center;gap:8px;"><button class="btn btn-ghost btn-sm install-app" data-action="install-app">Instalar app</button><div class="role-toggle">' +
       '<button data-role="patient" class="'+(state.role==='patient'?'active':'')+'">Sou paciente</button>' +
@@ -852,9 +880,9 @@ function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepca
 function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
 function allowedStaffTabs(){
   var role=currentStaffRole();
-  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes'];
-  if(role==='dentista') return ['visao','recepcao','agenda','pacientes','confirmacoes','relatorios'];
-  return ['visao','recepcao','agenda','financeiro','pacientes','confirmacoes','relatorios','administracao','auditoria'];
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
+  if(role==='dentista') return ['visao','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
+  return ['visao','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -883,7 +911,7 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
@@ -894,6 +922,7 @@ function renderStaff(){
   else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
+  else if(state.staffTab==='estoque') out += renderEstoque();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
@@ -992,7 +1021,7 @@ function renderVisaoGeral(){
   out+=dashboardCard('Despesas no mês',fmtMoney(fs.expenses),fmtMoney(fs.unpaidExp)+' em aberto',fs.unpaidExp>0?'negative':'');
   out+=dashboardCard('Resultado estimado',fmtMoney(fs.result),'após custos e provisões',fs.result>=0?'positive':'negative');
   out+='</div>';
-  out+='<div class="quick-actions"><button class="btn btn-primary" data-stafftab="agenda">Abrir agenda</button><button class="btn btn-ghost" data-stafftab="pacientes">Buscar paciente</button><button class="btn btn-ghost" data-stafftab="financeiro">Abrir financeiro</button><button class="btn btn-ghost" data-stafftab="relatorios">Relatórios e backup</button></div>';
+  out+='<div class="quick-actions"><button class="btn btn-primary" data-stafftab="agenda">Abrir agenda</button><button class="btn btn-ghost" data-stafftab="pacientes">Buscar paciente</button><button class="btn btn-ghost" data-stafftab="financeiro">Abrir financeiro</button><button class="btn btn-ghost" data-stafftab="estoque">Estoque</button><button class="btn btn-ghost" data-stafftab="relatorios">Relatórios e backup</button></div>';
   var alerts=[];
   if(d.todayItems.length===0) alerts.push('Nenhuma consulta marcada para hoje.');
   if(fs.pending>0) alerts.push('Existem '+fmtMoney(fs.pending)+' em recebimentos pendentes.');
@@ -1223,6 +1252,36 @@ function renderPatientForm(p){
   out+=field('pt-responsible','Responsável',p.responsible,'text','span-2');
   out+='<div class="field span-3"><label>Observações</label><textarea id="pt-notes" style="width:100%;min-height:90px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit;">'+esc(p.notes||'')+'</textarea></div>';
   out+='</div><div class="patient-actions"><button class="btn btn-ghost" data-action="cancel-patient">Cancelar</button><button class="btn btn-primary" data-action="save-patient" data-id="'+escAttr(p.id||'')+'">Salvar paciente</button></div></div>';
+  return out;
+}
+
+function daysUntil(iso){if(!iso)return 99999;return Math.ceil((parseISO(iso)-parseISO(todayISO()))/86400000);}
+function stockStatus(i){var exp=daysUntil(i.expiry);if(n(i.qty)<=n(i.minQty))return {label:'REPOR',cls:'low'};if(exp<=30)return {label:exp<0?'VENCIDO':'VALIDADE',cls:'exp'};return {label:'OK',cls:'ok'};}
+function stockValue(){return (store.inventory||[]).reduce(function(a,i){return a+n(i.qty)*n(i.cost);},0);}
+function procedureMaterialCost(procId){var rec=(store.procedureRecipes||{})[procId]||[];return rec.reduce(function(sum,r){var item=(store.inventory||[]).find(function(i){return i.id===r.itemId;});return sum+(item?n(item.cost)*n(r.qty):0);},0);}
+function renderEstoque(){
+  var items=(store.inventory||[]).slice(), q=(state.stockSearch||'').toLowerCase();
+  if(q)items=items.filter(function(i){return [i.name,i.category,i.supplier,i.lot].join(' ').toLowerCase().indexOf(q)>=0;});
+  var low=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty);}).length;
+  var exp=(store.inventory||[]).filter(function(i){return i.expiry&&daysUntil(i.expiry)<=30;}).length;
+  var out='<div class="section-title">Estoque inteligente</div>';
+  if(state.stockMessage)out+='<div class="good-card" style="margin-bottom:12px;">'+esc(state.stockMessage)+'</div>';
+  out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['procedimentos','Custos por procedimento'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="stock-grid"><div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div><div class="card stock-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:var(--danger)">'+low+'</div></div><div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div><div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div></div>';
+  if(state.stockTab==='itens'){
+    out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><button class="btn btn-ghost" data-action="stock-search">Buscar</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
+    if(state.stockEditingId){var d=state.stockEditingId==='new'?{id:'',name:'',category:'Materiais',unit:'un',qty:0,minQty:0,cost:0,supplier:'',lot:'',expiry:''}:(store.inventory||[]).find(function(i){return i.id===state.stockEditingId;})||{};out+='<div class="card"><h3 style="margin-top:0;">'+(d.id?'Editar material':'Novo material')+'</h3><div class="stock-form"><div class="field span-2"><label>Material</label><input id="st-name" value="'+escAttr(d.name||'')+'"></div><div class="field"><label>Categoria</label><input id="st-cat" value="'+escAttr(d.category||'')+'"></div><div class="field"><label>Unidade</label><input id="st-unit" value="'+escAttr(d.unit||'un')+'" placeholder="un, cx, pct, ml"></div><div class="field"><label>Quantidade atual</label><input id="st-qty" type="number" step="0.01" value="'+n(d.qty)+'"></div><div class="field"><label>Estoque mínimo</label><input id="st-min" type="number" step="0.01" value="'+n(d.minQty)+'"></div><div class="field"><label>Custo unitário</label><input id="st-cost" type="number" step="0.01" value="'+n(d.cost)+'"></div><div class="field"><label>Validade</label><input id="st-expiry" type="date" value="'+escAttr(d.expiry||'')+'"></div><div class="field span-2"><label>Fornecedor</label><input id="st-supplier" value="'+escAttr(d.supplier||'')+'"></div><div class="field span-2"><label>Lote</label><input id="st-lot" value="'+escAttr(d.lot||'')+'"></div></div><div class="patient-actions"><button class="btn btn-ghost" data-action="stock-cancel">Cancelar</button><button class="btn btn-primary" data-action="stock-save" data-id="'+escAttr(d.id||'')+'">Salvar material</button></div></div>';}
+    out+='<div class="card stock-table-wrap"><table><thead><tr><th>Material</th><th>Categoria</th><th>Estoque</th><th>Mínimo</th><th>Custo un.</th><th>Lote / validade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+    if(!items.length)out+='<tr><td colspan="8">Nenhum material encontrado.</td></tr>';
+    items.forEach(function(i){var st=stockStatus(i);out+='<tr><td><strong>'+esc(i.name)+'</strong><div class="stock-move">'+esc(i.supplier||'Sem fornecedor')+'</div></td><td>'+esc(i.category||'—')+'</td><td>'+n(i.qty).toLocaleString('pt-BR')+' '+esc(i.unit||'')+'</td><td>'+n(i.minQty).toLocaleString('pt-BR')+'</td><td>'+fmtMoney(n(i.cost))+'</td><td>'+esc(i.lot||'—')+'<div class="stock-move">'+(i.expiry?dayDisplay(i.expiry)+'/'+i.expiry.slice(0,4):'Sem validade')+'</div></td><td><span class="stock-alert '+st.cls+'">'+st.label+'</span></td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="stock-entry" data-id="'+i.id+'">Entrada</button><button class="btn btn-ghost btn-sm" data-action="stock-exit" data-id="'+i.id+'">Saída</button><button class="btn btn-ghost btn-sm" data-action="stock-edit" data-id="'+i.id+'">Editar</button></div></td></tr>';});
+    out+='</tbody></table></div>';
+  } else if(state.stockTab==='movimentos'){
+    var mov=(store.inventoryMovements||[]).slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));}).slice(0,150);out+='<div class="card stock-table-wrap"><table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Motivo</th></tr></thead><tbody>';if(!mov.length)out+='<tr><td colspan="5">Nenhuma movimentação registrada.</td></tr>';mov.forEach(function(m){var it=(store.inventory||[]).find(function(i){return i.id===m.itemId;});out+='<tr><td>'+new Date(m.createdAt).toLocaleString('pt-BR')+'</td><td>'+esc(it?it.name:m.itemName||'Item removido')+'</td><td>'+esc(m.type)+'</td><td>'+n(m.qty).toLocaleString('pt-BR')+'</td><td>'+esc(m.reason||'—')+'</td></tr>';});out+='</tbody></table></div>';
+  } else if(state.stockTab==='procedimentos'){
+    var pid=state.recipeProcedure||PROCEDURES[0].id, recipe=(store.procedureRecipes||{})[pid]||[], pc=procById(pid), cost=procedureMaterialCost(pid);out+='<div class="card"><div class="stock-toolbar"><div class="field"><label>Procedimento</label><select id="recipe-proc">'+PROCEDURES.map(function(p){return '<option value="'+p.id+'" '+(pid===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="recipe-load">Carregar</button></div><h3>Materiais consumidos por atendimento</h3><div id="recipe-list">';recipe.forEach(function(r,idx){var it=(store.inventory||[]).find(function(i){return i.id===r.itemId;});out+='<div class="recipe-row"><select id="recipe-item-'+idx+'">'+(store.inventory||[]).map(function(x){return '<option value="'+x.id+'" '+(r.itemId===x.id?'selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select><input id="recipe-qty-'+idx+'" type="number" step="0.01" min="0" value="'+n(r.qty)+'"><button class="btn btn-ghost btn-sm" data-action="recipe-remove" data-id="'+idx+'">Remover</button></div>';});out+='</div><div class="row-actions"><button class="btn btn-ghost" data-action="recipe-add">+ Material</button><button class="btn btn-primary" data-action="recipe-save">Salvar consumo padrão</button></div><div class="alert-card" style="margin-top:14px;">Custo estimado de materiais: <strong>'+fmtMoney(cost)+'</strong> · Preço cadastrado: <strong>'+fmtMoney(n(pc.price))+'</strong> · Margem antes de outros custos: <strong>'+fmtMoney(n(pc.price)-cost)+'</strong>.</div><p class="mini-note">Ao marcar uma consulta como Finalizada, o ERP dá baixa nesses materiais uma única vez e registra a movimentação.</p></div>';
+  } else if(state.stockTab==='compras'){
+    var buy=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty)|| (i.expiry&&daysUntil(i.expiry)<=30);});out+='<div class="card"><h3 style="margin-top:0;">Lista inteligente de reposição</h3>';if(!buy.length)out+='<div class="good-card">Nenhum item exige atenção neste momento.</div>';else{out+='<div class="stock-table-wrap"><table><thead><tr><th>Material</th><th>Atual</th><th>Mínimo</th><th>Sugestão de compra</th><th>Fornecedor</th><th>Motivo</th></tr></thead><tbody>';buy.forEach(function(i){var sug=Math.max(0,n(i.minQty)*2-n(i.qty)),reason=[];if(n(i.qty)<=n(i.minQty))reason.push('estoque baixo');if(i.expiry&&daysUntil(i.expiry)<=30)reason.push(daysUntil(i.expiry)<0?'vencido':'validade próxima');out+='<tr><td>'+esc(i.name)+'</td><td>'+n(i.qty)+' '+esc(i.unit)+'</td><td>'+n(i.minQty)+'</td><td><strong>'+sug.toLocaleString('pt-BR')+' '+esc(i.unit)+'</strong></td><td>'+esc(i.supplier||'—')+'</td><td>'+esc(reason.join(' e '))+'</td></tr>';});out+='</tbody></table></div>';}out+='</div>';
+  }
   return out;
 }
 
@@ -1583,6 +1642,18 @@ function attachEvents(){
     else if(a==='save-finance-config'){ saveFinanceConfig(); return; }
     else if(a==='add-expense'){ addExpense(); return; }
     else if(a==='del-expense'){ delExpense(t.dataset.id); return; }
+    else if(a==='stock-tab'){ state.stockTab=t.dataset.id; state.stockMessage=''; render(); return; }
+    else if(a==='stock-search'){ var ss=document.getElementById('stock-search');state.stockSearch=ss?ss.value:'';render();return; }
+    else if(a==='stock-new'){ state.stockEditingId='new';render();return; }
+    else if(a==='stock-edit'){ state.stockEditingId=t.dataset.id;render();return; }
+    else if(a==='stock-cancel'){ state.stockEditingId=null;render();return; }
+    else if(a==='stock-save'){ saveStockItem(t.dataset.id);return; }
+    else if(a==='stock-entry'){ moveStock(t.dataset.id,'entrada');return; }
+    else if(a==='stock-exit'){ moveStock(t.dataset.id,'saida');return; }
+    else if(a==='recipe-load'){ var rp=document.getElementById('recipe-proc');state.recipeProcedure=rp?rp.value:state.recipeProcedure;render();return; }
+    else if(a==='recipe-add'){ addRecipeRow();return; }
+    else if(a==='recipe-remove'){ removeRecipeRow(parseInt(t.dataset.id));return; }
+    else if(a==='recipe-save'){ saveRecipe();return; }
     else if(a==='new-patient'){ state.patientEditingId='new'; state.patientMessage=''; render(); return; }
     else if(a==='edit-patient'){ state.patientEditingId=t.dataset.id; state.patientMessage=''; render(); return; }
     else if(a==='cancel-patient'){ state.patientEditingId=null; state.patientMessage=''; render(); return; }
@@ -1906,7 +1977,7 @@ function restoreStaffSession(cb){
 
 function setReceptionStatus(id,status){
   var a=(store.appointments||[]).find(function(x){return x.id===id;}); if(!a)return;
-  a.status=status; auditAction('alterou status de consulta','agendamento',id,{status:status}); a.flowUpdatedAt=new Date().toISOString();
+  a.status=status; applyProcedureStock(a); auditAction('alterou status de consulta','agendamento',id,{status:status}); a.flowUpdatedAt=new Date().toISOString();
   if(status==='chegou') a.checkedInAt=new Date().toISOString();
   if(status==='atendimento') a.startedAt=new Date().toISOString();
   if(status==='realizado') a.finishedAt=new Date().toISOString();
@@ -1947,6 +2018,7 @@ function cycleOrSetStatus(t){
     var idx = order.indexOf(appt.status);
     appt.status = order[(idx+1) % order.length];
   }
+  applyProcedureStock(appt);
   persist();
 }
 
@@ -1985,6 +2057,16 @@ function delExpense(id){
   store.expenses = store.expenses.filter(function(e){ return e.id!==id; });
   persist();
 }
+
+function saveStockItem(id){
+  function v(x){var e=document.getElementById(x);return e?e.value:'';}var name=v('st-name').trim();if(!name){alert('Informe o nome do material.');return;}var rec={id:id||('st'+Date.now()),name:name,category:v('st-cat'),unit:v('st-unit')||'un',qty:Math.max(0,n(v('st-qty'))),minQty:Math.max(0,n(v('st-min'))),cost:Math.max(0,n(v('st-cost'))),supplier:v('st-supplier'),lot:v('st-lot'),expiry:v('st-expiry'),updatedAt:new Date().toISOString()};var idx=(store.inventory||[]).findIndex(function(i){return i.id===rec.id;});if(idx>=0)store.inventory[idx]=rec;else store.inventory.push(rec);state.stockEditingId=null;state.stockMessage='Material salvo.';auditAction('salvou material de estoque','estoque',rec.id,{name:rec.name});persist();
+}
+function moveStock(id,type){var item=(store.inventory||[]).find(function(i){return i.id===id;});if(!item)return;var raw=prompt((type==='entrada'?'Quantidade de entrada':'Quantidade de saída')+' para '+item.name+':','1');if(raw===null)return;var qty=n(String(raw).replace(',','.'));if(qty<=0){alert('Informe uma quantidade maior que zero.');return;}if(type==='saida'&&qty>n(item.qty)){if(!confirm('A saída é maior que o estoque atual. Continuar e zerar o item?'))return;qty=n(item.qty);}var reason=prompt('Motivo / observação:',type==='entrada'?'Compra / reposição':'Uso / ajuste')||'';item.qty=Math.max(0,n(item.qty)+(type==='entrada'?qty:-qty));store.inventoryMovements=store.inventoryMovements||[];store.inventoryMovements.push({id:'mv'+Date.now(),itemId:id,itemName:item.name,type:type,qty:qty,reason:reason,createdAt:new Date().toISOString()});state.stockMessage='Movimentação registrada.';auditAction('movimentou estoque','estoque',id,{type:type,qty:qty});persist();}
+function readCurrentRecipe(){var pid=state.recipeProcedure||'exodontia', old=(store.procedureRecipes||{})[pid]||[], arr=[];for(var i=0;i<old.length;i++){var e=document.getElementById('recipe-item-'+i),q=document.getElementById('recipe-qty-'+i);if(e&&q&&n(q.value)>0)arr.push({itemId:e.value,qty:n(q.value)});}return arr;}
+function addRecipeRow(){var pid=state.recipeProcedure||'exodontia';store.procedureRecipes=store.procedureRecipes||{};store.procedureRecipes[pid]=readCurrentRecipe();var first=(store.inventory||[])[0];if(first)store.procedureRecipes[pid].push({itemId:first.id,qty:1});render();}
+function removeRecipeRow(idx){var pid=state.recipeProcedure||'exodontia';store.procedureRecipes[pid]=readCurrentRecipe();store.procedureRecipes[pid].splice(idx,1);render();}
+function saveRecipe(){var pid=state.recipeProcedure||'exodontia';store.procedureRecipes=store.procedureRecipes||{};store.procedureRecipes[pid]=readCurrentRecipe();state.stockMessage='Consumo padrão do procedimento salvo.';auditAction('alterou consumo padrão','procedimento',pid,{items:store.procedureRecipes[pid]});persist();}
+function applyProcedureStock(appt){if(!appt||appt.stockPostedAt||appt.status!=='realizado')return;var recipe=(store.procedureRecipes||{})[appt.procedureId]||[];if(!recipe.length){appt.stockPostedAt=new Date().toISOString();return;}store.inventoryMovements=store.inventoryMovements||[];recipe.forEach(function(r){var item=(store.inventory||[]).find(function(i){return i.id===r.itemId;});if(!item)return;var requested=Math.max(0,n(r.qty)),used=Math.min(requested,n(item.qty));item.qty=Math.max(0,n(item.qty)-requested);store.inventoryMovements.push({id:'mv'+Date.now()+Math.random().toString(16).slice(2),itemId:item.id,itemName:item.name,type:'saida automática',qty:requested,reason:'Procedimento '+(procById(appt.procedureId).name||appt.procedureId)+' · '+(appt.name||'Paciente'),appointmentId:appt.id,createdAt:new Date().toISOString()});});appt.stockPostedAt=new Date().toISOString();auditAction('baixou estoque automaticamente','agendamento',appt.id,{procedureId:appt.procedureId});}
 
 /* ---------------- boot ---------------- */
 try{
