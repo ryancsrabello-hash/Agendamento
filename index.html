@@ -401,6 +401,22 @@
   }
 
 
+
+  /* Central de Pendências */
+  .pending-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 16px;}
+  .pending-kpi{padding:14px;border-radius:14px;border:1px solid var(--border);background:#fff;}
+  .pending-kpi .n{font-size:24px;font-weight:800;color:var(--navy);}
+  .pending-kpi .l{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .pending-toolbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:12px 0;}
+  .pending-toolbar .field{min-width:170px;flex:1;}
+  .pending-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+  .pending-form .span-2{grid-column:span 2}.pending-form .span-4{grid-column:1/-1;}
+  .pending-card{border:1px solid var(--border);border-radius:16px;padding:14px;background:#fff;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;}
+  .pending-card.high{border-left:5px solid var(--danger)} .pending-card.medium{border-left:5px solid var(--amber)} .pending-card.low{border-left:5px solid var(--teal)}
+  .pending-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .pending-badge{font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px;background:var(--grey-soft);color:var(--navy);}
+  .pending-empty{padding:30px;text-align:center;color:var(--ink-soft);border:1px dashed var(--border);border-radius:16px;background:#fff;}
+  @media(max-width:800px){.pending-kpis{grid-template-columns:repeat(2,1fr)}.pending-form{grid-template-columns:1fr}.pending-form .span-2,.pending-form .span-4{grid-column:auto}.pending-card{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -471,6 +487,7 @@ var state = {
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
   stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia',
+  pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
@@ -931,8 +948,8 @@ function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffR
 function allowedStaffTabs(){
   var role=currentStaffRole();
   if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
-  if(role==='dentista') return ['visao','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
-  return ['visao','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
+  if(role==='dentista') return ['visao','pendencias','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
+  return ['visao','pendencias','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -953,6 +970,59 @@ function renderClinicalAlerts(){
   return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':'')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
 }
 
+
+function pendingTypeLabel(t){return ({recall:'Recall',orcamento:'Orçamento',financeiro:'Financeiro'})[t]||t;}
+function pendingPriorityLabel(p){return ({alta:'Alta',media:'Média',baixa:'Baixa'})[p]||'Média';}
+function pendingClient(){return window.ILRSupabase&&window.ILRSupabase.client?window.ILRSupabase.client:null;}
+function loadPendencias(){
+  var c=pendingClient();
+  if(!c){state.pendingError='Conexão com o Supabase ainda não disponível.';state.pendingLoading=false;render();return;}
+  state.pendingLoading=true;state.pendingError='';render();
+  c.from('pending_items').select('*').order('status',{ascending:true}).order('due_date',{ascending:true,nullsFirst:false}).order('created_at',{ascending:false}).then(function(res){
+    if(res.error)throw res.error;state.pendingItems=res.data||[];state.pendingLoading=false;render();
+  }).catch(function(e){console.error(e);state.pendingLoading=false;state.pendingError='Não foi possível carregar as pendências. Execute o SQL da Central de Pendências no Supabase.';render();});
+}
+function pendingAutoFinancial(){
+  return (store.payments||[]).filter(function(p){return p.status==='pendente';}).map(function(p){
+    var a=(store.appointments||[]).find(function(x){return x.id===p.appointmentId;});
+    return {id:'auto-fin-'+p.id,auto:true,type:'financeiro',patient_name:p.patient||(a&&a.name)||'Paciente',phone:(a&&a.phone)||'',title:'Pagamento pendente',details:p.notes||'',amount:n(p.gross)-n(p.discount),due_date:p.date||'',priority:'alta',status:'aberto',original_professional:a?profById(a.professionalId).name:'',created_at:p.date||''};
+  });
+}
+function renderPendencias(){
+  var saved=(state.pendingItems||[]).filter(function(x){return x.status!=='resolvido';});
+  var autos=pendingAutoFinancial();
+  var all=saved.concat(autos);
+  var today=todayISO();
+  var recall=all.filter(function(x){return x.type==='recall';}).length, orc=all.filter(function(x){return x.type==='orcamento';}).length, fin=all.filter(function(x){return x.type==='financeiro';}).length;
+  var overdue=all.filter(function(x){return x.due_date&&x.due_date<today;}).length;
+  var out='<div class="section-title">Central de Pendências <button class="btn btn-ghost btn-sm" data-action="pending-refresh">Atualizar</button></div>';
+  out+='<div class="pending-kpis"><div class="pending-kpi"><div class="n">'+all.length+'</div><div class="l">Pendências ativas</div></div><div class="pending-kpi"><div class="n">'+recall+'</div><div class="l">Recalls</div></div><div class="pending-kpi"><div class="n">'+orc+'</div><div class="l">Orçamentos</div></div><div class="pending-kpi"><div class="n">'+(fin+overdue)+'</div><div class="l">Financeiro / atrasos</div></div></div>';
+  out+='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><strong>Caixa de entrada compartilhada dos doutores</strong><div class="mini-note">Ryan e Amanda visualizam a mesma lista, independentemente de quem atendeu o paciente.</div></div><button class="btn btn-primary" data-action="pending-new">+ Nova pendência</button></div></div>';
+  if(state.pendingMessage)out+='<div class="good-card" style="margin-top:10px">'+esc(state.pendingMessage)+'</div>';
+  if(state.pendingError)out+='<div class="alert-card" style="margin-top:10px">'+esc(state.pendingError)+'</div>';
+  if(state.pendingEditing){
+    var patientOptions='<option value="">Paciente não cadastrado</option>'+(store.patients||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}).map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name||'Paciente')+'</option>';}).join('');
+    out+='<div class="card" style="margin-top:12px"><h3 style="margin-top:0">Nova pendência</h3><div class="pending-form"><div class="field span-2"><label>Paciente cadastrado</label><select id="pd-patient">'+patientOptions+'</select></div><div class="field"><label>Tipo</label><select id="pd-type"><option value="recall">Recall</option><option value="orcamento">Orçamento não fechado</option><option value="financeiro">Financeiro pendente</option></select></div><div class="field"><label>Prioridade</label><select id="pd-priority"><option value="media">Média</option><option value="alta">Alta</option><option value="baixa">Baixa</option></select></div><div class="field span-2"><label>Paciente / nome</label><input id="pd-name" placeholder="Nome do paciente"></div><div class="field"><label>Telefone</label><input id="pd-phone" placeholder="11999999999"></div><div class="field"><label>Data para lembrar</label><input id="pd-due" type="date" value="'+today+'"></div><div class="field span-2"><label>Título</label><input id="pd-title" placeholder="Ex.: Recall de profilaxia em 6 meses"></div><div class="field"><label>Valor (opcional)</label><input id="pd-amount" type="number" step="0.01" min="0"></div><div class="field"><label>Profissional original</label><select id="pd-prof"><option value="">Ambos / não definido</option>'+PROFESSIONALS.map(function(p){return '<option value="'+escAttr(p.name)+'">'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field span-4"><label>Observações</label><textarea id="pd-details" style="width:100%;min-height:80px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit"></textarea></div></div><div class="patient-actions"><button class="btn btn-ghost" data-action="pending-cancel">Cancelar</button><button class="btn btn-primary" data-action="pending-save">Salvar pendência</button></div></div>';
+  }
+  out+='<div class="pending-toolbar"><div class="field"><label>Mostrar</label><select id="pending-filter"><option value="todos">Todas</option><option value="recall">Recall</option><option value="orcamento">Orçamentos</option><option value="financeiro">Financeiro</option></select></div><button class="btn btn-ghost" data-action="pending-filter">Aplicar filtro</button></div>';
+  if(state.pendingLoading)return out+'<div class="loading">Carregando pendências…</div>';
+  var filtered=all.filter(function(x){return state.pendingFilter==='todos'||x.type===state.pendingFilter;}).sort(function(a,b){var pa={alta:0,media:1,baixa:2},x1=pa[a.priority]??1,x2=pa[b.priority]??1;if(x1!==x2)return x1-x2;return String(a.due_date||'9999').localeCompare(String(b.due_date||'9999'));});
+  if(!filtered.length)return out+'<div class="pending-empty">Nenhuma pendência neste filtro. 🎉</div>';
+  filtered.forEach(function(x){var late=x.due_date&&x.due_date<today;out+='<div class="pending-card '+(x.priority==='alta'?'high':x.priority==='baixa'?'low':'medium')+'"><div><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center"><span class="pending-badge">'+esc(pendingTypeLabel(x.type))+'</span>'+(late?'<span class="pending-badge" style="background:#ffe7e8;color:#a92832">ATRASADO</span>':'')+(x.auto?'<span class="pending-badge">Automático</span>':'')+'</div><h3 style="margin:8px 0 4px">'+esc(x.patient_name||'Paciente')+'</h3><div style="font-weight:700">'+esc(x.title||pendingTypeLabel(x.type))+'</div>'+(x.details?'<div style="color:var(--ink-soft);font-size:13px;margin-top:5px">'+esc(x.details)+'</div>':'')+'<div class="pending-meta"><span>Prioridade: '+esc(pendingPriorityLabel(x.priority))+'</span>'+(x.due_date?'<span>Lembrar: '+dayDisplay(x.due_date)+'</span>':'')+(n(x.amount)>0?'<span>Valor: '+fmtMoney(n(x.amount))+'</span>':'')+(x.original_professional?'<span>Origem: '+esc(x.original_professional)+'</span>':'')+(x.phone?'<span>'+esc(x.phone)+'</span>':'')+'</div></div><div class="row-actions">'+(x.phone?'<button class="btn btn-ghost btn-sm" data-action="pending-copy" data-phone="'+escAttr(x.phone)+'">Copiar telefone</button>':'')+(x.patient_id?'<button class="btn btn-ghost btn-sm" data-action="pending-patient" data-id="'+escAttr(x.patient_id)+'">Ver paciente</button>':'')+(!x.auto?'<button class="btn btn-ghost btn-sm" data-action="pending-contact" data-id="'+escAttr(x.id)+'">Registrar contato</button><button class="btn btn-ghost btn-sm" data-action="pending-snooze" data-id="'+escAttr(x.id)+'">Adiar</button><button class="btn btn-primary btn-sm" data-action="pending-resolve" data-id="'+escAttr(x.id)+'">Resolvido</button>':'<button class="btn btn-ghost btn-sm" data-action="pending-finance">Abrir financeiro</button>')+'</div></div>';});
+  return out;
+}
+function pendingPatientPicked(){var sel=document.getElementById('pd-patient');if(!sel||!sel.value)return;var p=patientById(sel.value);if(!p)return;var nEl=document.getElementById('pd-name'),ph=document.getElementById('pd-phone');if(nEl)nEl.value=p.name||'';if(ph)ph.value=p.phone||'';}
+function savePendencia(){
+  var c=pendingClient();if(!c){alert('Supabase indisponível.');return;}
+  function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+  var patientId=v('pd-patient'),name=v('pd-name'),phone=v('pd-phone').replace(/\D/g,''),type=v('pd-type'),title=v('pd-title'),details=v('pd-details'),due=v('pd-due'),priority=v('pd-priority'),prof=v('pd-prof'),amount=Number(v('pd-amount')||0);
+  if(name.length<3||!title){alert('Informe o paciente e o motivo da pendência.');return;}
+  c.from('pending_items').insert({patient_id:patientId||null,patient_name:name,phone:phone||null,type:type,title:title,details:details||null,amount:amount||0,due_date:due||null,priority:priority,original_professional:prof||null,status:'aberto'}).select().single().then(function(r){if(r.error)throw r.error;state.pendingEditing=false;state.pendingMessage='Pendência adicionada para os dois doutores.';auditAction('criou pendência','pending_item',r.data.id,{type:type,patient:name});loadPendencias();}).catch(function(e){console.error(e);alert('Não foi possível salvar a pendência. Verifique se o SQL da Central foi executado.');});
+}
+function updatePendencia(id,changes,message){var c=pendingClient();if(!c)return;c.from('pending_items').update(Object.assign({},changes,{updated_at:new Date().toISOString()})).eq('id',id).then(function(r){if(r.error)throw r.error;state.pendingMessage=message||'Pendência atualizada.';loadPendencias();}).catch(function(e){console.error(e);alert('Não foi possível atualizar a pendência.');});}
+function registerPendingContact(id){var note=prompt('Observação do contato (opcional):','');if(note===null)return;updatePendencia(id,{last_contact_at:new Date().toISOString(),contact_notes:note},'Contato registrado.');}
+function snoozePending(id){var d=prompt('Adiar para qual data? Use AAAA-MM-DD:',addDays(todayISO(),7));if(!d)return;updatePendencia(id,{due_date:d,priority:'media'},'Lembrete adiado.');}
+
 function renderStaff(){
   var out = '';
   if(state.staffEmail){
@@ -961,7 +1031,7 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
@@ -969,6 +1039,7 @@ function renderStaff(){
   out += '</div>';
 
   if(state.staffTab==='visao') out += renderVisaoGeral();
+  else if(state.staffTab==='pendencias') out += renderPendencias();
   else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
@@ -1688,7 +1759,7 @@ function attachEvents(){
     if(!t) return;
 
     if(t.dataset.role){ state.role = t.dataset.role; render(); return; }
-    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else render(); return; }
+    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else if(state.staffTab==='pendencias')loadPendencias(); else render(); return; }
 
     var a = t.dataset.action;
     var b = state.booking;
@@ -1766,12 +1837,23 @@ function attachEvents(){
     else if(a==='waitlist-add'){ addWaitlist(); return; }
     else if(a==='waitlist-remove'){ removeWaitlist(t.dataset.id); return; }
     else if(a==='waitlist-copy'){ copyWaitlistPhone(t.dataset.id); return; }
+    else if(a==='pending-refresh'){ loadPendencias(); return; }
+    else if(a==='pending-new'){ state.pendingEditing=true;state.pendingMessage='';render();setTimeout(function(){var q=document.getElementById('pd-patient');if(q)q.onchange=pendingPatientPicked;},0);return; }
+    else if(a==='pending-cancel'){ state.pendingEditing=false;render();return; }
+    else if(a==='pending-save'){ savePendencia();return; }
+    else if(a==='pending-filter'){ var pf=document.getElementById('pending-filter');state.pendingFilter=pf?pf.value:'todos';render();return; }
+    else if(a==='pending-contact'){ registerPendingContact(t.dataset.id);return; }
+    else if(a==='pending-snooze'){ snoozePending(t.dataset.id);return; }
+    else if(a==='pending-resolve'){ updatePendencia(t.dataset.id,{status:'resolvido',resolved_at:new Date().toISOString()},'Pendência marcada como resolvida.');return; }
+    else if(a==='pending-copy'){ var ph=t.dataset.phone||'';if(navigator.clipboard)navigator.clipboard.writeText(ph).then(function(){alert('Telefone copiado.');});else prompt('Copie o telefone:',ph);return; }
+    else if(a==='pending-patient'){ state.patientEditingId=t.dataset.id;state.staffTab='pacientes';render();return; }
+    else if(a==='pending-finance'){ state.staffTab='financeiro';state.finTab='recebimentos';render();return; }
     else if(a==='install-app'){ installPwa(); return; }
 
     render();
   };
 
-  root.onchange=function(e){if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();};
+  root.onchange=function(e){if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();if(e.target&&e.target.id==='pd-patient')pendingPatientPicked();};
   root.oninput=function(e){if(e.target&&['ev-date','ev-procedure','ev-description','ev-conduct','ev-notes'].indexOf(e.target.id)>=0)scheduleEvolutionDraftSave();};
   setTimeout(initSignatureCanvas,0);
 }
@@ -2084,7 +2166,7 @@ function copyWaitlistPhone(id){var w=(store.waitlist||[]).find(function(x){retur
 var deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstallPrompt=e;document.querySelectorAll('.install-app').forEach(function(b){b.style.display='inline-flex';});});
 function installPwa(){if(!deferredInstallPrompt){alert('No celular, use “Adicionar à tela inicial”. No computador, procure o ícone de instalação na barra do navegador.');return;}deferredInstallPrompt.prompt();deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});}
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.0').catch(function(e){console.warn('PWA indisponível:',e);});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.0-pendencias1').catch(function(e){console.warn('PWA indisponível:',e);});});}
 
 function cycleOrSetStatus(t){
   var id = t.dataset.id;
