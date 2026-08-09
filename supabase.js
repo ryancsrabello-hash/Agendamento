@@ -252,57 +252,10 @@ async function adminUpdateTeamProfile(userId,changes={}){
   return data;
 }
 
-
-// ---------- Portal Privado do Paciente v2.8.1 ----------
-async function openPatientPortal(token){
-  const {data,error}=await client.rpc('portal_open_v280',{p_token:String(token||'')});
-  if(error) throw error;
-  return data||null;
-}
-async function submitPortalRequest(token,action,appointmentId,note=''){
-  const {data,error}=await client.rpc('portal_request_v280',{
-    p_token:String(token||''),
-    p_action:String(action||''),
-    p_appointment_id:String(appointmentId||''),
-    p_note:String(note||'')
-  });
-  if(error) throw error;
-  return data;
-}
-async function createPatientPortal(patientId,displayName,appointments){
-  await requireTeamUser();
-  const {data,error}=await client.rpc('team_create_patient_portal_v280',{
-    p_patient_id:String(patientId||''),
-    p_display_name:String(displayName||'Paciente'),
-    p_appointments:appointments||[]
-  });
-  if(error) throw error;
-  return data||null;
-}
-async function revokePatientPortal(patientId){
-  await requireTeamUser();
-  const {data,error}=await client.rpc('team_revoke_patient_portal_v280',{p_patient_id:String(patientId||'')});
-  if(error) throw error;
-  return !!data;
-}
-async function listPortalRequests(){
-  await requireTeamUser();
-  const {data,error}=await client.rpc('team_list_portal_requests_v280');
-  if(error) throw error;
-  return data||[];
-}
-async function resolvePortalRequest(id){
-  await requireTeamUser();
-  const {data,error}=await client.rpc('team_resolve_portal_request_v280',{p_id:Number(id)});
-  if(error) throw error;
-  return data;
-}
-
 window.ILRSupabase = {
   client, loadStore, saveStore, subscribeStore, createPublicBooking, lookupAppointments,
   signIn, signOut, getCurrentUser, isAuthorizedTeamMember, onAuthChange,
   loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution, getTeamProfile, listTeamProfiles, adminUpdateTeamProfile, writeAudit, listAudit, loadEvolutionDraft, saveEvolutionDraft, deleteEvolutionDraft,
-  saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument,
-  openPatientPortal, submitPortalRequest, createPatientPortal, revokePatientPortal, listPortalRequests, resolvePortalRequest
+  saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument
 };
 window.dispatchEvent(new Event('ilr-supabase-ready'));
