@@ -417,6 +417,18 @@
   .pending-badge{font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px;background:var(--grey-soft);color:var(--navy);}
   .pending-empty{padding:30px;text-align:center;color:var(--ink-soft);border:1px dashed var(--border);border-radius:16px;background:#fff;}
   @media(max-width:800px){.pending-kpis{grid-template-columns:repeat(2,1fr)}.pending-form{grid-template-columns:1fr}.pending-form .span-2,.pending-form .span-4{grid-column:auto}.pending-card{grid-template-columns:1fr}}
+
+  /* Etapas B/C — site público + marketing */
+  .public-section{margin:22px 0}.public-section-head{text-align:center;margin-bottom:14px}.public-section-head h2{margin:0 0 5px;font-size:24px}.public-section-head p{margin:0;color:var(--ink-soft);font-size:13.5px}
+  .team-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.team-card{border:1px solid var(--border);border-radius:18px;background:#fff;padding:18px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 24px rgba(9,35,43,.05)}
+  .team-avatar{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--ink),var(--teal));color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:22px;flex:0 0 auto}.team-card h3{margin:0 0 4px}.team-card p{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.5}
+  .testimonial-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.testimonial{border:1px solid var(--border);border-radius:16px;background:#fff;padding:16px}.testimonial .stars{color:#c99631;letter-spacing:2px;margin-bottom:8px}.testimonial blockquote{margin:0;color:var(--ink);font-size:13.5px;line-height:1.55}.testimonial .who{margin-top:10px;color:var(--ink-soft);font-size:12px;font-weight:700}
+  .preconsult-card{background:linear-gradient(135deg,#fff,#f3f8f7);border:1px solid rgba(27,92,86,.18)}.preconsult-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.preconsult-grid .full{grid-column:1/-1}
+  .marketing-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.marketing-kpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px}.marketing-kpi .n{font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:24px}.marketing-kpi .l{font-size:12px;color:var(--ink-soft);margin-top:3px}
+  .marketing-bars{display:grid;gap:9px}.marketing-bar-row{display:grid;grid-template-columns:160px 1fr 42px;gap:10px;align-items:center;font-size:12.5px}.marketing-bar{height:10px;background:var(--grey-soft);border-radius:999px;overflow:hidden}.marketing-bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--ink));border-radius:999px}
+  .preconsult-admin-item{border:1px solid var(--border);border-radius:14px;padding:14px;background:#fff;margin-bottom:10px}.preconsult-admin-item h3{margin:0 0 4px}.preconsult-admin-item .meta{font-size:12px;color:var(--ink-soft);display:flex;gap:10px;flex-wrap:wrap;margin:6px 0}
+  @media(max-width:760px){.team-grid,.testimonial-grid,.marketing-kpis{grid-template-columns:1fr}.preconsult-grid{grid-template-columns:1fr}.preconsult-grid .full{grid-column:auto}.marketing-bar-row{grid-template-columns:110px 1fr 32px}}
+
 </style>
 </head>
 <body>
@@ -489,6 +501,8 @@ var state = {
   stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia',
   pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
+  preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
+  marketingEvents:[], marketingLoading:false, marketingRange:30,
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
@@ -760,6 +774,7 @@ function render(){
   html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.0 · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
+logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
 }
 
 function renderHeader(){
@@ -787,10 +802,69 @@ function renderPromoCarousel(){
 }
 
 
+
+function marketingClient(){return window.ILRSupabase&&window.ILRSupabase.client?window.ILRSupabase.client:null;}
+function logMarketingEvent(eventName,meta){
+  try{
+    var c=marketingClient(); if(!c)return Promise.resolve(false);
+    var key='ilr-marketing-view-'+eventName;
+    if(eventName==='page_view'&&sessionStorage.getItem(key))return Promise.resolve(true);
+    return c.rpc('public_log_marketing_event',{p_event:eventName,p_meta:meta||{},p_path:location.pathname}).then(function(r){if(r.error)throw r.error;if(eventName==='page_view')sessionStorage.setItem(key,'1');return true;}).catch(function(e){console.warn('Métrica não registrada',e);return false;});
+  }catch(e){return Promise.resolve(false);}
+}
+function renderTeamSection(){
+  return '<section class="public-section"><div class="public-section-head"><h2>Conheça nossa equipe</h2><p>Atendimento próximo, planejamento individual e cuidado em cada etapa.</p></div><div class="team-grid">'+
+    '<div class="team-card"><div class="team-avatar">RR</div><div><h3>Dr. Ryan Rabello</h3><p><strong>Implantodontia e Clínica Geral</strong><br>Atendimento clínico, cirúrgico e reabilitador com planejamento individualizado.</p><button class="btn btn-ghost btn-sm" style="margin-top:10px" data-action="team-book" data-id="ryan">Agendar com Ryan</button></div></div>'+
+    '<div class="team-card"><div class="team-avatar">AC</div><div><h3>Dra. Amanda Chrislen</h3><p><strong>Endodontia e Clínica Geral</strong><br>Atendimento clínico com foco em endodontia, prevenção e preservação da saúde bucal.</p><button class="btn btn-ghost btn-sm" style="margin-top:10px" data-action="team-book" data-id="amanda">Agendar com Amanda</button></div></div>'+
+  '</div></section>';
+}
+function renderTestimonials(){
+  var items=(state.sacPublic||[]).filter(function(x){return x.category==='elogio'||!x.category;}).slice(0,6);
+  if(!items.length)return '<section class="public-section"><div class="public-section-head"><h2>O que nossos pacientes dizem</h2><p>Os depoimentos publicados aqui são aprovados pela equipe antes de ficarem visíveis.</p></div><div class="empty-note">Em breve, novos depoimentos aparecerão aqui.</div></section>';
+  return '<section class="public-section"><div class="public-section-head"><h2>O que nossos pacientes dizem</h2><p>Experiências compartilhadas e aprovadas para publicação.</p></div><div class="testimonial-grid">'+items.map(function(x){return '<div class="testimonial"><div class="stars">★★★★★</div><blockquote>“'+esc(x.message||'')+'”</blockquote><div class="who">'+esc(x.author_name||'Paciente do Instituto')+'</div></div>';}).join('')+'</div></section>';
+}
+function renderPreConsult(){
+  var procs=PROCEDURES.map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('');
+  return '<section class="public-section"><div class="card preconsult-card"><div class="public-section-head" style="text-align:left"><h2>Pré-consulta</h2><p>Quer adiantar sua chegada? Envie informações básicas para a equipe antes do atendimento. Isso não substitui anamnese nem avaliação clínica.</p></div>'+
+    (state.preConsultMessage?'<div class="alert-card" style="margin-bottom:12px">'+esc(state.preConsultMessage)+'</div>':'')+
+    '<div class="preconsult-grid"><div class="field"><label>Nome completo</label><input id="pc-name" placeholder="Seu nome"></div><div class="field"><label>Telefone</label><input id="pc-phone" inputmode="numeric" maxlength="11" placeholder="11999998888"></div><div class="field"><label>Procedimento de interesse</label><select id="pc-proc"><option value="">Selecione</option>'+procs+'</select></div><div class="field"><label>Data já agendada (opcional)</label><input id="pc-date" type="date"></div><div class="field full"><label>Motivo da consulta / principal dúvida</label><textarea id="pc-reason" style="width:100%;min-height:86px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Conte brevemente o que você gostaria de avaliar"></textarea></div></div><div class="patient-actions"><span class="mini-note">Não envie exames ou dados médicos sensíveis por este formulário.</span><button class="btn btn-primary" data-action="preconsult-submit">Enviar pré-consulta</button></div></div></section>';
+}
+function submitPreConsult(){
+  function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+  var name=v('pc-name'), phone=v('pc-phone').replace(/\D/g,''), proc=v('pc-proc'), date=v('pc-date'), reason=v('pc-reason');
+  if(name.length<3){alert('Informe seu nome completo.');return;} if(phone.length!==11){alert('Informe telefone com DDD e 11 números.');return;} if(!reason){alert('Conte brevemente o motivo da consulta.');return;}
+  var c=marketingClient(); if(!c){alert('Serviço temporariamente indisponível.');return;}
+  c.rpc('public_submit_preconsulta',{p_name:name,p_phone:phone,p_procedure:proc||null,p_appointment_date:date||null,p_reason:reason}).then(function(r){if(r.error)throw r.error;state.preConsultMessage='Pré-consulta enviada. Nossa equipe poderá visualizar essas informações antes do atendimento.';logMarketingEvent('preconsulta_submit',{procedure:proc||''});render();}).catch(function(e){console.error(e);alert('Não foi possível enviar a pré-consulta. Verifique a atualização do Supabase.');});
+}
+function loadPreConsultas(){
+  var c=marketingClient();if(!c)return;state.preConsultLoading=true;render();
+  c.from('pre_consultas').select('*').order('created_at',{ascending:false}).limit(100).then(function(r){if(r.error)throw r.error;state.preConsultItems=r.data||[];state.preConsultLoading=false;render();}).catch(function(e){state.preConsultLoading=false;console.error(e);render();});
+}
+function renderPreConsultasAdmin(){
+  var out='<div class="section-title">Pré-consultas <button class="btn btn-ghost btn-sm" data-action="preconsult-refresh">Atualizar</button></div>';
+  if(state.preConsultLoading)return out+'<div class="loading">Carregando…</div>';
+  var items=state.preConsultItems||[]; if(!items.length)return out+'<div class="empty-note">Nenhuma pré-consulta recebida.</div>';
+  items.forEach(function(x){out+='<div class="preconsult-admin-item"><h3>'+esc(x.patient_name||'Paciente')+'</h3><div class="meta"><span>'+esc(x.phone||'')+'</span>'+(x.procedure_id?'<span>'+esc(procById(x.procedure_id).name)+'</span>':'')+(x.appointment_date?'<span>Consulta: '+dayDisplay(x.appointment_date)+'</span>':'')+'<span>Recebido: '+new Date(x.created_at).toLocaleString('pt-BR')+'</span></div><div>'+esc(x.reason||'')+'</div><div class="row-actions" style="margin-top:10px">'+(x.status!=='revisado'?'<button class="btn btn-primary btn-sm" data-action="preconsult-reviewed" data-id="'+escAttr(x.id)+'">Marcar revisado</button>':'<span class="pill realizado">Revisado</span>')+'</div></div>';});return out;
+}
+function markPreConsultReviewed(id){var c=marketingClient();if(!c)return;c.from('pre_consultas').update({status:'revisado',reviewed_at:new Date().toISOString()}).eq('id',id).then(function(r){if(r.error)throw r.error;loadPreConsultas();}).catch(function(){alert('Não foi possível atualizar.');});}
+function loadMarketing(){
+  var c=marketingClient();if(!c)return;state.marketingLoading=true;render();var d=new Date();d.setDate(d.getDate()-(Number(state.marketingRange)||30));
+  c.from('marketing_events').select('event_name,meta,created_at').gte('created_at',d.toISOString()).order('created_at',{ascending:false}).limit(5000).then(function(r){if(r.error)throw r.error;state.marketingEvents=r.data||[];state.marketingLoading=false;render();}).catch(function(e){state.marketingLoading=false;console.error(e);render();});
+}
+function renderMarketing(){
+  var out='<div class="section-title">Marketing e métricas <button class="btn btn-ghost btn-sm" data-action="marketing-refresh">Atualizar</button></div><div class="report-toolbar"><div class="field"><label>Período</label><select id="marketing-range"><option value="7" '+(state.marketingRange==7?'selected':'')+'>7 dias</option><option value="30" '+(state.marketingRange==30?'selected':'')+'>30 dias</option><option value="90" '+(state.marketingRange==90?'selected':'')+'>90 dias</option></select></div><button class="btn btn-ghost" data-action="marketing-range">Aplicar</button></div>';
+  if(state.marketingLoading)return out+'<div class="loading">Carregando métricas…</div>';
+  var ev=state.marketingEvents||[],count=function(nm){return ev.filter(function(x){return x.event_name===nm;}).length;};var views=count('page_view'),starts=count('booking_started'),bookings=count('booking_confirmed'),pre=count('preconsulta_submit');var conv=starts?Math.round(bookings*1000/starts)/10:0;
+  out+='<div class="marketing-kpis"><div class="marketing-kpi"><div class="n">'+views+'</div><div class="l">Visitas ao site</div></div><div class="marketing-kpi"><div class="n">'+starts+'</div><div class="l">Inícios de agendamento</div></div><div class="marketing-kpi"><div class="n">'+bookings+'</div><div class="l">Agendamentos concluídos</div></div><div class="marketing-kpi"><div class="n">'+conv+'%</div><div class="l">Conversão do agendamento</div></div></div>';
+  var byProc={};ev.filter(function(x){return x.event_name==='procedure_interest';}).forEach(function(x){var id=x.meta&&x.meta.procedure||'outro';byProc[id]=(byProc[id]||0)+1;});var arr=Object.keys(byProc).map(function(k){return [k,byProc[k]];}).sort(function(a,b){return b[1]-a[1];});var max=arr.length?arr[0][1]:1;
+  out+='<div class="card"><h3 style="margin-top:0">Procedimentos com mais interesse</h3><div class="marketing-bars">'+(arr.length?arr.slice(0,8).map(function(x){var p=procById(x[0]);return '<div class="marketing-bar-row"><strong>'+esc(p?p.name:x[0])+'</strong><div class="marketing-bar"><span style="width:'+Math.max(5,Math.round(x[1]*100/max))+'%"></span></div><span>'+x[1]+'</span></div>';}).join(''):'<div class="empty-note">Ainda não há cliques suficientes para mostrar ranking.</div>')+'</div></div>';
+  out+='<div class="card" style="margin-top:12px"><h3 style="margin-top:0">Outros sinais</h3><div class="summary-line"><span>Pré-consultas enviadas</span><strong>'+pre+'</strong></div><div class="summary-line"><span>Cliques para escolher profissional</span><strong>'+count('professional_interest')+'</strong></div><div class="summary-line"><span>Mensagens enviadas ao SAC</span><strong>'+count('sac_submit')+'</strong></div></div>';return out;
+}
+
 function renderPatient(){
   var b = state.booking;
   var out = '<div class="hero"><img class="hero-watermark" src="'+LOGO_ICON+'" alt=""><h1>Agende sua consulta em poucos passos</h1>' +
-    '<p>Escolha o procedimento, o profissional e o melhor horário. A confirmação aparece imediatamente na tela.</p></div>' + renderSacPublic() + renderPromoCarousel();
+    '<p>Escolha o procedimento, o profissional e o melhor horário. A confirmação aparece imediatamente na tela.</p></div>' + renderPromoCarousel() + renderTeamSection() + renderTestimonials() + renderPreConsult() + renderSacPublic();
 
   if(b.done){
     var proc = procById(b.procedureId), prof = profById(b.professionalId);
@@ -950,8 +1024,8 @@ function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffR
 function allowedStaffTabs(){
   var role=currentStaffRole();
   if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
-  if(role==='dentista') return ['visao','pendencias','sac','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
-  return ['visao','pendencias','sac','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
+  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
+  return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -1105,7 +1179,7 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
@@ -1115,6 +1189,8 @@ function renderStaff(){
   if(state.staffTab==='visao') out += renderVisaoGeral();
   else if(state.staffTab==='pendencias') out += renderPendencias();
   else if(state.staffTab==='sac') out += renderSacAdmin();
+  else if(state.staffTab==='preconsultas') out += renderPreConsultasAdmin();
+  else if(state.staffTab==='marketing') out += renderMarketing();
   else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
@@ -1849,7 +1925,7 @@ function attachEvents(){
     if(!t) return;
 
     if(t.dataset.role){ state.role = t.dataset.role; render(); return; }
-    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else if(state.staffTab==='pendencias')loadPendencias(); else if(state.staffTab==='sac')loadSacAdmin(); else render(); return; }
+    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else if(state.staffTab==='pendencias')loadPendencias(); else if(state.staffTab==='sac')loadSacAdmin(); else if(state.staffTab==='preconsultas')loadPreConsultas(); else if(state.staffTab==='marketing')loadMarketing(); else render(); return; }
 
     var a = t.dataset.action;
     var b = state.booking;
@@ -1859,8 +1935,8 @@ function attachEvents(){
     if(a==='export-patients'){ exportPatientsCSV(); return; }
     if(a==='export-finance'){ exportFinanceCSV(); return; }
 
-    if(a==='pick-proc'){ b.procedureId = t.dataset.id; }
-    else if(a==='pick-prof'){ b.professionalId = t.dataset.id; }
+    if(a==='pick-proc'){ b.procedureId = t.dataset.id; logMarketingEvent('procedure_interest',{procedure:b.procedureId}); if(b.step===1)logMarketingEvent('booking_started',{procedure:b.procedureId}); }
+    else if(a==='pick-prof'){ b.professionalId = t.dataset.id; logMarketingEvent('professional_interest',{professional:b.professionalId}); }
     else if(a==='pick-date'){ b.date = t.dataset.id; b.time=null; }
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
     else if(a==='wiz-next'){ b.step = Math.min(5,b.step+1); }
@@ -1943,6 +2019,12 @@ function attachEvents(){
     else if(a==='sac-refresh'){ loadSacAdmin(); return; }
     else if(a==='sac-visible'){ setSacVisibility(t.dataset.id,t.dataset.visible==='true'); return; }
     else if(a==='sac-delete'){ deleteSacFeedback(t.dataset.id); return; }
+    else if(a==='preconsult-submit'){ submitPreConsult(); return; }
+    else if(a==='preconsult-refresh'){ loadPreConsultas(); return; }
+    else if(a==='preconsult-reviewed'){ markPreConsultReviewed(t.dataset.id); return; }
+    else if(a==='marketing-refresh'){ loadMarketing(); return; }
+    else if(a==='marketing-range'){ var mr=document.getElementById('marketing-range');state.marketingRange=mr?Number(mr.value):30;loadMarketing();return; }
+    else if(a==='team-book'){ state.booking.professionalId=t.dataset.id;state.booking.step=1;logMarketingEvent('professional_interest',{professional:t.dataset.id,source:'team'});window.scrollTo({top:0,behavior:'smooth'});render();return; }
     else if(a==='install-app'){ installPwa(); return; }
 
     render();
@@ -2095,6 +2177,7 @@ function confirmBooking(){
     b.done = true;
     writeLocalStore(store);
     resolveAutoRecallsForPhone(b.phone);
+    logMarketingEvent('booking_confirmed',{procedure:b.procedureId,professional:b.professionalId});
     render();
   }).catch(function(error){
     console.error('Erro ao criar agendamento:', error);
