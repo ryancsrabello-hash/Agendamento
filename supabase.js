@@ -253,7 +253,7 @@ async function adminUpdateTeamProfile(userId,changes={}){
 }
 
 
-// ---------- Portal Privado do Paciente v2.8.0 ----------
+// ---------- Portal Privado do Paciente v2.8.1 ----------
 async function openPatientPortal(token){
   const {data,error}=await client.rpc('portal_open_v280',{p_token:String(token||'')});
   if(error) throw error;

@@ -380,9 +380,20 @@
 </style>
 </head>
 <body>
+<script>
+(function(){
+  var k='ilr_erp_asset_reset_281';
+  if(sessionStorage.getItem(k)) return;
+  sessionStorage.setItem(k,'1');
+  try {
+    if('caches' in window){ caches.keys().then(function(keys){ return Promise.all(keys.map(function(key){ return caches.delete(key); })); }); }
+    if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(function(regs){ return Promise.all(regs.map(function(r){ return r.unregister(); })); }); }
+  } catch(e) { console.warn('Limpeza de cache não crítica:', e); }
+})();
+</script>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
-<script type="module" src="./supabase.js?v=erp280-portal-clean-20260809"></script>
+<script type="module" src="./supabase.js?v=erp281-hard-refresh-20260809"></script>
 
 <script>
 (function(){
@@ -715,7 +726,7 @@ function render(){
   else if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.8.0 · clínica, financeiro, estoque e portal privado do paciente.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.8.1 · clínica, financeiro, estoque e portal privado do paciente.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -1627,7 +1638,7 @@ function restoreBackupFile(file){
 
 
 function renderPortalAdmin(){
-  var out='<div class="section-title">Portal do paciente <span class="pill realizado">v2.8.0</span></div>';
+  var out='<div class="section-title">Portal do paciente <span class="pill realizado">v2.8.1</span></div>';
   out+='<div class="card"><h3 style="margin-top:0;">Links individuais</h3><p class="mini-note">Na aba Pacientes, use o botão <strong>Portal</strong>. O ERP gera um link privado individual, invalidando automaticamente o anterior. O link vence em 30 dias e pode ser revogado a qualquer momento.</p></div>';
   out+='<div class="card"><div class="row-actions" style="justify-content:space-between;"><div><h3 style="margin:0;">Solicitações recebidas</h3><p class="mini-note" style="margin:4px 0 0;">Confirmações, pedidos de reagendamento e cancelamento.</p></div><button class="btn btn-ghost btn-sm" data-action="portal-admin-refresh">Atualizar</button></div>';
   if(state.portalAdminLoading)out+='<div class="loading" style="padding:24px;">Carregando…</div>';
@@ -2126,7 +2137,7 @@ function copyWaitlistPhone(id){var w=(store.waitlist||[]).find(function(x){retur
 var deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstallPrompt=e;document.querySelectorAll('.install-app').forEach(function(b){b.style.display='inline-flex';});});
 function installPwa(){if(!deferredInstallPrompt){alert('No celular, use “Adicionar à tela inicial”. No computador, procure o ícone de instalação na barra do navegador.');return;}deferredInstallPrompt.prompt();deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});}
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.8.0').catch(function(e){console.warn('PWA indisponível:',e);});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.8.1').catch(function(e){console.warn('PWA indisponível:',e);});});}
 
 function cycleOrSetStatus(t){
   var id = t.dataset.id;
