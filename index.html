@@ -715,7 +715,7 @@ function render(){
   else if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.6.5 · clínica, financeiro, estoque e portal seguro do paciente.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.6.6 · clínica, financeiro, estoque e portal seguro do paciente.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -2140,7 +2140,7 @@ function copyWaitlistPhone(id){var w=(store.waitlist||[]).find(function(x){retur
 var deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstallPrompt=e;document.querySelectorAll('.install-app').forEach(function(b){b.style.display='inline-flex';});});
 function installPwa(){if(!deferredInstallPrompt){alert('No celular, use “Adicionar à tela inicial”. No computador, procure o ícone de instalação na barra do navegador.');return;}deferredInstallPrompt.prompt();deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});}
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.0').catch(function(e){console.warn('PWA indisponível:',e);});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.6.6').catch(function(e){console.warn('PWA indisponível:',e);});});}
 
 function cycleOrSetStatus(t){
   var id = t.dataset.id;
