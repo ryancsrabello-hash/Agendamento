@@ -372,6 +372,35 @@
   /* v2.4 Estoque Inteligente */
   .stock-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:14px 0 18px}.stock-kpi{padding:16px}.stock-kpi .k{font-size:11px;text-transform:uppercase;color:var(--ink-soft);font-weight:700}.stock-kpi .v{font-family:'Space Grotesk';font-size:23px;font-weight:700;margin-top:4px}.stock-toolbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.stock-toolbar .field{margin:0;min-width:180px}.stock-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stock-form .span-2{grid-column:span 2}.stock-form .span-4{grid-column:span 4}.stock-alert{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:800}.stock-alert.low{background:var(--danger-soft);color:var(--danger)}.stock-alert.exp{background:var(--amber-soft);color:#8a5c14}.stock-alert.ok{background:var(--success-soft);color:var(--teal-deep)}.stock-move{font-size:12px;color:var(--ink-soft)}.recipe-row{display:grid;grid-template-columns:1.4fr .6fr auto;gap:8px;align-items:end;margin:8px 0}.stock-table-wrap{overflow-x:auto}.stock-table-wrap table{min-width:850px}@media(max-width:760px){.stock-form{grid-template-columns:1fr 1fr}.stock-form .span-4,.stock-form .span-2{grid-column:span 2}.recipe-row{grid-template-columns:1fr 90px auto}}
 
+  .promo-carousel{position:relative;height:360px;margin:8px 0 24px;border-radius:22px;overflow:hidden;background:#081d31;box-shadow:0 18px 40px -24px rgba(8,29,49,.55);isolation:isolate;}
+  .promo-slide{position:absolute;inset:0;opacity:0;animation:promoFade 18s infinite;}
+  .promo-slide:nth-child(2){animation-delay:6s}.promo-slide:nth-child(3){animation-delay:12s}
+  .promo-slide img{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.02);}
+  .promo-slide:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,24,43,.96) 0%,rgba(5,24,43,.85) 38%,rgba(5,24,43,.25) 67%,rgba(5,24,43,.04) 100%);}
+  .promo-copy{position:absolute;z-index:2;left:42px;top:50%;transform:translateY(-50%);width:min(470px,58%);color:#fff;}
+  .promo-kicker{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:#e8b54f;margin-bottom:10px;}
+  .promo-kicker:before{content:"";width:34px;height:1px;background:#e8b54f;}
+  .promo-copy h2{font-size:clamp(28px,4vw,48px);line-height:1.02;letter-spacing:-.025em;margin:0 0 12px;color:#fff;}
+  .promo-copy h2 strong{color:#e8b54f;font-weight:800;}
+  .promo-copy p{font-size:15px;line-height:1.55;margin:0 0 20px;color:rgba(255,255,255,.88);max-width:420px;}
+  .promo-cta{display:inline-flex;align-items:center;gap:9px;text-decoration:none;background:#e8b54f;color:#0a2135;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:800;box-shadow:0 8px 22px rgba(232,181,79,.22);}
+  .promo-cta:hover{filter:brightness(1.05);transform:translateY(-1px);}
+  .promo-dots{position:absolute;z-index:3;bottom:15px;left:50%;transform:translateX(-50%);display:flex;gap:7px;}
+  .promo-dots i{display:block;width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55);}
+  .promo-dots i:first-child{animation:promoDot1 18s infinite}.promo-dots i:nth-child(2){animation:promoDot2 18s infinite}.promo-dots i:nth-child(3){animation:promoDot3 18s infinite}
+  @keyframes promoFade{0%,28%{opacity:1}33%,95%{opacity:0}100%{opacity:1}}
+  @keyframes promoDot1{0%,28%{background:#e8b54f;transform:scale(1.25)}33%,100%{background:rgba(255,255,255,.55);transform:none}}
+  @keyframes promoDot2{0%,32%,66%,100%{background:rgba(255,255,255,.55);transform:none}33%,61%{background:#e8b54f;transform:scale(1.25)}}
+  @keyframes promoDot3{0%,65%,100%{background:rgba(255,255,255,.55);transform:none}66%,95%{background:#e8b54f;transform:scale(1.25)}}
+  .promo-carousel:hover .promo-slide,.promo-carousel:hover .promo-dots i{animation-play-state:paused;}
+  @media(max-width:700px){
+    .promo-carousel{height:410px;border-radius:18px;margin-top:4px;}
+    .promo-slide:after{background:linear-gradient(0deg,rgba(5,24,43,.97) 0%,rgba(5,24,43,.82) 58%,rgba(5,24,43,.18) 100%);}
+    .promo-copy{left:22px;right:22px;top:auto;bottom:34px;transform:none;width:auto;}
+    .promo-copy h2{font-size:31px}.promo-copy p{font-size:14px;margin-bottom:15px}.promo-kicker{font-size:10.5px}
+  }
+
+
 </style>
 </head>
 <body>
@@ -468,8 +497,12 @@ function next14Days(){
 }
 function timeSlots(){
   var out=[];
-  // Agenda em horas cheias, das 08:00 às 19:00.
-  for(var h=8; h<=19; h++) out.push(pad(h)+':00');
+  // Agenda em horas cheias, das 08:00 às 18:00.
+  // 12:00 às 13:00 fica reservado para almoço; portanto 12:00 não é oferecido para agendamento.
+  for(var h=8; h<=18; h++){
+    if(h===12) continue;
+    out.push(pad(h)+':00');
+  }
   return out;
 }
 function timeToMinutes(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]); }
@@ -725,10 +758,20 @@ function renderHeader(){
 }
 
 /* ---- PATIENT ---- */
+function renderPromoCarousel(){
+  return '<section class="promo-carousel" aria-label="Destaques e promoções do Instituto Lins Rabello">' +
+    '<div class="promo-slide"><img src="./promocoes/promo-1.jpg?v=1" alt="Tratamento odontológico com implante"><div class="promo-copy"><div class="promo-kicker">Destaque do mês</div><h2>Implantes <strong>dentários</strong></h2><p>Recupere segurança para sorrir e mastigar com uma avaliação individualizada.</p><a class="promo-cta" href="#agendamento">Agendar avaliação →</a></div></div>' +
+    '<div class="promo-slide"><img src="./promocoes/promo-2.jpg?v=1" alt="Odontologia integrada"><div class="promo-copy"><div class="promo-kicker">Agendamento online</div><h2>Seu atendimento, <strong>mais simples</strong></h2><p>Nosso agendamento online está pronto. Escolha o procedimento, profissional, dia e horário em poucos passos.</p><a class="promo-cta" href="#agendamento">Agendar agora →</a></div></div>' +
+    '<div class="promo-slide"><img src="./promocoes/promo-3.jpg?v=1" alt="Promoções odontológicas do mês"><div class="promo-copy"><div class="promo-kicker">Condições especiais</div><h2>Promoções <strong>imperdíveis</strong></h2><p>Este mês teremos condições especiais em tratamentos selecionados. Consulte nossa equipe e cuide do seu sorriso.</p><a class="promo-cta" href="#agendamento">Ver horários →</a></div></div>' +
+    '<div class="promo-dots" aria-hidden="true"><i></i><i></i><i></i></div>' +
+  '</section>';
+}
+
+
 function renderPatient(){
   var b = state.booking;
   var out = '<div class="hero"><img class="hero-watermark" src="'+LOGO_ICON+'" alt=""><h1>Agende sua consulta em poucos passos</h1>' +
-    '<p>Escolha o procedimento, o profissional e o melhor horário. A confirmação aparece imediatamente na tela.</p></div>';
+    '<p>Escolha o procedimento, o profissional e o melhor horário. A confirmação aparece imediatamente na tela.</p></div>' + renderPromoCarousel();
 
   if(b.done){
     var proc = procById(b.procedureId), prof = profById(b.professionalId);
