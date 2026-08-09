@@ -255,7 +255,7 @@ async function adminUpdateTeamProfile(userId,changes={}){
 
 // ---------- Portal Seguro do Paciente v2.6.2 ----------
 async function verifyPatientPortal(token,birthDate,phoneLast4){
-  const {data,error}=await client.rpc('portal_verify',{p_token:String(token||''),p_birth_date:birthDate||null,p_phone_last4:String(phoneLast4||'')});
+  const {data,error}=await client.rpc('portal_verify_v263',{p_token:String(token||''),p_birth_date_text:String(birthDate||''),p_phone_last4:String(phoneLast4||'')});
   if(error) throw error; return data||null;
 }
 async function loadPatientPortal(sessionToken){
@@ -268,7 +268,7 @@ async function submitPortalRequest(sessionToken,action,appointmentId,note=''){
 }
 async function upsertPatientPortal(patientId,displayName,phoneLast4,birthDate,appointments){
   await requireTeamUser();
-  const {data,error}=await client.rpc('team_upsert_patient_portal_secure',{p_patient_id:String(patientId),p_display_name:String(displayName||'Paciente'),p_phone_last4:String(phoneLast4||''),p_birth_date:birthDate||null,p_appointments:appointments||[]});
+  const {data,error}=await client.rpc('team_upsert_patient_portal_secure_v263',{p_patient_id:String(patientId),p_display_name:String(displayName||'Paciente'),p_phone_last4:String(phoneLast4||''),p_birth_date_text:String(birthDate||''),p_appointments:appointments||[]});
   if(error) throw error; return data;
 }
 async function revokePatientPortal(patientId){

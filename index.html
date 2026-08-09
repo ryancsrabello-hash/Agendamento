@@ -461,6 +461,7 @@ function addDays(iso,n){ var d=parseISO(iso); d.setDate(d.getDate()+n); return i
 function isSameMonth(iso, ref){ return iso.slice(0,7) === ref.slice(0,7); }
 function weekdayShort(iso){ return parseISO(iso).toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''); }
 function dayDisplay(iso){ var d=parseISO(iso); return pad(d.getDate())+'/'+pad(d.getMonth()+1); }
+function birthDisplay(iso){ if(!iso)return '—'; var m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m)return m[3]+'/'+m[2]+'/'+m[1]; var d=parseISO(iso); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
 function fullDisplay(iso){ var d=parseISO(iso); return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'}); }
 function nowStamp(){ var d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes())+' · '+pad(d.getDate())+'/'+pad(d.getMonth()+1); }
 function fmtMoney(v){ return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -885,7 +886,7 @@ function renderPortal(){
   if(state.portalError) out+='<div class="card" style="margin-bottom:14px;"><div class="clinical-alert"><span>⚠</span><span><strong>Acesso não liberado.</strong><br>'+esc(state.portalError)+'</span></div></div>';
   var d=state.portalData;
   if(!d){
-    out+='<div class="card" style="max-width:560px;margin:0 auto;"><h2 style="margin-top:0;">Confirme que é você</h2><p class="mini-note">Informe os mesmos dados cadastrados na clínica. Após 5 tentativas incorretas, o acesso fica temporariamente bloqueado por 15 minutos.</p>';
+    out+='<div class="card" style="max-width:560px;margin:0 auto;"><h2 style="margin-top:0;">Confirme que é você</h2><p class="mini-note">Informe a data completa (dia, mês e ano) e os 4 últimos números do telefone exatamente como cadastrados na clínica. Após 5 tentativas incorretas, o acesso fica temporariamente bloqueado por 15 minutos.</p>';
     out+='<div class="field"><label>Data de nascimento</label><input id="portal-birth" type="date" autocomplete="bday"></div>';
     out+='<div class="field"><label>Últimos 4 números do telefone</label><input id="portal-last4" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off"></div>';
     out+='<button class="btn btn-primary" style="width:100%;" data-action="portal-load">Acessar meu portal</button>';
@@ -1662,7 +1663,7 @@ function generatePatientPortal(patientId){
   var last4=String(p.phone||p.sourcePhone||'').replace(/\D/g,'').slice(-4);
   if(last4.length!==4){alert('Cadastre um telefone válido antes de gerar o Portal Seguro.');return;}
   var hist=patientHistory(p).map(function(a){return {id:a.id,date:a.date,time:a.time,status:a.status,procedure:procById(a.procedureId).name,professional:profById(a.professionalId).name};});
-  waitForSupabase(5000).then(function(api){if(!api||!api.upsertPatientPortal)throw new Error('Atualize o supabase.js desta versão.');return api.upsertPatientPortal(patientId,p.name||'Paciente',last4,p.birthDate,hist);}).then(function(token){var url=location.origin+location.pathname+'?portal='+encodeURIComponent(token);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert('Novo link seguro copiado! O link anterior foi invalidado.\n\n'+url+'\n\nValidação cadastrada: nascimento '+dayDisplay(p.birthDate)+' e telefone final '+last4+'.\n\nO paciente deve informar exatamente esses dados.');}).catch(function(){prompt('Copie o novo link seguro:',url);});}else prompt('Copie o novo link seguro:',url);auditAction('portal_seguro_gerado','patient',patientId,{patient:p.name});}).catch(function(e){alert(e.message||'Não foi possível gerar o portal.');});
+  waitForSupabase(5000).then(function(api){if(!api||!api.upsertPatientPortal)throw new Error('Atualize o supabase.js desta versão.');return api.upsertPatientPortal(patientId,p.name||'Paciente',last4,p.birthDate,hist);}).then(function(token){var url=location.origin+location.pathname+'?portal='+encodeURIComponent(token);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert('Novo link seguro copiado! O link anterior foi invalidado.\n\n'+url+'\n\nValidação cadastrada: nascimento '+birthDisplay(p.birthDate)+' e telefone final '+last4+'.\n\nO paciente deve informar exatamente esses dados.');}).catch(function(){prompt('Copie o novo link seguro:',url);});}else prompt('Copie o novo link seguro:',url);auditAction('portal_seguro_gerado','patient',patientId,{patient:p.name});}).catch(function(e){alert(e.message||'Não foi possível gerar o portal.');});
 }
 function revokePatientPortal(patientId){
   var p=patientById(patientId);if(!p)return;
