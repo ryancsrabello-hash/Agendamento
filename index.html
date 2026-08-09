@@ -488,6 +488,7 @@ var state = {
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
   stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia',
   pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
+  sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   finForm: { desc:'', cat:EXPENSE_CATS[0], specialty:SPECIALTIES[0], value:'', date: todayISO(), type:'variavel', deductible:true, recurring:false, paid:true, supplier:'' }
 };
 var store = null;
@@ -498,6 +499,7 @@ function todayISO(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth
 function isoOf(y,m,d){ return y+'-'+pad(m)+'-'+pad(d); }
 function parseISO(iso){ var p=iso.split('-'); return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])); }
 function addDays(iso,n){ var d=parseISO(iso); d.setDate(d.getDate()+n); return isoOf(d.getFullYear(),d.getMonth()+1,d.getDate()); }
+function addMonths(iso,n){ var d=parseISO(iso),day=d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+n); var max=new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); d.setDate(Math.min(day,max)); return isoOf(d.getFullYear(),d.getMonth()+1,d.getDate()); }
 function isSameMonth(iso, ref){ return iso.slice(0,7) === ref.slice(0,7); }
 function weekdayShort(iso){ return parseISO(iso).toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''); }
 function dayDisplay(iso){ var d=parseISO(iso); return pad(d.getDate())+'/'+pad(d.getMonth()+1); }
@@ -788,7 +790,7 @@ function renderPromoCarousel(){
 function renderPatient(){
   var b = state.booking;
   var out = '<div class="hero"><img class="hero-watermark" src="'+LOGO_ICON+'" alt=""><h1>Agende sua consulta em poucos passos</h1>' +
-    '<p>Escolha o procedimento, o profissional e o melhor horário. A confirmação aparece imediatamente na tela.</p></div>' + renderPromoCarousel();
+    '<p>Escolha o procedimento, o profissional e o melhor horário. A confirmação aparece imediatamente na tela.</p></div>' + renderSacPublic() + renderPromoCarousel();
 
   if(b.done){
     var proc = procById(b.procedureId), prof = profById(b.professionalId);
@@ -948,20 +950,27 @@ function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffR
 function allowedStaffTabs(){
   var role=currentStaffRole();
   if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
-  if(role==='dentista') return ['visao','pendencias','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
-  return ['visao','pendencias','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
+  if(role==='dentista') return ['visao','pendencias','sac','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
+  return ['visao','pendencias','sac','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
 }
 function clinicalAlerts(){
   var r=state.recordData.prontuario||{}, alerts=[];
+  var patient=state.recordPatientId?patientById(state.recordPatientId):null;
+  var sig=patient&&patient.signatures?patient.signatures:{anamnesis:false,contract:false,terms:false};
   if(r.alergias&&r.alergias.trim()) alerts.push({text:'Alergias: '+r.alergias,kind:'danger'});
   if(r.anticoagulante) alerts.push({text:'Paciente em uso de anticoagulante.',kind:'danger'});
   if(r.hipertensao) alerts.push({text:'Hipertensão relatada.',kind:'warning'});
   if(r.diabetes) alerts.push({text:'Diabetes relatado.',kind:'warning'});
   if(r.gestante) alerts.push({text:'Paciente gestante.',kind:'warning'});
   if(r.medicamentos&&r.medicamentos.trim()) alerts.push({text:'Medicamentos em uso: '+r.medicamentos,kind:'warning'});
+  if(patient){
+    if(!sig.anamnesis) alerts.push({text:'Anamnese ainda sem confirmação de assinatura.',kind:'warning'});
+    if(!sig.contract) alerts.push({text:'Contrato ainda sem confirmação de assinatura.',kind:'warning'});
+    if(!sig.terms) alerts.push({text:'Termos / consentimentos ainda sem confirmação de assinatura.',kind:'warning'});
+  }
   return alerts;
 }
 function renderClinicalAlerts(){
@@ -970,6 +979,71 @@ function renderClinicalAlerts(){
   return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':'')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
 }
 
+
+
+function normalizePhone(v){return String(v||'').replace(/\D/g,'');}
+function patientForPhone(phone){var d=normalizePhone(phone);return (store.patients||[]).find(function(p){return normalizePhone(p.phone)===d||normalizePhone(p.sourcePhone)===d;})||null;}
+function recallDueForProcedure(procId,date){
+  if(['exodontia','canal','implante'].indexOf(procId)>=0)return addDays(date,7);
+  if(['restauracao','limpeza','avaliacao'].indexOf(procId)>=0)return addMonths(date,6);
+  return null;
+}
+function hasFutureAppointmentForPhone(phone,afterDate,afterTime){
+  var d=normalizePhone(phone);return (store.appointments||[]).some(function(a){
+    if(normalizePhone(a.phone)!==d||a.status==='cancelado'||a.status==='falta')return false;
+    return (a.date>afterDate)||(a.date===afterDate&&String(a.time||'')>String(afterTime||''));
+  });
+}
+function ensureAutoRecallForAppointment(appt){
+  if(!appt||appt.status!=='realizado')return Promise.resolve(false);
+  var due=recallDueForProcedure(appt.procedureId,appt.date);if(!due)return Promise.resolve(false);
+  if(hasFutureAppointmentForPhone(appt.phone,appt.date,appt.time))return resolveAutoRecallsForPhone(appt.phone);
+  var c=pendingClient();if(!c)return Promise.resolve(false);
+  var patient=patientForPhone(appt.phone), proc=procById(appt.procedureId), phone=normalizePhone(appt.phone);
+  return c.from('pending_items').select('id,status').eq('source_appointment_id',String(appt.id)).maybeSingle().then(function(r){
+    if(r.error)throw r.error;
+    var payload={patient_id:patient?patient.id:null,patient_name:appt.name||(patient&&patient.name)||'Paciente',phone:phone||null,type:'recall',title:'Recall automático — '+proc.name,details:'Gerado automaticamente porque não há retorno futuro marcado após o atendimento.',due_date:due,priority:['exodontia','canal','implante'].indexOf(appt.procedureId)>=0?'alta':'media',original_professional:profById(appt.professionalId).name,status:'aberto',source_appointment_id:String(appt.id),auto_generated:true,updated_at:new Date().toISOString()};
+    if(r.data&&r.data.id)return c.from('pending_items').update(payload).eq('id',r.data.id).then(function(x){if(x.error)throw x.error;return true;});
+    return c.from('pending_items').insert(payload).then(function(x){if(x.error)throw x.error;return true;});
+  }).then(function(changed){if(state.role==='staff'&&state.staffTab==='pendencias')setTimeout(loadPendencias,150);return changed;}).catch(function(e){console.warn('Recall automático não criado:',e);return false;});
+}
+function resolveAutoRecallsForPhone(phone){
+  var c=pendingClient(),d=normalizePhone(phone);if(!c||!d)return Promise.resolve(false);
+  return c.from('pending_items').update({status:'resolvido',resolved_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('type','recall').eq('auto_generated',true).eq('phone',d).eq('status','aberto').then(function(r){if(r.error)throw r.error;return true;}).catch(function(e){console.warn('Recall automático não resolvido:',e);return false;});
+}
+
+function sacClient(){return window.ILRSupabase&&window.ILRSupabase.client?window.ILRSupabase.client:null;}
+function loadSacPublic(){
+  var c=sacClient();if(!c||state.sacPublicLoading)return;state.sacPublicLoading=true;
+  c.from('sac_feedback').select('id,category,author_name,message,created_at').eq('visible',true).order('created_at',{ascending:false}).limit(8).then(function(r){if(r.error)throw r.error;state.sacPublic=r.data||[];state.sacPublicLoading=false;if(state.role==='patient')render();}).catch(function(e){console.warn('SAC público indisponível',e);state.sacPublicLoading=false;});
+}
+function submitSacFeedback(){
+  var c=sacClient();if(!c){alert('O SAC está temporariamente indisponível.');return;}
+  var cat=document.getElementById('sac-category'),name=document.getElementById('sac-name'),msg=document.getElementById('sac-message');
+  var message=msg?msg.value.trim():'';if(message.length<5){alert('Escreva sua mensagem antes de enviar.');return;}
+  c.from('sac_feedback').insert({category:cat?cat.value:'sugestao',author_name:name&&name.value.trim()?name.value.trim():null,message:message,visible:false}).then(function(r){if(r.error)throw r.error;state.sacMessage='Obrigado! Sua mensagem foi enviada ao Instituto.';render();}).catch(function(e){console.error(e);alert('Não foi possível enviar sua mensagem agora.');});
+}
+function loadSacAdmin(){
+  var c=sacClient();if(!c){state.sacLoading=false;render();return;}state.sacLoading=true;render();
+  c.from('sac_feedback').select('*').order('created_at',{ascending:false}).then(function(r){if(r.error)throw r.error;state.sacItems=r.data||[];state.sacLoading=false;render();}).catch(function(e){console.error(e);state.sacLoading=false;state.sacMessage='Não foi possível carregar o SAC. Execute o SQL desta atualização.';render();});
+}
+function setSacVisibility(id,visible){var c=sacClient();if(!c)return;c.from('sac_feedback').update({visible:visible,reviewed_at:new Date().toISOString()}).eq('id',id).then(function(r){if(r.error)throw r.error;state.sacMessage=visible?'Mensagem publicada no site.':'Mensagem ocultada do site.';loadSacAdmin();loadSacPublic();}).catch(function(e){alert('Não foi possível atualizar a publicação.');});}
+function deleteSacFeedback(id){if(!confirm('Excluir esta mensagem do SAC?'))return;var c=sacClient();if(!c)return;c.from('sac_feedback').delete().eq('id',id).then(function(r){if(r.error)throw r.error;state.sacMessage='Mensagem excluída.';loadSacAdmin();loadSacPublic();}).catch(function(){alert('Não foi possível excluir.');});}
+function renderSacPublic(){
+  var out='<div class="card" style="margin-bottom:18px;border:1px solid rgba(27,92,86,.18);background:linear-gradient(135deg,#ffffff,#f5faf9)"><div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap"><div><div class="promo-kicker">SAC • FALE COM O INSTITUTO</div><h2 style="margin:5px 0 6px">Sua opinião importa</h2><p style="margin:0;color:var(--ink-soft);font-size:13px">Envie um elogio, crítica ou sugestão. A mensagem vai para nossa equipe e só aparece publicamente se for aprovada.</p></div><span class="profile-badge">OUVIDORIA</span></div>';
+  if(state.sacMessage)out+='<div class="good-card" style="margin-top:12px">'+esc(state.sacMessage)+'</div>';
+  out+='<div class="patient-form-grid" style="margin-top:14px"><div class="field"><label>Tipo</label><select id="sac-category"><option value="elogio">Elogio</option><option value="critica">Crítica</option><option value="sugestao">Sugestão</option></select></div><div class="field span-2"><label>Nome (opcional)</label><input id="sac-name" placeholder="Se preferir, deixe em branco"></div><div class="field span-3"><label>Mensagem</label><textarea id="sac-message" style="width:100%;min-height:90px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Conte como foi sua experiência ou deixe uma sugestão"></textarea></div></div><div class="patient-actions"><span></span><button class="btn btn-primary" data-action="sac-submit">Enviar ao SAC</button></div>';
+  if((state.sacPublic||[]).length){out+='<div style="margin-top:18px"><strong>Mensagens compartilhadas por pacientes</strong><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">';state.sacPublic.forEach(function(x){out+='<div style="padding:13px;border:1px solid var(--border);border-radius:12px;background:#fff"><div class="pending-badge" style="display:inline-block">'+esc(x.category||'Mensagem')+'</div><p style="font-size:13px;line-height:1.5;margin:8px 0">“'+esc(x.message)+'”</p><div style="font-size:12px;color:var(--ink-soft)">— '+esc(x.author_name||'Paciente')+'</div></div>';});out+='</div></div>';}
+  out+='</div>';return out;
+}
+function renderSacAdmin(){
+  var out='<div class="section-title">SAC — elogios, críticas e sugestões <button class="btn btn-ghost btn-sm" data-action="sac-refresh">Atualizar</button></div>';
+  if(state.sacMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.sacMessage)+'</div>';
+  if(state.sacLoading)return out+'<div class="loading">Carregando SAC…</div>';
+  if(!(state.sacItems||[]).length)return out+'<div class="card empty-state">Nenhuma mensagem recebida ainda.</div>';
+  (state.sacItems||[]).forEach(function(x){out+='<div class="pending-card '+(x.category==='critica'?'high':x.category==='elogio'?'low':'medium')+'"><div><span class="pending-badge">'+esc((x.category||'mensagem').toUpperCase())+'</span><h3 style="margin:8px 0 4px">'+esc(x.author_name||'Paciente anônimo')+'</h3><div style="font-size:13px;line-height:1.55">'+esc(x.message)+'</div><div class="pending-meta"><span>'+new Date(x.created_at).toLocaleString('pt-BR')+'</span><span>'+(x.visible?'Visível aos pacientes':'Somente equipe')+'</span></div></div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="sac-visible" data-id="'+escAttr(x.id)+'" data-visible="'+(!x.visible)+'">'+(x.visible?'Ocultar':'Publicar')+'</button><button class="btn btn-ghost btn-sm" data-action="sac-delete" data-id="'+escAttr(x.id)+'">Excluir</button></div></div>';});
+  return out;
+}
 
 function pendingTypeLabel(t){return ({recall:'Recall',orcamento:'Orçamento',financeiro:'Financeiro'})[t]||t;}
 function pendingPriorityLabel(p){return ({alta:'Alta',media:'Média',baixa:'Baixa'})[p]||'Média';}
@@ -1031,7 +1105,7 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
@@ -1040,6 +1114,7 @@ function renderStaff(){
 
   if(state.staffTab==='visao') out += renderVisaoGeral();
   else if(state.staffTab==='pendencias') out += renderPendencias();
+  else if(state.staffTab==='sac') out += renderSacAdmin();
   else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
@@ -1339,7 +1414,7 @@ function renderFinanceiro(){
 }
 
 function patientBlank(){
-  return {id:'',name:'',cpf:'',rg:'',birthDate:'',sex:'',phone:'',email:'',cep:'',address:'',number:'',complement:'',neighborhood:'',city:'',state:'SP',insurance:'',responsible:'',notes:'',sourcePhone:'',createdAt:''};
+  return {id:'',name:'',cpf:'',rg:'',birthDate:'',sex:'',phone:'',email:'',cep:'',address:'',number:'',complement:'',neighborhood:'',city:'',state:'SP',insurance:'',responsible:'',notes:'',sourcePhone:'',createdAt:'',signatures:{anamnesis:false,contract:false,terms:false,notes:'',updatedAt:''}};
 }
 
 function patientRecords(){
@@ -1486,9 +1561,10 @@ function renderClinicalRecord(){
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
   out+=renderClinicalAlerts();
-  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(state.recordTab==='saude') out+=renderHealthAlerts();
   else if(state.recordTab==='anamnese') out+=renderAnamnesis();
+  else if(state.recordTab==='lembretes') out+=renderPatientReminders(p);
   else if(state.recordTab==='odontograma') out+=renderOdontogram();
   else if(state.recordTab==='evolucoes') out+=renderEvolutions();
   else if(state.recordTab==='documentos') out+=renderClinicalDocuments(p);
@@ -1531,6 +1607,20 @@ function renderAnamnesis(){
   out+='<div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-anamnesis">Salvar anamnese</button></div>';
   return out;
 }
+
+function patientSignatureState(p){var s=(p&&p.signatures)||{};return {anamnesis:!!s.anamnesis,contract:!!s.contract,terms:!!s.terms,notes:s.notes||'',updatedAt:s.updatedAt||''};}
+function renderPatientReminders(p){
+  var s=patientSignatureState(p),missing=[];if(!s.anamnesis)missing.push('Anamnese');if(!s.contract)missing.push('Contrato');if(!s.terms)missing.push('Termos / consentimentos');
+  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px"><h3 style="margin-top:0">Lembretes de documentos e assinaturas</h3><p style="font-size:13px;color:var(--ink-soft)">Marque o OK somente depois que o paciente assinar presencialmente. O que estiver pendente ficará destacado no topo do prontuário.</p>'+(missing.length?'<div class="alert-card">Pendentes: <strong>'+esc(missing.join(', '))+'</strong></div>':'<div class="good-card">✓ Documentos obrigatórios confirmados como assinados.</div>')+'</div>';
+  out+='<div class="card"><div class="record-checks" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><label class="record-check"><input id="sig-anamnesis" type="checkbox" '+(s.anamnesis?'checked':'')+'> Anamnese assinada</label><label class="record-check"><input id="sig-contract" type="checkbox" '+(s.contract?'checked':'')+'> Contrato assinado</label><label class="record-check"><input id="sig-terms" type="checkbox" '+(s.terms?'checked':'')+'> Termos / consentimentos assinados</label></div><div class="field" style="margin-top:14px"><label>Observações</label><textarea id="sig-notes" class="record-textarea" placeholder="Ex.: termo de implante entregue para assinatura no retorno">'+esc(s.notes)+'</textarea></div>'+(s.updatedAt?'<div class="mini-note">Última atualização: '+new Date(s.updatedAt).toLocaleString('pt-BR')+'</div>':'')+'<div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-patient-reminders">Salvar lembretes</button></div></div>';return out;
+}
+function savePatientReminders(){
+  var p=patientById(state.recordPatientId);if(!p)return;var idx=(store.patients||[]).findIndex(function(x){return x.id===p.id;});if(idx<0){alert('Salve primeiro o cadastro do paciente.');return;}
+  function ck(id){var e=document.getElementById(id);return !!(e&&e.checked);}var notes=document.getElementById('sig-notes');
+  store.patients[idx].signatures={anamnesis:ck('sig-anamnesis'),contract:ck('sig-contract'),terms:ck('sig-terms'),notes:notes?notes.value.trim():'',updatedAt:new Date().toISOString()};
+  auditAction('atualizou lembretes de assinatura','paciente',p.id,store.patients[idx].signatures);state.patientMessage='Lembretes de assinatura atualizados.';persist();
+}
+
 function renderOdontogram(){
   var teeth=['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28','48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
   var map=clinicalToothMap(), selected=state.selectedTooth, current=selected?map[selected]:null;
@@ -1759,7 +1849,7 @@ function attachEvents(){
     if(!t) return;
 
     if(t.dataset.role){ state.role = t.dataset.role; render(); return; }
-    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else if(state.staffTab==='pendencias')loadPendencias(); else render(); return; }
+    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else if(state.staffTab==='pendencias')loadPendencias(); else if(state.staffTab==='sac')loadSacAdmin(); else render(); return; }
 
     var a = t.dataset.action;
     var b = state.booking;
@@ -1848,6 +1938,11 @@ function attachEvents(){
     else if(a==='pending-copy'){ var ph=t.dataset.phone||'';if(navigator.clipboard)navigator.clipboard.writeText(ph).then(function(){alert('Telefone copiado.');});else prompt('Copie o telefone:',ph);return; }
     else if(a==='pending-patient'){ state.patientEditingId=t.dataset.id;state.staffTab='pacientes';render();return; }
     else if(a==='pending-finance'){ state.staffTab='financeiro';state.finTab='recebimentos';render();return; }
+    else if(a==='save-patient-reminders'){ savePatientReminders(); return; }
+    else if(a==='sac-submit'){ submitSacFeedback(); return; }
+    else if(a==='sac-refresh'){ loadSacAdmin(); return; }
+    else if(a==='sac-visible'){ setSacVisibility(t.dataset.id,t.dataset.visible==='true'); return; }
+    else if(a==='sac-delete'){ deleteSacFeedback(t.dataset.id); return; }
     else if(a==='install-app'){ installPwa(); return; }
 
     render();
@@ -1999,6 +2094,7 @@ function confirmBooking(){
     b.saving = false;
     b.done = true;
     writeLocalStore(store);
+    resolveAutoRecallsForPhone(b.phone);
     render();
   }).catch(function(error){
     console.error('Erro ao criar agendamento:', error);
@@ -2143,6 +2239,7 @@ function setReceptionStatus(id,status){
   if(status==='atendimento') a.startedAt=new Date().toISOString();
   if(status==='realizado') a.finishedAt=new Date().toISOString();
   persist();
+  if(status==='realizado') ensureAutoRecallForAppointment(a);
 }
 function openReceptionRecord(apptId){
   if(!canAccessClinical()){alert('Seu perfil não possui acesso ao prontuário clínico.');return;}
@@ -2166,7 +2263,7 @@ function copyWaitlistPhone(id){var w=(store.waitlist||[]).find(function(x){retur
 var deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstallPrompt=e;document.querySelectorAll('.install-app').forEach(function(b){b.style.display='inline-flex';});});
 function installPwa(){if(!deferredInstallPrompt){alert('No celular, use “Adicionar à tela inicial”. No computador, procure o ícone de instalação na barra do navegador.');return;}deferredInstallPrompt.prompt();deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});}
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.0-pendencias1').catch(function(e){console.warn('PWA indisponível:',e);});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.0-pendencias-recall-sac1').catch(function(e){console.warn('PWA indisponível:',e);});});}
 
 function cycleOrSetStatus(t){
   var id = t.dataset.id;
@@ -2181,6 +2278,7 @@ function cycleOrSetStatus(t){
   }
   applyProcedureStock(appt);
   persist();
+  if(appt.status==='realizado') ensureAutoRecallForAppointment(appt);
 }
 
 function toggleBlock(time){
@@ -2232,11 +2330,11 @@ function applyProcedureStock(appt){if(!appt||appt.stockPostedAt||appt.status!=='
 /* ---------------- boot ---------------- */
 try{
   loadStore(function(){
-    restoreStaffSession(function(){ render(); });
+    restoreStaffSession(function(){ render(); loadSacPublic(); });
   });
 }catch(e){
   store = seedStore();
-  restoreStaffSession(function(){ render(); });
+  restoreStaffSession(function(){ render(); loadSacPublic(); });
 }
 
 })();
