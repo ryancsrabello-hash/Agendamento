@@ -382,7 +382,7 @@
 <body>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
-<script type="module" src="./supabase.js?v=erp240-estoque-20260808-1"></script>
+<script type="module" src="./supabase.js?v=erp264-portal-cache-20260809-1"></script>
 
 <script>
 (function(){
@@ -715,7 +715,7 @@ function render(){
   else if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.6.1 · clínica, financeiro, estoque e portal do paciente.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.6.4 · clínica, financeiro, estoque e portal seguro do paciente.</footer>';
   root.innerHTML = html;
   attachEvents();
 }
@@ -1648,7 +1648,7 @@ function restoreBackupFile(file){
 
 
 function renderPortalAdmin(){
-  var out='<div class="section-title">Portal do paciente <span class="pill realizado">v2.6.2</span></div>';
+  var out='<div class="section-title">Portal do paciente <span class="pill realizado">v2.6.4</span></div>';
   out+='<div class="card"><h3 style="margin-top:0;">Links individuais</h3><p class="mini-note">Na aba Pacientes, use o botão <strong>Portal</strong>. O ERP gera um novo link seguro e invalida o anterior. Para entrar, o paciente confirma data de nascimento + últimos 4 números do telefone. A sessão dura 30 minutos e o link vence em 30 dias.</p></div>';
   out+='<div class="card"><div class="row-actions" style="justify-content:space-between;"><div><h3 style="margin:0;">Solicitações recebidas</h3><p class="mini-note" style="margin:4px 0 0;">Confirmações, pedidos de reagendamento e cancelamento.</p></div><button class="btn btn-ghost btn-sm" data-action="portal-admin-refresh">Atualizar</button></div>';
   if(state.portalAdminLoading)out+='<div class="loading" style="padding:24px;">Carregando…</div>';

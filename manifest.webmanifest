@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#F5F9F8",
   "theme_color": "#122A3A",
-  "description": "ERP odontológico com Portal Seguro do Paciente v2.6.3, agenda, prontuário, estoque e financeiro.",
+  "description": "ERP odontológico com Portal Seguro do Paciente v2.6.4, agenda, prontuário, estoque e financeiro.",
   "icons": [
     {
       "src": "./icons/icon-192.png",
