@@ -382,7 +382,7 @@
 <body>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
-<script type="module" src="./supabase.js?v=erp265-portal-login-20260809-1"></script>
+<script type="module" src="./supabase.js?v=erp266-portal-validacao-20260809-2"></script>
 
 <script>
 (function(){
@@ -916,7 +916,7 @@ function loadPatientPortal(){
     var last4=((document.getElementById('portal-last4')||{}).value||'').replace(/[^0-9]/g,'').slice(-4);
     if(!birth||last4.length!==4) throw new Error('Informe sua data de nascimento e os últimos 4 números do telefone.');
     return api.verifyPatientPortal(state.portalToken,birth,last4).then(function(v){
-      if(!v||!v.ok||!v.session_token) throw new Error((v&&v.message)||'Não foi possível validar sua identidade.');
+      if(!v||!v.ok||!v.session_token) throw new Error(((v&&v.message)||'Não foi possível validar sua identidade.') + (v&&v.code ? ' ['+v.code+']' : ''));
       state.portalSession=v.session_token;
       sessionStorage.setItem('ilrPortalSession:'+state.portalToken,state.portalSession);
       return api.loadPatientPortal(state.portalSession).then(function(data){return {data:data,api:api};});
