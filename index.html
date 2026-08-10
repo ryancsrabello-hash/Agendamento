@@ -734,6 +734,44 @@
   .promo-copy{width:82%!important}
 }
 
+
+/* ===== CALENDÁRIO MENSAL ===== */
+.month-calendar{margin-top:6px}
+.month-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.month-calendar-head strong{text-transform:capitalize;font-size:15px}
+.month-nav-btn{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:9px;padding:8px 11px;cursor:pointer}
+.month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.month-week{font-size:9px;font-weight:850;text-align:center;color:rgba(255,255,255,.55);text-transform:uppercase;padding:3px 0}
+.month-day{
+  border:1px solid rgba(255,255,255,.18);background:#082b49;color:#fff;border-radius:10px;
+  min-height:49px;padding:6px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer
+}
+.month-day .n{font-size:14px;font-weight:850}.month-day .w{font-size:8px;color:rgba(255,255,255,.58);margin-top:2px}
+.month-day:hover:not(:disabled){border-color:#e1b457}
+.month-day.selected{background:#d9ad54;color:#08233d;border-color:#d9ad54}
+.month-day.selected .w{color:#5b461b}
+.month-day:disabled{cursor:not-allowed;opacity:.38;background:#142d42}
+.month-day.closed{opacity:.58;background:repeating-linear-gradient(45deg,#132f47,#132f47 6px,#1b3a53 6px,#1b3a53 12px)}
+.month-day.closed .w{color:#f0c66e}
+.month-empty{min-height:1px}
+.day-close-card{margin:16px 0;padding:15px;border:1px solid var(--border);border-radius:14px;background:var(--grey-soft)}
+.day-close-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.day-close-state{font-size:13px;color:var(--ink-soft);line-height:1.45}
+.day-close-state strong{display:block;color:var(--ink);font-size:14px}
+.day-close-btn{white-space:nowrap}
+@media(max-width:760px){
+  .month-grid{gap:4px}
+  .month-day{min-height:44px;border-radius:8px;padding:4px 2px}
+  .month-day .n{font-size:13px}.month-day .w{font-size:7px}
+  .month-calendar-head strong{font-size:14px}
+  .day-close-row{display:block}.day-close-btn{width:100%;margin-top:10px}
+}
+
+
+.month-day.weekend-open{background:linear-gradient(135deg,#0e5f57,#17786d)!important;border-color:#4fd2bd!important;opacity:1!important}
+.month-day.weekend-open .w{color:#d9fff8!important}
+
 </style>
 </head>
 <body>
@@ -780,6 +818,7 @@ var ACCESS_CODES = { ryan: '1957', amanda: '2831' };
 var state = {
   role: 'patient', // patient | gate | staff
   publicPage: 'home', // home | about | sac | cases | why | faq | contact
+  bookingMonth: todayISO().slice(0,7),
   staffTab: 'visao',
   gateError: false,
   gateLoading: false,
@@ -828,11 +867,54 @@ function nowStamp(){ var d=new Date(); return pad(d.getHours())+':'+pad(d.getMin
 function fmtMoney(v){ return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function next14Days(){
   var out=[]; var d=todayISO();
-  for(var i=0;i<16 && out.length<12;i++){
+  for(var i=0;i<40 && out.length<22;i++){
     var iso = addDays(d,i);
-    if(parseISO(iso).getDay()!==0){ out.push(iso); } // skip Sundays
+    var wd=parseISO(iso).getDay();
+    if(wd!==0 && wd!==6){ out.push(iso); }
   }
   return out;
+}
+function monthDays(monthRef){
+  var p=monthRef.split('-'), y=parseInt(p[0]), m=parseInt(p[1]);
+  var last=new Date(y,m,0).getDate(), out=[];
+  for(var d=1;d<=last;d++) out.push(isoOf(y,m,d));
+  return out;
+}
+function monthLabel(monthRef){
+  var p=monthRef.split('-');
+  return new Date(parseInt(p[0]),parseInt(p[1])-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+}
+function shiftMonth(monthRef,delta){
+  var p=monthRef.split('-'), d=new Date(parseInt(p[0]),parseInt(p[1])-1+delta,1);
+  return isoOf(d.getFullYear(),d.getMonth()+1,1).slice(0,7);
+}
+function isWeekend(iso){ var d=parseISO(iso).getDay(); return d===0 || d===6; }
+function isPastDay(iso){ return iso < todayISO(); }
+
+function isWeekendExceptionOpen(date){
+  return (store.blocks||[]).some(function(bl){
+    return bl.date===date && bl.weekendOpen===true;
+  });
+}
+function setWeekendException(date,open){
+  store.blocks = (store.blocks||[]).filter(function(bl){
+    return !(bl.date===date && bl.weekendOpen===true);
+  });
+  if(open){
+    store.blocks.push({id:'wopen'+Date.now(),date:date,weekendOpen:true,professionalId:'weekend-open',time:'00:00'});
+  }
+  persist();
+}
+
+function isDayClosed(date){
+  return (store.blocks||[]).some(function(bl){
+    return bl.date===date && (bl.allDay===true || bl.professionalId==='all-day');
+  });
+}
+function dayHasAppointments(date){
+  return (store.appointments||[]).some(function(a){
+    return a.date===date && a.status!=='cancelado' && a.status!=='falta';
+  });
 }
 function timeSlots(){
   var out=[];
@@ -1002,6 +1084,7 @@ function procById(id){ for(var i=0;i<PROCEDURES.length;i++) if(PROCEDURES[i].id=
 
 function busyRanges(professionalId, date){
   var ranges = [];
+  if(isDayClosed(date)) return [[0,24*60]];
   // O Instituto possui uma única cadeira: qualquer consulta ocupa o horário para ambos os dentistas.
   store.appointments.forEach(function(a){
     if(a.date===date && a.status!=='cancelado' && a.status!=='falta'){
@@ -1022,6 +1105,7 @@ function busyRanges(professionalId, date){
 function rangesOverlap(s1,e1,s2,e2){ return s1 < e2 && e1 > s2; }
 
 function isFreeSlot(professionalId, date, time, duration){
+  if((isWeekend(date) && !isWeekendExceptionOpen(date)) || isDayClosed(date)) return false;
   var start = timeToMinutes(time);
   var end = start + (duration||30);
   if(end > 20*60) return false;
@@ -1352,12 +1436,26 @@ function renderPatient(){
     out += '</div>';
   }
   else if(b.step===3){
-    out += '<h3 style="margin-top:0;">3. Escolha o dia</h3><div class="date-row">';
-    next14Days().forEach(function(d){
-      out += '<button class="date-chip '+(b.date===d?'selected':'')+'" data-action="pick-date" data-id="'+d+'">' +
-        '<div class="wd">'+weekdayShort(d)+'</div><div class="dd">'+dayDisplay(d)+'</div></button>';
+    var bm=state.bookingMonth||todayISO().slice(0,7);
+    var days=monthDays(bm);
+    var firstWd=parseISO(days[0]).getDay();
+    var labels=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    out += '<h3 style="margin-top:0;">3. Escolha o dia</h3>';
+    out += '<div class="month-calendar"><div class="month-calendar-head">'+
+      '<button class="month-nav-btn" data-action="booking-month-prev" type="button">‹</button>'+
+      '<strong>'+monthLabel(bm)+'</strong>'+
+      '<button class="month-nav-btn" data-action="booking-month-next" type="button">›</button>'+
+    '</div><div class="month-grid">';
+    labels.forEach(function(x){out+='<div class="month-week">'+x+'</div>';});
+    for(var e=0;e<firstWd;e++) out+='<div class="month-empty"></div>';
+    days.forEach(function(d){
+      var closed=isDayClosed(d), weekend=isWeekend(d), weekendOpen=isWeekendExceptionOpen(d), past=isPastDay(d);
+      var disabled=past||closed||(weekend&&!weekendOpen);
+      var note=closed?'Fechado':(weekend?(weekendOpen?'Aberto excepcionalmente':'Fim de semana'):weekdayShort(d));
+      out += '<button class="month-day '+(b.date===d?'selected ':'')+(closed?'closed ':'')+(weekendOpen?'weekend-open':'')+'" data-action="pick-date" data-id="'+d+'" '+(disabled?'disabled':'')+'>'+
+        '<span class="n">'+parseISO(d).getDate()+'</span><span class="w">'+note+'</span></button>';
     });
-    out += '</div>';
+    out += '</div><div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.65)">Atendimentos de segunda a sexta. Dias indisponíveis aparecem bloqueados.</div></div>';
   }
   else if(b.step===4){
     out += '<h3 style="margin-top:0;">4. Escolha o horário — '+fullDisplay(b.date)+'</h3>';
@@ -1818,11 +1916,25 @@ function miniReceptionKpi(value,label){return '<div class="mini-kpi"><div class=
 
 function renderAgenda(){
   var out = '<div class="section-title">Agenda por cadeira</div>';
+  var admMonth=state.agendaDate.slice(0,7);
   out += '<div class="date-row" style="margin-bottom:18px;">';
-  next14Days().slice(0,10).forEach(function(d){
-    out += '<button class="date-chip '+(state.agendaDate===d?'selected':'')+'" data-action="agenda-date" data-id="'+d+'"><div class="wd">'+weekdayShort(d)+'</div><div class="dd">'+dayDisplay(d)+'</div></button>';
+  monthDays(admMonth).forEach(function(d){
+    var closed=isDayClosed(d), weekend=isWeekend(d);
+    out += '<button class="date-chip '+(state.agendaDate===d?'selected ':'')+(closed?'blocked':'')+'" data-action="agenda-date" data-id="'+d+'"><div class="wd">'+weekdayShort(d)+(weekend?' · fim de semana':'')+'</div><div class="dd">'+dayDisplay(d)+'</div></button>';
   });
   out += '</div>';
+
+  var dayClosed=isDayClosed(state.agendaDate), hasAppts=dayHasAppointments(state.agendaDate), weekend=isWeekend(state.agendaDate), weekendOpen=isWeekendExceptionOpen(state.agendaDate);
+  out += '<div class="day-close-card"><div class="day-close-row"><div class="day-close-state"><strong>'+
+    (weekend ? (weekendOpen?'🟢 Fim de semana aberto excepcionalmente':'🔒 Fim de semana fechado por padrão') : (dayClosed?'🔒 Dia fechado para novos agendamentos':'🟢 Dia aberto para agendamentos'))+
+    '</strong>'+
+    (weekend ? (weekendOpen?'Esta data está liberada para novos agendamentos.':'Sábados e domingos ficam fechados por padrão, mas você pode abrir esta data como exceção.') :
+      (hasAppts?'Existem consultas cadastradas nesta data.':'Você pode fechar ou reabrir esta data quando quiser.'))+
+    '</div>'+
+    (weekend
+      ? '<button class="btn '+(weekendOpen?'btn-primary':'btn-ghost')+' day-close-btn" data-action="toggle-weekend-exception">'+(weekendOpen?'Fechar fim de semana':'Abrir excepcionalmente este dia')+'</button>'
+      : '<button class="btn '+(dayClosed?'btn-primary':'btn-ghost')+' day-close-btn" data-action="toggle-day-closed">'+(dayClosed?'Reabrir este dia':'Fechar este dia')+'</button>')+
+    '</div></div>';
 
   out += '<div class="card">';
   out += '<div class="hour-labels"><div>' + [8,10,12,14,16,18].map(function(h){ var pct=((h-8)/10)*100; return '<span style="left:'+pct+'%;">'+h+'h</span>'; }).join('') + '</div></div>';
@@ -2388,6 +2500,8 @@ function attachEvents(){
 
     if(a==='pick-proc'){ b.procedureId = t.dataset.id; logMarketingEvent('procedure_interest',{procedure:b.procedureId}); if(b.step===1)logMarketingEvent('booking_started',{procedure:b.procedureId}); }
     else if(a==='pick-prof'){ b.professionalId = t.dataset.id; logMarketingEvent('professional_interest',{professional:b.professionalId}); }
+    else if(a==='booking-month-prev'){state.bookingMonth=shiftMonth(state.bookingMonth||todayISO().slice(0,7),-1);render();return;}
+    else if(a==='booking-month-next'){state.bookingMonth=shiftMonth(state.bookingMonth||todayISO().slice(0,7),1);render();return;}
     else if(a==='pick-date'){ b.date = t.dataset.id; b.time=null; }
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
     else if(a==='wiz-next'){ if(b.step===5){var ne=document.getElementById('inp-name'),pe=document.getElementById('inp-phone');b.name=ne?ne.value.trim():b.name;b.phone=pe?pe.value.replace(/\D/g,''):b.phone;if(b.name.length<3){b.error='Informe seu nome completo.';render();return;}if(b.phone.length!==11){b.error='Informe o telefone com DDD + 9 dígitos (11 números).';render();return;}b.error=null;} b.step = Math.min(6,b.step+1); }
@@ -2401,6 +2515,8 @@ function attachEvents(){
     else if(a==='agenda-date'){ state.agendaDate = t.dataset.id; }
     else if(a==='agenda-block-prof'){ state.agendaBlockProf = t.dataset.id; }
     else if(a==='toggle-block'){ toggleBlock(t.dataset.id); return; }
+    else if(a==='toggle-day-closed'){ toggleDayClosed(); return; }
+    else if(a==='toggle-weekend-exception'){ toggleWeekendException(); return; }
     else if(a==='finance-tab'){ state.finTab=t.dataset.id; state.financeMessage=''; render(); return; }
     else if(a==='finance-month'){ var fm=document.getElementById('finance-month'); state.financeMonth=fm?fm.value:state.financeMonth; render(); return; }
     else if(a==='prepare-payment'){ preparePayment(t.dataset.id); return; }
@@ -2818,6 +2934,35 @@ function cycleOrSetStatus(t){
   applyProcedureStock(appt);
   persist();
   if(appt.status==='realizado') ensureAutoRecallForAppointment(appt);
+}
+
+
+
+function toggleWeekendException(){
+  var date=state.agendaDate;
+  if(!isWeekend(date)) return;
+  var currentlyOpen=isWeekendExceptionOpen(date);
+  if(currentlyOpen && dayHasAppointments(date)){
+    alert('Este dia possui agendamentos ativos. Reagende ou cancele as consultas antes de fechar novamente este fim de semana.');
+    return;
+  }
+  setWeekendException(date,!currentlyOpen);
+}
+
+function toggleDayClosed(){
+  var date=state.agendaDate;
+  var idx=(store.blocks||[]).findIndex(function(bl){return bl.date===date && (bl.allDay===true || bl.professionalId==='all-day');});
+  if(idx>=0){
+    store.blocks.splice(idx,1);
+    persist();
+    return;
+  }
+  if(dayHasAppointments(date)){
+    alert('Este dia possui agendamentos ativos. Reagende ou cancele as consultas antes de fechar o dia inteiro.');
+    return;
+  }
+  store.blocks.push({id:'day'+Date.now(),professionalId:'all-day',date:date,time:'00:00',allDay:true});
+  persist();
 }
 
 function toggleBlock(time){
