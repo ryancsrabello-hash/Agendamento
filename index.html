@@ -1993,6 +1993,7 @@ function miniReceptionKpi(value,label){return '<div class="mini-kpi"><div class=
 
 function renderAgenda(){
   var out = '<div class="section-title">Agenda por cadeira</div>';
+  if(state.agendaDate<todayISO()) state.agendaDate=todayISO();
   var admMonth=state.agendaDate.slice(0,7);
   out += '<div class="agenda-months"><strong>Meses</strong><div class="agenda-month-row">';
   monthRefsThroughYear().forEach(function(mr){
@@ -2000,7 +2001,11 @@ function renderAgenda(){
   });
   out += '</div></div>';
   out += '<div class="date-row agenda-month-days" style="margin-bottom:18px;">';
-  monthDays(admMonth).forEach(function(d){
+  monthDays(admMonth).filter(function(d){
+    // Na tela de abrir/fechar agenda, não mostramos datas que já passaram.
+    // O histórico de atendimentos continua preservado nas demais áreas do ERP.
+    return d>=todayISO();
+  }).forEach(function(d){
     var closed=isDayClosed(d), weekend=isWeekend(d);
     out += '<button class="date-chip '+(state.agendaDate===d?'selected ':'')+(closed?'blocked':'')+'" data-action="agenda-date" data-id="'+d+'"><div class="wd">'+weekdayShort(d)+(weekend?' · fim de semana':'')+'</div><div class="dd">'+dayDisplay(d)+'</div></button>';
   });
