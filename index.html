@@ -940,9 +940,11 @@ function defaultProfessionalClosed(professionalId,date,time){
   }
 
   // Dra. Amanda:
-  // - segunda, quarta e sexta: somente 18:00 disponível.
+  // - segunda e quarta: somente 18:00 disponível.
+  // - sexta-feira: dia inteiro fechado.
   if(professionalId==='amanda'){
-    if((dow===1 || dow===3 || dow===5) && time!=='18:00') return true;
+    if(dow===5) return true;
+    if((dow===1 || dow===3) && time!=='18:00') return true;
   }
 
   return false;
@@ -2044,7 +2046,7 @@ function renderAgenda(){
   out += '<div class="section-title">Fechar horários</div><div class="card">';
   out += '<p style="color:var(--ink-soft);font-size:13px;margin-top:0;">Selecione o profissional e ajuste a disponibilidade desta data. Horários fechados pelo padrão de trabalho aparecem como <strong>Fechado por padrão</strong>. Administradores podem clicar neles para abrir uma exceção. Horários normalmente abertos podem ser fechados manualmente.</p>';
   if(canEditScheduleExceptions()){
-    out += '<div class="schedule-rules-note"><strong>Regras padrão:</strong> Dr. Ryan — segundas fechadas e 08h/09h fechados todos os dias. Dra. Amanda — segundas, quartas e sextas disponível por padrão somente às 18h. Finais de semana continuam fechados, salvo exceção manual.</div>';
+    out += '<div class="schedule-rules-note"><strong>Regras padrão:</strong> Dr. Ryan — segundas fechadas e 08h/09h fechados todos os dias. Dra. Amanda — segundas e quartas disponível por padrão somente às 18h; sextas-feiras fechadas o dia inteiro. Finais de semana continuam fechados, salvo exceção manual.</div>';
   }
   out += '<div class="role-toggle" style="margin-bottom:16px;display:inline-flex;">';
   PROFESSIONALS.forEach(function(p){
