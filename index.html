@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
 <title>Instituto Lins Rabello ERP</title>
 <meta name="theme-color" content="#122A3A">
 <meta name="description" content="Agenda, recepção, prontuário e gestão do Instituto Lins Rabello.">
@@ -538,6 +538,75 @@
   .public-booking-side{padding:12px}.public-booking-side>.card{padding:16px}
 }
 
+
+/* ===== CORREÇÃO MOBILE — AGENDAMENTO ===== */
+@media(max-width:760px){
+  html,body{overflow-x:hidden}
+  .public-blue-top{overflow:visible}
+  .public-blue-grid{display:block;min-height:0}
+  .public-booking-side{
+    display:block;
+    padding:12px;
+    overflow:visible;
+  }
+  .public-booking-side>.card{
+    max-height:none!important;
+    overflow:visible!important;
+    padding-bottom:92px!important;
+  }
+  .public-booking-side .wizard-footer{
+    position:sticky;
+    bottom:8px;
+    z-index:70;
+    display:flex;
+    gap:8px;
+    padding:10px;
+    margin:14px -4px -78px;
+    border-radius:14px;
+    background:rgba(5,31,55,.97);
+    box-shadow:0 -8px 24px rgba(0,0,0,.24);
+    backdrop-filter:blur(8px);
+  }
+  .public-booking-side .wizard-footer .btn{
+    flex:1;
+    min-height:48px;
+    font-size:14px;
+  }
+  .public-booking-side .dates{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  .public-booking-side .date-chip{
+    min-width:0!important;
+    width:100%!important;
+    padding:10px 7px!important;
+  }
+  .public-booking-side .slots{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:8px!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  .public-booking-side .slot{
+    min-width:0!important;
+    width:100%!important;
+    padding:11px 4px!important;
+    font-size:13px!important;
+  }
+  .steps{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .steps-track{min-width:520px}
+  input,select,textarea,button{font-size:16px!important}
+}
+@media(max-width:420px){
+  .public-booking-side .dates{grid-template-columns:1fr 1fr!important}
+  .public-booking-side .slots{grid-template-columns:1fr 1fr 1fr!important}
+  .public-booking-side>.card{padding-left:14px!important;padding-right:14px!important}
+}
+
 </style>
 </head>
 <body>
@@ -1028,6 +1097,22 @@ function renderPremiumConfirmation(proc,prof,b){
     '<div><strong>2. No atendimento</strong>'+esc(prof.name)+' irá conversar com você, avaliar suas necessidades e explicar as possibilidades de cuidado.</div>'+
     '<div><strong>3. Depois da consulta</strong>Quando necessário, orientaremos retornos e acompanhamento para manter a continuidade do cuidado.</div>'+
   '</div><div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:#fff;border:1px solid var(--border);font-size:13px"><strong>Resumo:</strong> '+esc(proc.name)+' · '+fullDisplay(b.date)+' · '+b.time+' · '+esc(prof.name)+'</div>';
+}
+
+
+function keepBookingControlsVisible(){
+  if(window.innerWidth<=760){
+    setTimeout(function(){
+      var card=document.getElementById('agendamento');
+      var footer=card?card.querySelector('.wizard-footer'):null;
+      if(footer){
+        var r=footer.getBoundingClientRect();
+        if(r.bottom>window.innerHeight || r.top<0){
+          footer.scrollIntoView({behavior:'smooth',block:'nearest'});
+        }
+      }
+    },80);
+  }
 }
 
 function renderPatient(){
