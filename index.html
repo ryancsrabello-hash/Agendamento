@@ -772,6 +772,22 @@
 .month-day.weekend-open{background:linear-gradient(135deg,#0e5f57,#17786d)!important;border-color:#4fd2bd!important;opacity:1!important}
 .month-day.weekend-open .w{color:#d9fff8!important}
 
+
+/* ===== ESCALA PADRÃO DOS DOUTORES + MESES ATÉ DEZEMBRO ===== */
+.agenda-months{margin-bottom:12px}
+.agenda-months>strong{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:8px}
+.agenda-month-row{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px}
+.agenda-month-chip{border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:999px;padding:9px 13px;white-space:nowrap;cursor:pointer;text-transform:capitalize;font-weight:750}
+.agenda-month-chip.active{background:var(--teal-deep);color:#fff;border-color:var(--teal-deep)}
+.schedule-rules-note{margin:10px 0 16px;padding:12px 14px;border-radius:12px;background:#eef7f5;border:1px solid rgba(27,92,86,.15);font-size:12px;line-height:1.55;color:var(--ink-soft)}
+.slot.schedule-open{background:#dff6ee!important;border-color:#39a88f!important;color:#135b50!important}
+.slot.schedule-open small{color:#135b50!important}
+.month-nav-btn:disabled{opacity:.32;cursor:not-allowed}
+@media(max-width:760px){
+  .agenda-month-days{max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .agenda-month-chip{padding:8px 11px;font-size:12px}
+}
+
 </style>
 </head>
 <body>
@@ -890,6 +906,63 @@ function shiftMonth(monthRef,delta){
 }
 function isWeekend(iso){ var d=parseISO(iso).getDay(); return d===0 || d===6; }
 function isPastDay(iso){ return iso < todayISO(); }
+
+
+function scheduleOverrideOpen(professionalId,date,time){
+  return (store.blocks||[]).some(function(bl){
+    return bl.scheduleOpen===true && bl.targetProfessionalId===professionalId && bl.date===date && bl.time===time;
+  });
+}
+function setScheduleOverrideOpen(professionalId,date,time,open){
+  store.blocks=(store.blocks||[]).filter(function(bl){
+    return !(bl.scheduleOpen===true && bl.targetProfessionalId===professionalId && bl.date===date && bl.time===time);
+  });
+  if(open){
+    store.blocks.push({
+      id:'sopen'+Date.now()+Math.random().toString(16).slice(2),
+      professionalId:'schedule-open',
+      targetProfessionalId:professionalId,
+      date:date,
+      time:time,
+      scheduleOpen:true
+    });
+  }
+}
+function defaultProfessionalClosed(professionalId,date,time){
+  var d=parseISO(date), dow=d.getDay();
+
+  // Dr. Ryan:
+  // - todas as segundas-feiras fechadas;
+  // - todos os dias 08:00 e 09:00 fechados.
+  if(professionalId==='ryan'){
+    if(dow===1) return true;
+    if(time==='08:00' || time==='09:00') return true;
+  }
+
+  // Dra. Amanda:
+  // - segunda, quarta e sexta: somente 18:00 disponível.
+  if(professionalId==='amanda'){
+    if((dow===1 || dow===3 || dow===5) && time!=='18:00') return true;
+  }
+
+  return false;
+}
+function professionalScheduleClosed(professionalId,date,time){
+  if(scheduleOverrideOpen(professionalId,date,time)) return false;
+  return defaultProfessionalClosed(professionalId,date,time);
+}
+function canEditScheduleExceptions(){
+  return currentStaffRole && currentStaffRole()==='admin';
+}
+function monthRefsThroughYear(){
+  var now=new Date(), y=now.getFullYear(), start=now.getMonth()+1, out=[];
+  for(var m=start;m<=12;m++) out.push(y+'-'+String(m).padStart(2,'0'));
+  return out;
+}
+function isMonthInCurrentYearRange(ref){
+  var now=new Date(), y=String(now.getFullYear());
+  return ref>=todayISO().slice(0,7) && ref<=y+'-12';
+}
 
 function isWeekendExceptionOpen(date){
   return (store.blocks||[]).some(function(bl){
@@ -1095,6 +1168,7 @@ function busyRanges(professionalId, date){
   });
   // Bloqueios administrativos continuam individuais por profissional.
   store.blocks.forEach(function(bl){
+    if(bl.scheduleOpen===true || bl.weekendOpen===true || bl.allDay===true) return;
     if(bl.professionalId===professionalId && bl.date===date){
       var start = timeToMinutes(bl.time);
       ranges.push([start, start+60]);
@@ -1106,6 +1180,7 @@ function rangesOverlap(s1,e1,s2,e2){ return s1 < e2 && e1 > s2; }
 
 function isFreeSlot(professionalId, date, time, duration){
   if((isWeekend(date) && !isWeekendExceptionOpen(date)) || isDayClosed(date)) return false;
+  if(professionalScheduleClosed(professionalId,date,time)) return false;
   var start = timeToMinutes(time);
   var end = start + (duration||30);
   if(end > 20*60) return false;
@@ -1442,9 +1517,9 @@ function renderPatient(){
     var labels=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
     out += '<h3 style="margin-top:0;">3. Escolha o dia</h3>';
     out += '<div class="month-calendar"><div class="month-calendar-head">'+
-      '<button class="month-nav-btn" data-action="booking-month-prev" type="button">‹</button>'+
+      '<button class="month-nav-btn" data-action="booking-month-prev" type="button" '+(bm<=todayISO().slice(0,7)?'disabled':'')+'>‹</button>'+
       '<strong>'+monthLabel(bm)+'</strong>'+
-      '<button class="month-nav-btn" data-action="booking-month-next" type="button">›</button>'+
+      '<button class="month-nav-btn" data-action="booking-month-next" type="button" '+(bm>=String(new Date().getFullYear())+'-12'?'disabled':'')+'>›</button>'+
     '</div><div class="month-grid">';
     labels.forEach(function(x){out+='<div class="month-week">'+x+'</div>';});
     for(var e=0;e<firstWd;e++) out+='<div class="month-empty"></div>';
@@ -1917,7 +1992,12 @@ function miniReceptionKpi(value,label){return '<div class="mini-kpi"><div class=
 function renderAgenda(){
   var out = '<div class="section-title">Agenda por cadeira</div>';
   var admMonth=state.agendaDate.slice(0,7);
-  out += '<div class="date-row" style="margin-bottom:18px;">';
+  out += '<div class="agenda-months"><strong>Meses</strong><div class="agenda-month-row">';
+  monthRefsThroughYear().forEach(function(mr){
+    out += '<button class="agenda-month-chip '+(admMonth===mr?'active':'')+'" data-action="agenda-month" data-id="'+mr+'">'+monthLabel(mr)+'</button>';
+  });
+  out += '</div></div>';
+  out += '<div class="date-row agenda-month-days" style="margin-bottom:18px;">';
   monthDays(admMonth).forEach(function(d){
     var closed=isDayClosed(d), weekend=isWeekend(d);
     out += '<button class="date-chip '+(state.agendaDate===d?'selected ':'')+(closed?'blocked':'')+'" data-action="agenda-date" data-id="'+d+'"><div class="wd">'+weekdayShort(d)+(weekend?' · fim de semana':'')+'</div><div class="dd">'+dayDisplay(d)+'</div></button>';
@@ -1962,7 +2042,10 @@ function renderAgenda(){
     '<span><span class="dot" style="background:#98A6AC;"></span>Horário fechado</span></div>';
 
   out += '<div class="section-title">Fechar horários</div><div class="card">';
-  out += '<p style="color:var(--ink-soft);font-size:13px;margin-top:0;">Selecione o profissional e clique nos horários em que ele(a) não vai atender nesta data. Horários fechados somem automaticamente do agendamento dos pacientes.</p>';
+  out += '<p style="color:var(--ink-soft);font-size:13px;margin-top:0;">Selecione o profissional e ajuste a disponibilidade desta data. Horários fechados pelo padrão de trabalho aparecem como <strong>Fechado por padrão</strong>. Administradores podem clicar neles para abrir uma exceção. Horários normalmente abertos podem ser fechados manualmente.</p>';
+  if(canEditScheduleExceptions()){
+    out += '<div class="schedule-rules-note"><strong>Regras padrão:</strong> Dr. Ryan — segundas fechadas e 08h/09h fechados todos os dias. Dra. Amanda — segundas, quartas e sextas disponível por padrão somente às 18h. Finais de semana continuam fechados, salvo exceção manual.</div>';
+  }
   out += '<div class="role-toggle" style="margin-bottom:16px;display:inline-flex;">';
   PROFESSIONALS.forEach(function(p){
     out += '<button data-action="agenda-block-prof" data-id="'+p.id+'" class="'+(state.agendaBlockProf===p.id?'active':'')+'">'+p.name+'</button>';
@@ -1971,11 +2054,20 @@ function renderAgenda(){
   var slots = timeSlots();
   out += '<div class="slot-grid">';
   slots.forEach(function(t){
-    var isBlocked = slotBlocked(state.agendaBlockProf, state.agendaDate, t);
+    var manualBlocked = slotBlocked(state.agendaBlockProf, state.agendaDate, t);
+    var defaultClosed = defaultProfessionalClosed(state.agendaBlockProf,state.agendaDate,t);
+    var overrideOpen = scheduleOverrideOpen(state.agendaBlockProf,state.agendaDate,t);
+    var scheduleClosed = defaultClosed && !overrideOpen;
+    var isBlocked = manualBlocked || scheduleClosed;
     var isOcc = slotOccupiedByAppointment(state.agendaBlockProf, state.agendaDate, t);
     var cls = isBlocked ? 'blocked' : (isOcc ? 'occupied' : '');
-    var label = isBlocked ? 'Fechado' : (isOcc ? 'Ocupado' : 'Aberto');
-    out += '<button class="slot '+cls+'" '+(isOcc && !isBlocked ? 'disabled' : '')+' data-action="toggle-block" data-id="'+t+'">'+t+'<small>'+label+'</small></button>';
+    if(defaultClosed && overrideOpen) cls += ' schedule-open';
+    var label = isOcc ? 'Ocupado' :
+      (manualBlocked ? 'Fechado manualmente' :
+        (scheduleClosed ? 'Fechado por padrão' :
+          (defaultClosed && overrideOpen ? 'Aberto por exceção' : 'Aberto')));
+    var disabled = isOcc || (!canEditScheduleExceptions() && defaultClosed);
+    out += '<button class="slot '+cls+'" '+(disabled?'disabled':'')+' data-action="toggle-block" data-id="'+t+'">'+t+'<small>'+label+'</small></button>';
   });
   out += '</div></div>';
 
@@ -2500,8 +2592,16 @@ function attachEvents(){
 
     if(a==='pick-proc'){ b.procedureId = t.dataset.id; logMarketingEvent('procedure_interest',{procedure:b.procedureId}); if(b.step===1)logMarketingEvent('booking_started',{procedure:b.procedureId}); }
     else if(a==='pick-prof'){ b.professionalId = t.dataset.id; logMarketingEvent('professional_interest',{professional:b.professionalId}); }
-    else if(a==='booking-month-prev'){state.bookingMonth=shiftMonth(state.bookingMonth||todayISO().slice(0,7),-1);render();return;}
-    else if(a==='booking-month-next'){state.bookingMonth=shiftMonth(state.bookingMonth||todayISO().slice(0,7),1);render();return;}
+    else if(a==='booking-month-prev'){
+      var pv=shiftMonth(state.bookingMonth||todayISO().slice(0,7),-1);
+      if(isMonthInCurrentYearRange(pv)) state.bookingMonth=pv;
+      render();return;
+    }
+    else if(a==='booking-month-next'){
+      var nx=shiftMonth(state.bookingMonth||todayISO().slice(0,7),1);
+      if(isMonthInCurrentYearRange(nx)) state.bookingMonth=nx;
+      render();return;
+    }
     else if(a==='pick-date'){ b.date = t.dataset.id; b.time=null; }
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
     else if(a==='wiz-next'){ if(b.step===5){var ne=document.getElementById('inp-name'),pe=document.getElementById('inp-phone');b.name=ne?ne.value.trim():b.name;b.phone=pe?pe.value.replace(/\D/g,''):b.phone;if(b.name.length<3){b.error='Informe seu nome completo.';render();return;}if(b.phone.length!==11){b.error='Informe o telefone com DDD + 9 dígitos (11 números).';render();return;}b.error=null;} b.step = Math.min(6,b.step+1); }
@@ -2512,6 +2612,11 @@ function attachEvents(){
     else if(a==='do-gate'){ doGate(); return; }
     else if(a==='do-logout'){ doLogout(); return; }
     else if(a==='cycle-status' || a==='set-status'){ cycleOrSetStatus(t); return; }
+    else if(a==='agenda-month'){
+      var mr=t.dataset.id;
+      var first=monthDays(mr).find(function(d){return d>=todayISO();})||monthDays(mr)[0];
+      state.agendaDate=first;
+    }
     else if(a==='agenda-date'){ state.agendaDate = t.dataset.id; }
     else if(a==='agenda-block-prof'){ state.agendaBlockProf = t.dataset.id; }
     else if(a==='toggle-block'){ toggleBlock(t.dataset.id); return; }
@@ -2967,10 +3072,33 @@ function toggleDayClosed(){
 
 function toggleBlock(time){
   var prof = state.agendaBlockProf, date = state.agendaDate;
-  if(slotOccupiedByAppointment(prof, date, time)) return; // não permite bloquear horário já ocupado
+  if(slotOccupiedByAppointment(prof, date, time)) return;
+
+  var defaultClosed=defaultProfessionalClosed(prof,date,time);
+  var overrideOpen=scheduleOverrideOpen(prof,date,time);
+
+  // Apenas administrador pode alterar exceções da escala-padrão.
+  if(defaultClosed){
+    if(!canEditScheduleExceptions()){
+      alert('Este horário faz parte da escala padrão do profissional. Somente um administrador pode abrir uma exceção.');
+      return;
+    }
+    setScheduleOverrideOpen(prof,date,time,!overrideOpen);
+
+    // Se abrirmos por exceção, removemos um eventual bloqueio manual do mesmo horário.
+    if(!overrideOpen){
+      store.blocks=(store.blocks||[]).filter(function(bl){
+        return !(bl.professionalId===prof && bl.date===date && bl.time===time && !bl.scheduleOpen);
+      });
+    }
+    persist();
+    return;
+  }
+
+  // Horário normalmente aberto: comportamento tradicional fechar / reabrir.
   var idx = -1;
   for(var i=0;i<store.blocks.length;i++){
-    if(store.blocks[i].professionalId===prof && store.blocks[i].date===date && store.blocks[i].time===time){ idx = i; break; }
+    if(store.blocks[i].professionalId===prof && store.blocks[i].date===date && store.blocks[i].time===time && !store.blocks[i].scheduleOpen){ idx = i; break; }
   }
   if(idx>=0){ store.blocks.splice(idx,1); }
   else{ store.blocks.push({id:'b'+Date.now(), professionalId:prof, date:date, time:time}); }
