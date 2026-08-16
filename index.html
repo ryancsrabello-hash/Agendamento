@@ -1571,7 +1571,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.2 · correção geração de orçamento · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.3 · orçamento com logo institucional · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2988,7 +2988,7 @@ function clinicalToothMap(){
 
 
 function clinicQuoteInfo(){
-  return {name:'Instituto Lins Rabello',address:'Itapecerica da Serra - SP',logo:'assets/logo.png'};
+  return {name:'Instituto Lins Rabello',address:'Itapecerica da Serra - SP',logo:LOGO_ICON};
 }
 function quoteProfessionalName(){
   try{
@@ -3011,7 +3011,7 @@ function renderQuoteDocument(p){
   var plans=patientTreatmentPlans(p.id).filter(function(x){return x.status!=='realizado';});
   var total=plans.reduce(function(s,x){return s+n(x.price);},0),c=clinicQuoteInfo(),date=todayISO(),out='';
   out+='<div class="quote-toolbar"><button class="btn btn-primary" data-action="quote-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="quote-whatsapp">Enviar resumo no WhatsApp</button><button class="btn btn-ghost" data-action="quote-close">Voltar ao plano</button></div>';
-  out+='<div class="quote-sheet" id="quote-sheet"><div class="quote-head"><div class="quote-brand"><img src="'+escAttr(c.logo)+'" alt="Logo Instituto Lins Rabello"><div><h2>'+esc(c.name)+'</h2><div>Odontologia humanizada e tecnologia</div></div></div><div class="quote-meta"><strong>ORÇAMENTO ODONTOLÓGICO</strong><br>Data: '+dayDisplay(date)+'<br>Profissional: '+esc(quoteProfessionalName())+'</div></div>';
+  out+='<div class="quote-sheet" id="quote-sheet"><div class="quote-head"><div class="quote-brand"><img src="'+escAttr(c.logo)+'" alt="Logo Instituto Lins Rabello"><div><h2>'+esc(c.name)+'</h2><div>Odontologia Integrada</div></div></div><div class="quote-meta"><strong>ORÇAMENTO ODONTOLÓGICO</strong><br>Data: '+dayDisplay(date)+'<br>Profissional: '+esc(quoteProfessionalName())+'</div></div>';
   out+='<div class="quote-patient"><div><strong>Paciente:</strong> '+esc(p.name||'')+'</div><div><strong>Telefone:</strong> '+esc(p.phone||'—')+'</div><div><strong>CPF:</strong> '+esc(p.cpf||'—')+'</div><div><strong>Nascimento:</strong> '+esc((p.birthDate&&/^\d{4}-\d{2}-\d{2}$/.test(p.birthDate))?dayDisplay(p.birthDate):(p.birthDate||'—'))+'</div></div>';
   out+='<table class="quote-table"><thead><tr><th>Dente / região</th><th>Procedimento</th><th>Status</th><th>Observação</th><th>Valor</th></tr></thead><tbody>';
   plans.sort(function(a,b){return String(a.tooth||'').localeCompare(String(b.tooth||''),'pt-BR');}).forEach(function(x){out+='<tr><td><strong>'+esc(x.tooth||'Geral')+'</strong></td><td>'+esc(x.name)+'</td><td>'+esc(x.status||'proposto')+'</td><td>'+esc(x.note||'—')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';});
