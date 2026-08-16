@@ -819,6 +819,15 @@
 @media(max-width:900px){.price-shell{grid-template-columns:1fr}.price-list{max-height:260px}.cost-grid{grid-template-columns:1fr 1fr}.crm-row{grid-template-columns:1fr 1fr}.crm-row.head{display:none}}
 @media(max-width:560px){.cost-grid{grid-template-columns:1fr}.crm-row{grid-template-columns:1fr}}
 
+
+/* ===== ERP 2.7 · Fases 1–5 ===== */
+.phase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px;margin:12px 0 16px}
+.phase-card{padding:14px}.phase-card .num{font-size:10px;font-weight:850;color:var(--teal);text-transform:uppercase}.phase-card .big{font:800 21px 'Space Grotesk';margin-top:4px}
+.plan-row,.lab-row,.task-row{display:grid;grid-template-columns:1.5fr .7fr .8fr .8fr 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.plan-row.head,.lab-row.head,.task-row.head{font-size:10px;text-transform:uppercase;font-weight:800;color:var(--ink-soft)}
+.health-score{display:flex;align-items:center;gap:12px}.health-ring{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--teal) calc(var(--score)*1%),var(--grey-soft) 0);position:relative}.health-ring:after{content:"";position:absolute;width:48px;height:48px;border-radius:50%;background:#fff}.health-ring strong{z-index:1;font-size:16px}
+@media(max-width:800px){.plan-row,.lab-row,.task-row{grid-template-columns:1fr 1fr}.plan-row.head,.lab-row.head,.task-row.head{display:none}}
+
 </style>
 </head>
 <body>
@@ -890,7 +899,7 @@ var state = {
   staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false, teamProfiles:[], teamLoading:false, teamMessage:'',
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
-  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'',
+  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas',
   pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
@@ -1170,7 +1179,10 @@ function seedStore(){
     inventoryMovements: [],
     procedureRecipes: defaultProcedureRecipes(),
     procedurePricing: defaultProcedurePricing(),
-    crmContacts: []
+    crmContacts: [],
+    treatmentPlans: [],
+    labCases: [],
+    taskLog: []
   };
 }
 
@@ -1235,6 +1247,9 @@ function normalizeStore(value){
   base.procedureRecipes = value.procedureRecipes && typeof value.procedureRecipes==='object' ? value.procedureRecipes : defaultProcedureRecipes();
   base.procedurePricing = mergeProcedurePricing(value.procedurePricing);
   base.crmContacts = Array.isArray(value.crmContacts) ? value.crmContacts : [];
+  base.treatmentPlans = Array.isArray(value.treatmentPlans) ? value.treatmentPlans : [];
+  base.labCases = Array.isArray(value.labCases) ? value.labCases : [];
+  base.taskLog = Array.isArray(value.taskLog) ? value.taskLog : [];
   applyFinalProcedurePrices(base.procedurePricing);
   return base;
 }
@@ -1454,7 +1469,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.0 · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.7.0 · fases 1–5 · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -1869,8 +1884,8 @@ function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepca
 function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
 function allowedStaffTabs(){
   var role=currentStaffRole();
-  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque','crm'];
-  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','crm','relatorios'];
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque','laboratorio','tarefas','crm'];
+  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','laboratorio','tarefas','crm','relatorios'];
   return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
@@ -2025,7 +2040,7 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['crm','Reativação'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['laboratorio','Laboratório'],['tarefas','Tarefas'],['crm','Reativação'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
@@ -2041,6 +2056,8 @@ function renderStaff(){
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
   else if(state.staffTab==='estoque') out += renderEstoque();
+  else if(state.staffTab==='laboratorio') out += renderLaboratorio();
+  else if(state.staffTab==='tarefas') out += renderTaskCenter();
   else if(state.staffTab==='crm') out += renderCRM();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
@@ -2640,6 +2657,26 @@ function crmRegisterContact(patientId,feedbackOnly){
   persist();
 }
 
+
+function renderLaboratorio(){
+  var cases=(store.labCases||[]).slice().sort(function(a,b){return String(b.dueDate||'').localeCompare(String(a.dueDate||''));});
+  var open=cases.filter(function(x){return x.status!=='entregue';}), cost=cases.reduce(function(s,x){return s+n(x.cost);},0);
+  var out='<div class="section-title">Laboratório e prótese</div><div class="phase-grid"><div class="card phase-card"><div class="num">Casos em andamento</div><div class="big">'+open.length+'</div></div><div class="card phase-card"><div class="num">Custo laboratorial registrado</div><div class="big">'+fmtMoney(cost)+'</div></div><div class="card phase-card"><div class="num">Atrasados</div><div class="big">'+open.filter(function(x){return x.dueDate&&x.dueDate<todayISO();}).length+'</div></div></div>';
+  if(state.labMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.labMessage)+'</div>';
+  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Casos laboratoriais</h3><div class="mini-note">Laboratório, trabalho, elemento, cor, prazo, custo e entrega.</div></div><button class="btn btn-primary" data-action="lab-add">+ Novo caso</button></div><div class="lab-row head"><div>Paciente / trabalho</div><div>Laboratório</div><div>Prazo</div><div>Custo</div><div>Status</div><div>Ações</div></div>';
+  if(!cases.length)out+='<div class="empty-state">Nenhum caso laboratorial cadastrado.</div>';
+  cases.forEach(function(x){var p=patientById(x.patientId);out+='<div class="lab-row"><div><strong>'+esc(p?p.name:'Paciente')+'</strong><br><span class="mini-note">'+esc(x.work||'')+' '+esc(x.tooth||'')+'</span></div><div>'+esc(x.lab||'—')+'</div><div>'+(x.dueDate?dayDisplay(x.dueDate):'—')+'</div><div>'+fmtMoney(n(x.cost))+'</div><div><span class="pill '+(x.status==='entregue'?'realizado':'pendente')+'">'+esc(x.status||'enviado')+'</span></div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="lab-cycle" data-id="'+x.id+'">Avançar</button><button class="btn btn-ghost btn-sm" data-action="lab-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
+  out+='</div>';return out;
+}
+function addLabCase(){
+  var pts=patientRecords();if(!pts.length){alert('Cadastre um paciente primeiro.');return;}
+  var name=prompt('Nome do paciente:','');if(!name)return;var p=pts.find(function(x){return String(x.name||'').toLowerCase().indexOf(name.toLowerCase())>=0;});if(!p){alert('Paciente não encontrado.');return;}
+  var work=prompt('Trabalho solicitado (coroa, lente, prótese, guia etc.):','Coroa cerâmica');if(!work)return;
+  var tooth=prompt('Dente/região/cor (opcional):','')||'', lab=prompt('Laboratório / protético:','')||'', due=prompt('Previsão de entrega (AAAA-MM-DD):',addDays(todayISO(),10))||'', cost=prompt('Custo do laboratório:', '0');
+  store.labCases.push({id:'lab'+Date.now(),patientId:p.id,work:work,tooth:tooth,lab:lab,dueDate:due,cost:n(cost),status:'enviado',createdAt:new Date().toISOString()});state.labMessage='Caso laboratorial cadastrado.';persist();
+}
+function cycleLab(id){var x=(store.labCases||[]).find(function(v){return v.id===id;});if(!x)return;var s=['enviado','em produção','prova','recebido','entregue'],i=s.indexOf(x.status);x.status=s[Math.min(s.length-1,i+1)];persist();}
+
 function renderPacientes(){
   var list=patientRecords();
   var q=String(state.patientSearch||'').trim().toLowerCase().replace(/\D/g,function(m){return m;});
@@ -2682,6 +2719,40 @@ function clinicalToothMap(){
   (state.recordData.odontograma||[]).forEach(function(x){map[String(x.dente)]=x;});
   return map;
 }
+
+function patientTreatmentPlans(patientId){
+  return (store.treatmentPlans||[]).filter(function(x){return x.patientId===patientId;}).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''));});
+}
+function renderTreatmentPlan(p){
+  var plans=patientTreatmentPlans(p.id), total=plans.reduce(function(s,x){return s+n(x.price);},0),
+      accepted=plans.filter(function(x){return ['aceito','realizado'].indexOf(x.status)>=0;}).reduce(function(s,x){return s+n(x.price);},0);
+  var out='<div class="phase-grid"><div class="card phase-card"><div class="num">Plano</div><div class="big">'+plans.length+' item(ns)</div></div><div class="card phase-card"><div class="num">Valor proposto</div><div class="big">'+fmtMoney(total)+'</div></div><div class="card phase-card"><div class="num">Aceito / realizado</div><div class="big">'+fmtMoney(accepted)+'</div></div></div>';
+  if(state.planMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.planMessage)+'</div>';
+  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Plano de tratamento e orçamento</h3><div class="mini-note">Integra indicação clínica, dente/região, proposta, aceite e execução.</div></div><button class="btn btn-primary" data-action="plan-add">+ Adicionar procedimento</button></div>';
+  out+='<div class="plan-row head"><div>Procedimento</div><div>Dente/região</div><div>Valor</div><div>Status</div><div>Observação</div><div>Ações</div></div>';
+  if(!plans.length)out+='<div class="empty-state">Nenhum item no plano de tratamento.</div>';
+  plans.forEach(function(x){out+='<div class="plan-row"><div><strong>'+esc(x.name)+'</strong></div><div>'+esc(x.tooth||'—')+'</div><div>'+fmtMoney(n(x.price))+'</div><div><span class="pill '+(x.status==='realizado'?'realizado':x.status==='aceito'?'confirmado':'pendente')+'">'+esc(x.status||'proposto')+'</span></div><div>'+esc(x.note||'—')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="plan-cycle" data-id="'+x.id+'">Avançar</button><button class="btn btn-ghost btn-sm" data-action="plan-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
+  out+='</div>';
+  return out;
+}
+function addTreatmentPlan(){
+  var p=patientById(state.recordPatientId);if(!p)return;
+  var names=allPricingProcedures().map(function(x){return x.name;}).join(', ');
+  var name=prompt('Procedimento do plano:\\nExemplos: '+names,'Avaliação');if(!name)return;
+  var tooth=prompt('Dente ou região (opcional):','')||'';
+  var match=allPricingProcedures().find(function(x){return x.name.toLowerCase()===name.toLowerCase();});
+  var price=prompt('Valor proposto:',String(match?n(match.finalPrice):0));if(price===null)return;
+  var note=prompt('Observação / condição comercial (opcional):','')||'';
+  store.treatmentPlans=store.treatmentPlans||[];
+  store.treatmentPlans.push({id:'tp'+Date.now(),patientId:p.id,name:name,tooth:tooth,price:n(price),status:'proposto',note:note,createdAt:new Date().toISOString()});
+  state.planMessage='Item adicionado ao plano de tratamento.';persist();
+}
+function cycleTreatmentPlan(id){
+  var x=(store.treatmentPlans||[]).find(function(v){return v.id===id;});if(!x)return;
+  var seq=['proposto','apresentado','negociacao','aceito','realizado'],i=seq.indexOf(x.status);x.status=seq[Math.min(seq.length-1,i+1)];
+  persist();
+}
+
 function renderClinicalRecord(){
   if(!state.recordPatientId) return '';
   var p=patientById(state.recordPatientId);
@@ -2691,10 +2762,11 @@ function renderClinicalRecord(){
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
   out+=renderClinicalAlerts();
-  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['plano','Plano & orçamento'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(state.recordTab==='saude') out+=renderHealthAlerts();
   else if(state.recordTab==='anamnese') out+=renderAnamnesis();
   else if(state.recordTab==='lembretes') out+=renderPatientReminders(p);
+  else if(state.recordTab==='plano') out+=renderTreatmentPlan(p);
   else if(state.recordTab==='odontograma') out+=renderOdontogram();
   else if(state.recordTab==='evolucoes') out+=renderEvolutions();
   else if(state.recordTab==='documentos') out+=renderClinicalDocuments(p);
@@ -2956,6 +3028,49 @@ function loadAudit(){
   waitForSupabase(5000).then(function(api){return api.listAudit(150);}).then(function(rows){state.auditLogs=rows||[];state.auditLoading=false;render();}).catch(function(e){state.auditLoading=false;alert('Não foi possível carregar auditoria: '+e.message);render();});
 }
 
+
+function operationalMetrics(){
+  var m=monthRef(), ap=store.appointments.filter(function(a){return inMonth(a.date,m)&&a.status!=='cancelado';});
+  var done=ap.filter(function(a){return a.status==='realizado';}), faltas=ap.filter(function(a){return a.status==='falta';});
+  var soldMin=done.reduce(function(s,a){var p=procById(a.procedureId);return s+(p?p.duration:60);},0);
+  var workingDays=monthDays(m).filter(function(d){var w=parseISO(d).getDay();return w>=1&&w<=5;}).length;
+  var capacity=Math.max(1,workingDays*9*60);
+  var fs=financeSummary(m);
+  return {appointments:ap.length,done:done.length,absences:faltas.length,occupancy:Math.min(100,Math.round(soldMin/capacity*100)),revenuePerHour:soldMin?fs.received/(soldMin/60):0,ticket:done.length?fs.received/done.length:0};
+}
+function derivedTasks(){
+  var arr=[],today=todayISO();
+  patientRecords().forEach(function(p){
+    var s=patientSignatureState(p),miss=[];if(!s.anamnesis)miss.push('anamnese');if(!s.contract)miss.push('contrato');if(!s.terms)miss.push('termos');
+    if(miss.length)arr.push({id:'sig-'+p.id,type:'Documentos',patient:p.name,title:'Assinaturas pendentes: '+miss.join(', '),priority:'alta'});
+  });
+  (store.labCases||[]).forEach(function(x){if(x.status!=='entregue'&&x.dueDate&&x.dueDate<=today){var p=patientById(x.patientId);arr.push({id:'lab-'+x.id,type:'Laboratório',patient:p?p.name:'Paciente',title:'Caso '+x.work+' com prazo '+dayDisplay(x.dueDate),priority:'alta'});}});
+  crmPatientRows().filter(function(r){return !r.future&&r.priority==='alta';}).slice(0,30).forEach(function(r){arr.push({id:'crm-'+r.p.id,type:'Reativação',patient:r.p.name,title:'Paciente inativo com oportunidade de retorno',priority:'media'});});
+  (store.payments||[]).forEach(function(x){if(String(x.status||'').toLowerCase()!=='pago'&&x.dueDate&&x.dueDate<today){var a=(store.appointments||[]).find(function(v){return v.id===x.appointmentId;});arr.push({id:'pay-'+x.id,type:'Financeiro',patient:a?a.name:'Paciente',title:'Pagamento vencido '+fmtMoney(n(x.gross)-n(x.discount)),priority:'alta'});}});
+  return arr;
+}
+function renderTaskCenter(){
+  var tasks=derivedTasks(), out='<div class="section-title">Central de tarefas</div><div class="phase-grid"><div class="card phase-card"><div class="num">Pendências automáticas</div><div class="big">'+tasks.length+'</div></div><div class="card phase-card"><div class="num">Prioridade alta</div><div class="big">'+tasks.filter(function(x){return x.priority==='alta';}).length+'</div></div><div class="card phase-card"><div class="num">Objetivo</div><div class="big">Zero pendências</div></div></div><div class="card">';
+  out+='<div class="task-row head"><div>Tarefa</div><div>Tipo</div><div>Paciente</div><div>Prioridade</div><div>Próxima ação</div><div></div></div>';
+  if(!tasks.length)out+='<div class="empty-state">Nenhuma pendência automática encontrada.</div>';
+  tasks.forEach(function(x){out+='<div class="task-row"><div><strong>'+esc(x.title)+'</strong></div><div>'+esc(x.type)+'</div><div>'+esc(x.patient||'—')+'</div><div><span class="crm-priority '+x.priority+'">'+x.priority.toUpperCase()+'</span></div><div>Revisar e resolver</div><div></div></div>';});
+  out+='</div>';return out;
+}
+function renderExecutiveIntelligence(){
+  var x=operationalMetrics(), tasks=derivedTasks(), score=Math.max(0,Math.min(100,Math.round(100-(x.absences*3)-(tasks.filter(function(t){return t.priority==='alta';}).length*1.5)+(x.occupancy*.25))));
+  return '<div class="card" style="margin-top:16px"><div class="patient-actions"><div><h3 style="margin:0">Inteligência operacional</h3><div class="mini-note">Indicadores para decisão, não substituem análise contábil.</div></div><div class="health-score"><div class="health-ring" style="--score:'+score+'"><strong>'+score+'</strong></div></div></div><div class="phase-grid">'+
+  '<div class="phase-card"><div class="num">Ocupação estimada da cadeira</div><div class="big">'+x.occupancy+'%</div></div>'+
+  '<div class="phase-card"><div class="num">Receita recebida / hora clínica</div><div class="big">'+fmtMoney(x.revenuePerHour)+'</div></div>'+
+  '<div class="phase-card"><div class="num">Ticket médio realizado</div><div class="big">'+fmtMoney(x.ticket)+'</div></div>'+
+  '<div class="phase-card"><div class="num">Faltas no mês</div><div class="big">'+x.absences+'</div></div>'+
+  '<div class="phase-card"><div class="num">Pendências críticas</div><div class="big">'+tasks.filter(function(t){return t.priority==='alta';}).length+'</div></div></div></div>';
+}
+function renderSystemDiagnostics(){
+  var duplicatePatients=0, seen={};patientRecords().forEach(function(p){var k=normalizePhone(p.phone)||String(p.cpf||'').replace(/\D/g,'');if(k&&seen[k])duplicatePatients++;if(k)seen[k]=1;});
+  var orphanPayments=(store.payments||[]).filter(function(x){return x.appointmentId&&!(store.appointments||[]).some(function(a){return a.id===x.appointmentId;});}).length;
+  return '<div class="card" style="margin-top:16px"><h3 style="margin-top:0">Diagnóstico e integridade</h3><table class="metric-table"><tbody><tr><td>Pacientes potencialmente duplicados</td><td><strong>'+duplicatePatients+'</strong></td></tr><tr><td>Pagamentos sem consulta vinculada</td><td><strong>'+orphanPayments+'</strong></td></tr><tr><td>Casos laboratoriais em aberto</td><td><strong>'+(store.labCases||[]).filter(function(x){return x.status!=='entregue';}).length+'</strong></td></tr><tr><td>Itens de plano de tratamento</td><td><strong>'+(store.treatmentPlans||[]).length+'</strong></td></tr><tr><td>Backup</td><td>Use “Baixar backup completo” regularmente</td></tr></tbody></table></div>';
+}
+
 function renderRelatorios(){
   var month=monthRef(), fs=financeSummary(month), monthAppts=store.appointments.filter(function(a){return inMonth(a.date,month);});
   var total=monthAppts.filter(function(a){return a.status!=='cancelado';}).length, done=monthAppts.filter(function(a){return a.status==='realizado';}).length, abs=monthAppts.filter(function(a){return a.status==='falta';}).length;
@@ -2967,6 +3082,8 @@ function renderRelatorios(){
   var counts={},max=1;PROFESSIONALS.forEach(function(p){counts[p.id]=0;});monthAppts.forEach(function(a){if(a.status!=='cancelado'){counts[a.professionalId]=(counts[a.professionalId]||0)+1;max=Math.max(max,counts[a.professionalId]);}});PROFESSIONALS.forEach(function(p){var v=counts[p.id]||0;out+='<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+v+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max*100)+'%;background:'+p.color+';"></div></div></div>';});out+='</div>';
   out+='<div class="card"><h3 style="margin-top:0;">Procedimentos realizados</h3>';var procCounts={},max2=1;PROCEDURES.forEach(function(p){procCounts[p.id]=0;});monthAppts.forEach(function(a){if(a.status==='realizado'){procCounts[a.procedureId]=(procCounts[a.procedureId]||0)+1;max2=Math.max(max2,procCounts[a.procedureId]);}});PROCEDURES.forEach(function(p){var v=procCounts[p.id]||0;out+='<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+v+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max2*100)+'%;background:var(--coral);"></div></div></div>';});out+='</div></div>';
   out+='<div class="card" style="margin-top:16px;"><h3 style="margin-top:0;">Resumo financeiro do mês</h3><table class="metric-table"><tbody><tr><td>Receita recebida</td><td>'+fmtMoney(fs.received)+'</td></tr><tr><td>A receber</td><td>'+fmtMoney(fs.pending)+'</td></tr><tr><td>Taxas de cartão</td><td>'+fmtMoney(fs.fees)+'</td></tr><tr><td>Despesas</td><td>'+fmtMoney(fs.expenses)+'</td></tr><tr><td>Provisões e impostos</td><td>'+fmtMoney(fs.taxes+fs.reserve)+'</td></tr><tr><td>Resultado estimado</td><td class="'+(fs.result>=0?'positive':'negative')+'"><strong>'+fmtMoney(fs.result)+'</strong></td></tr></tbody></table></div>';
+  out+=renderExecutiveIntelligence();
+  out+=renderSystemDiagnostics();
   out+='<p style="font-size:11.5px;color:var(--ink-soft);margin-top:14px;">Os arquivos CSV podem ser abertos no Excel. O backup JSON deve ser guardado em local seguro e contém dados pessoais e clínicos.</p>';
   return out;
 }
@@ -3035,6 +3152,14 @@ function attachEvents(){
     else if(a==='crm-tab'){state.crmTab=t.dataset.id;state.crmMessage='';render();return;}
     else if(a==='crm-contact'){crmRegisterContact(t.dataset.id,false);return;}
     else if(a==='crm-feedback'){crmRegisterContact(t.dataset.id,true);return;}
+
+    else if(a==='plan-add'){addTreatmentPlan();return;}
+    else if(a==='plan-cycle'){cycleTreatmentPlan(t.dataset.id);return;}
+    else if(a==='plan-delete'){if(confirm('Excluir este item do plano?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
+    else if(a==='lab-add'){addLabCase();return;}
+    else if(a==='lab-cycle'){cycleLab(t.dataset.id);return;}
+    else if(a==='lab-delete'){if(confirm('Excluir este caso laboratorial?')){store.labCases=(store.labCases||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
+
     else if(a==='stock-search'){ var ss=document.getElementById('stock-search');state.stockSearch=ss?ss.value:'';render();return; }
     else if(a==='stock-new'){ state.stockEditingId='new';render();return; }
     else if(a==='stock-edit'){ state.stockEditingId=t.dataset.id;render();return; }
