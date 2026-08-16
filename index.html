@@ -788,6 +788,12 @@
   .agenda-month-chip{padding:8px 11px;font-size:12px}
 }
 
+
+/* ===== CORREÇÃO DE CONSISTÊNCIA DA AGENDA ===== */
+.slot.schedule-open{background:#e5f7f1!important;border-color:#3ca88f!important;color:#125d50!important}
+.slot.schedule-open small{color:#125d50!important;font-weight:700}
+.slot.occupied small,.slot.blocked small{font-weight:700}
+
 </style>
 </head>
 <body>
@@ -1044,6 +1050,27 @@ function seedStore(){
 var realtimeChannel = null;
 var realtimeStarted = false;
 
+
+function cleanScheduleBlocks(blocks){
+  var out=[],seen={};
+  (blocks||[]).forEach(function(bl){
+    if(!bl || !bl.date) return;
+    var key=[
+      bl.professionalId||'',
+      bl.targetProfessionalId||'',
+      bl.date||'',
+      bl.time||'',
+      bl.allDay===true?'A':'',
+      bl.weekendOpen===true?'W':'',
+      bl.scheduleOpen===true?'S':''
+    ].join('|');
+    if(seen[key]) return;
+    seen[key]=true;
+    out.push(bl);
+  });
+  return out;
+}
+
 function normalizeStore(value){
   var base = seedStore();
   if(!value || typeof value !== 'object') return base;
@@ -1053,7 +1080,7 @@ function normalizeStore(value){
   base.payments = Array.isArray(value.payments) ? value.payments : [];
   base.financeConfig = mergeFinanceConfig(value.financeConfig);
   base.logs = Array.isArray(value.logs) ? value.logs : [];
-  base.blocks = Array.isArray(value.blocks) ? value.blocks : [];
+  base.blocks = cleanScheduleBlocks(Array.isArray(value.blocks) ? value.blocks : []);
   base.waitlist = Array.isArray(value.waitlist) ? value.waitlist : [];
   base.inventory = Array.isArray(value.inventory) ? value.inventory : defaultInventoryItems();
   base.inventoryMovements = Array.isArray(value.inventoryMovements) ? value.inventoryMovements : [];
@@ -1184,16 +1211,7 @@ function busyRanges(professionalId, date){
 function rangesOverlap(s1,e1,s2,e2){ return s1 < e2 && e1 > s2; }
 
 function isFreeSlot(professionalId, date, time, duration){
-  if((isWeekend(date) && !isWeekendExceptionOpen(date)) || isDayClosed(date)) return false;
-  if(professionalScheduleClosed(professionalId,date,time)) return false;
-  var start = timeToMinutes(time);
-  var end = start + (duration||30);
-  if(end > 20*60) return false;
-  var ranges = busyRanges(professionalId, date);
-  for(var i=0;i<ranges.length;i++){
-    if(rangesOverlap(start,end,ranges[i][0],ranges[i][1])) return false;
-  }
-  return true;
+  return slotAvailability(professionalId,date,time,duration).free;
 }
 
 function slotBlocked(professionalId, date, time){
@@ -1214,19 +1232,48 @@ function slotOccupiedByAppointment(professionalId, date, time){
   return false;
 }
 
+
+function slotAvailability(professionalId,date,time,duration){
+  duration=duration||60;
+
+  if(isDayClosed(date)) return {free:false,reason:'Dia fechado'};
+  if(isWeekend(date) && !isWeekendExceptionOpen(date)) return {free:false,reason:'Fim de semana fechado'};
+  if(professionalScheduleClosed(professionalId,date,time)) return {free:false,reason:'Fechado pela escala'};
+
+  var start=timeToMinutes(time);
+  var end=start+duration;
+  if(end>20*60) return {free:false,reason:'Ultrapassa o horário de atendimento'};
+
+  var ranges=busyRanges(professionalId,date);
+  for(var i=0;i<ranges.length;i++){
+    if(rangesOverlap(start,end,ranges[i][0],ranges[i][1])) return {free:false,reason:'Cadeira ocupada'};
+  }
+  return {free:true,reason:'Disponível'};
+}
+
 function availableSlots(professionalId, date, duration){
-  duration = duration || 30;
-  var slots = timeSlots();
-  var out = [];
+  duration=duration||60;
+  var slots=timeSlots(),out=[],seen={};
+
   if(professionalId==='any'){
     slots.forEach(function(t){
       for(var i=0;i<PROFESSIONALS.length;i++){
-        var pid = PROFESSIONALS[i].id;
-        if(isFreeSlot(pid, date, t, duration)){ out.push({time:t, professionalId:pid}); return; }
+        var pid=PROFESSIONALS[i].id;
+        if(slotAvailability(pid,date,t,duration).free){
+          var key=t+'|'+pid;
+          if(!seen[key]){
+            out.push({time:t,professionalId:pid});
+            seen[key]=true;
+          }
+        }
       }
     });
-  } else {
-    slots.forEach(function(t){ if(isFreeSlot(professionalId, date, t, duration)) out.push({time:t, professionalId:professionalId}); });
+  }else{
+    slots.forEach(function(t){
+      if(slotAvailability(professionalId,date,t,duration).free){
+        out.push({time:t,professionalId:professionalId});
+      }
+    });
   }
   return out;
 }
@@ -1541,7 +1588,11 @@ function renderPatient(){
     out += '<h3 style="margin-top:0;">4. Escolha o horário — '+fullDisplay(b.date)+'</h3>';
     var slots = availableSlots(b.professionalId, b.date, procById(b.procedureId).duration);
     if(slots.length===0){
-      out += '<div class="empty-note">Sem horários livres nesse dia. Volte e escolha outra data.</div>';
+      var reason='';
+      if(isDayClosed(b.date)) reason='Este dia está fechado pela equipe.';
+      else if(isWeekend(b.date) && !isWeekendExceptionOpen(b.date)) reason='Este fim de semana está fechado.';
+      else reason='Não há horários compatíveis disponíveis para este profissional e procedimento.';
+      out += '<div class="empty-note">'+reason+' Volte e escolha outra data ou profissional.</div>';
     } else {
       out += '<div class="slot-grid">';
       slots.forEach(function(s){
@@ -2064,20 +2115,30 @@ function renderAgenda(){
   var slots = timeSlots();
   out += '<div class="slot-grid">';
   slots.forEach(function(t){
-    var manualBlocked = slotBlocked(state.agendaBlockProf, state.agendaDate, t);
-    var defaultClosed = defaultProfessionalClosed(state.agendaBlockProf,state.agendaDate,t);
-    var overrideOpen = scheduleOverrideOpen(state.agendaBlockProf,state.agendaDate,t);
-    var scheduleClosed = defaultClosed && !overrideOpen;
-    var isBlocked = manualBlocked || scheduleClosed;
-    var isOcc = slotOccupiedByAppointment(state.agendaBlockProf, state.agendaDate, t);
-    var cls = isBlocked ? 'blocked' : (isOcc ? 'occupied' : '');
-    if(defaultClosed && overrideOpen) cls += ' schedule-open';
-    var label = isOcc ? 'Ocupado' :
-      (manualBlocked ? 'Fechado manualmente' :
-        (scheduleClosed ? 'Fechado por padrão' :
-          (defaultClosed && overrideOpen ? 'Aberto por exceção' : 'Aberto')));
-    var disabled = isOcc || (!canEditScheduleExceptions() && defaultClosed);
-    out += '<button class="slot '+cls+'" '+(disabled?'disabled':'')+' data-action="toggle-block" data-id="'+t+'">'+t+'<small>'+label+'</small></button>';
+    var manualBlocked=slotBlocked(state.agendaBlockProf,state.agendaDate,t);
+    var defaultClosed=defaultProfessionalClosed(state.agendaBlockProf,state.agendaDate,t);
+    var overrideOpen=scheduleOverrideOpen(state.agendaBlockProf,state.agendaDate,t);
+    var isOcc=slotOccupiedByAppointment(state.agendaBlockProf,state.agendaDate,t);
+    var actual=slotAvailability(state.agendaBlockProf,state.agendaDate,t,60);
+
+    var cls=actual.free?'schedule-open':'blocked';
+    if(isOcc) cls='occupied';
+
+    var label='';
+    if(isOcc) label='Cadeira ocupada';
+    else if(isDayClosed(state.agendaDate)) label='Dia fechado';
+    else if(isWeekend(state.agendaDate) && !isWeekendExceptionOpen(state.agendaDate)) label='Fim de semana fechado';
+    else if(manualBlocked) label='Fechado manualmente';
+    else if(defaultClosed && !overrideOpen) label='Fechado por padrão';
+    else if(defaultClosed && overrideOpen) label='Aberto por exceção';
+    else label='Disponível ao paciente';
+
+    var disabled=isOcc || isDayClosed(state.agendaDate) ||
+      (isWeekend(state.agendaDate) && !isWeekendExceptionOpen(state.agendaDate)) ||
+      (!canEditScheduleExceptions() && defaultClosed);
+
+    out += '<button class="slot '+cls+'" '+(disabled?'disabled':'')+
+      ' data-action="toggle-block" data-id="'+t+'">'+t+'<small>'+label+'</small></button>';
   });
   out += '</div></div>';
 
