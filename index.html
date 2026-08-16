@@ -975,6 +975,21 @@
 .whatsapp-btn:hover{background:#d6f1e3!important}
 @media(max-width:800px){.reminder-appt{grid-template-columns:1fr 1fr}.reminder-appt .wa-action{grid-column:1/-1}.whatsapp-btn{width:100%}}
 
+
+/* ===== ALERTAS INTELIGENTES DE ESTOQUE ===== */
+.stock-warning-panel{display:grid;gap:9px;margin:12px 0 16px}
+.stock-warning{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 14px;border-radius:12px;border:1px solid var(--border);font-size:12.5px}
+.stock-warning .icon{font-size:19px}.stock-warning .title{font-weight:800}.stock-warning .meta{font-size:11.5px;margin-top:2px}
+.stock-warning.critical{background:#fde8ea;border-color:#efadb4;color:#a91f2d}
+.stock-warning.urgent{background:#fff0e4;border-color:#f2c39c;color:#a8541c}
+.stock-warning.low{background:#fff8dc;border-color:#eadb95;color:#7e6518}
+.stock-warning.expiry{background:#eef0ff;border-color:#c6caf1;color:#4a56a2}
+.stock-kpi.critical-kpi{border-color:#efadb4;background:#fff7f8}
+.stock-kpi.warning-kpi{border-color:#eadb95;background:#fffdf4}
+.stock-alert.zero{background:#fde8ea!important;color:#a91f2d!important}
+.stock-alert.critical{background:#fff0e4!important;color:#a8541c!important}
+.stock-alert.low{background:#fff8dc!important;color:#7e6518!important}
+
 </style>
 </head>
 <body>
@@ -1774,7 +1789,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.7 · catálogo completo de estoque · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.8 · alertas inteligentes de estoque · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2913,7 +2928,20 @@ function renderPatientForm(p){
 }
 
 function daysUntil(iso){if(!iso)return 99999;return Math.ceil((parseISO(iso)-parseISO(todayISO()))/86400000);}
-function stockStatus(i){var exp=daysUntil(i.expiry);if(n(i.qty)<=n(i.minQty))return {label:'REPOR',cls:'low'};if(exp<=30)return {label:exp<0?'VENCIDO':'VALIDADE',cls:'exp'};return {label:'OK',cls:'ok'};}
+function stockStatus(i){
+  var qty=n(i.qty),min=n(i.minQty),exp=daysUntil(i.expiry);
+  if(qty<=0)return {label:'ZERADO',cls:'zero',level:4};
+  if(min>0 && qty<=Math.max(1,min*0.35))return {label:'CRÍTICO',cls:'critical',level:3};
+  if(min>0 && qty<=min)return {label:'ABAIXO DO MÍNIMO',cls:'low',level:2};
+  if(exp<0)return {label:'VENCIDO',cls:'exp',level:3};
+  if(exp<=30)return {label:'VALIDADE PRÓXIMA',cls:'exp',level:1};
+  return {label:'OK',cls:'ok',level:0};
+}
+function stockAlerts(){
+  return (store.inventory||[]).map(function(i){return {item:i,status:stockStatus(i)};})
+    .filter(function(x){return x.status.level>0;})
+    .sort(function(a,b){return b.status.level-a.status.level || n(a.item.qty)-n(b.item.qty);});
+}
 function stockValue(){return (store.inventory||[]).reduce(function(a,i){return a+n(i.qty)*n(i.cost);},0);}
 function procedureMaterialCost(procId){var rec=(store.procedureRecipes||{})[procId]||[];return rec.reduce(function(sum,r){var item=(store.inventory||[]).find(function(i){return i.id===r.itemId;});return sum+(item?n(item.cost)*n(r.qty):0);},0);}
 
@@ -2932,12 +2960,35 @@ function renderEstoque(){
   if(q)items=items.filter(function(i){return [i.name,i.category,i.supplier,i.lot].join(' ').toLowerCase().indexOf(q)>=0;});
   if(state.stockCategory&&state.stockCategory!=='Todas')items=items.filter(function(i){return i.category===state.stockCategory;});
   items.sort(function(a,b){var c=String(a.category||'').localeCompare(String(b.category||''),'pt-BR');return c||String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
-  var low=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty);}).length;
-  var exp=(store.inventory||[]).filter(function(i){return i.expiry&&daysUntil(i.expiry)<=30;}).length;
+  var alerts=stockAlerts(),
+      zero=alerts.filter(function(x){return x.status.cls==='zero';}).length,
+      critical=alerts.filter(function(x){return x.status.cls==='critical';}).length,
+      low=alerts.filter(function(x){return x.status.cls==='low';}).length,
+      exp=alerts.filter(function(x){return x.status.cls==='exp';}).length;
   var out='<div class="section-title">Estoque inteligente</div>';
   if(state.stockMessage)out+='<div class="good-card" style="margin-bottom:12px;">'+esc(state.stockMessage)+'</div>';
   out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
-  out+='<div class="stock-grid"><div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div><div class="card stock-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:var(--danger)">'+low+'</div></div><div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div><div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div></div>';
+  out+='<div class="stock-grid">'+
+    '<div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div>'+
+    '<div class="card stock-kpi critical-kpi"><div class="k">Zerados</div><div class="v" style="color:var(--danger)">'+zero+'</div></div>'+
+    '<div class="card stock-kpi critical-kpi"><div class="k">Estoque crítico</div><div class="v" style="color:#a8541c">'+critical+'</div></div>'+
+    '<div class="card stock-kpi warning-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:#7e6518">'+low+'</div></div>'+
+    '<div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div>'+
+    '<div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div>'+
+  '</div>';
+  if(alerts.length){
+    out+='<div class="stock-warning-panel">';
+    alerts.slice(0,12).forEach(function(x){
+      var i=x.item,s=x.status,cls=s.cls==='zero'?'critical':s.cls==='critical'?'urgent':s.cls==='low'?'low':'expiry',
+          icon=s.cls==='zero'?'⛔':s.cls==='critical'?'⚠':s.cls==='low'?'!':'◷',
+          recommended=Math.max(0,n(i.minQty)-n(i.qty));
+      out+='<div class="stock-warning '+cls+'"><div class="icon">'+icon+'</div><div><div class="title">'+esc(i.name)+' · '+esc(s.label)+'</div><div class="meta">Atual: '+n(i.qty).toLocaleString('pt-BR')+' '+esc(i.unit||'')+' · mínimo: '+n(i.minQty).toLocaleString('pt-BR')+(recommended>0?' · sugerido repor pelo menos '+recommended.toLocaleString('pt-BR')+' '+esc(i.unit||''):'')+'</div></div><button class="btn btn-ghost btn-sm" data-action="stock-edit" data-id="'+escAttr(i.id)+'">Atualizar</button></div>';
+    });
+    if(alerts.length>12)out+='<div class="mini-note">Há mais '+(alerts.length-12)+' item(ns) com alerta. Consulte “Itens para comprar” para a lista completa.</div>';
+    out+='</div>';
+  }else{
+    out+='<div class="good-card" style="margin-bottom:14px">✓ Nenhum item abaixo do mínimo, crítico ou zerado neste momento.</div>';
+  }
   if(state.stockTab==='itens'){
     var stockCats=['Todas'].concat(Array.from(new Set((store.inventory||[]).map(function(i){return i.category||'Outros';}))).sort(function(a,b){return a.localeCompare(b,'pt-BR');}));
     out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><div class="field"><label>Categoria</label><select id="stock-category">'+stockCats.map(function(c){return '<option '+(state.stockCategory===c?'selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="stock-search">Aplicar filtros</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
