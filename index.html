@@ -965,6 +965,16 @@
 .status-select.status-recebido{background:#d9f3ec!important;border-color:#54b5a6!important;color:#116c60!important}
 .status-select.status-entregue{background:#d8f1df!important;border-color:#62ad78!important;color:#17643b!important}
 
+
+/* ===== LEMBRETES MANUAIS DE CONSULTA ===== */
+.reminder-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0 16px}
+.reminder-kpi{padding:14px}.reminder-kpi .k{font-size:10px;text-transform:uppercase;font-weight:850;color:var(--ink-soft)}.reminder-kpi .v{font:800 21px 'Space Grotesk';margin-top:4px}
+.reminder-list{display:grid;gap:9px}.reminder-appt{display:grid;grid-template-columns:115px minmax(170px,1.3fr) minmax(170px,1fr) 125px auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.reminder-appt.today{border-color:#e8b44e;background:#fffaf0}.reminder-appt .date strong{display:block;font-size:14px}.reminder-appt .date small,.reminder-appt .meta{font-size:11.5px;color:var(--ink-soft)}
+.whatsapp-btn{background:#e6f7ef!important;border-color:#7bc9a2!important;color:#176b46!important;font-weight:800!important}
+.whatsapp-btn:hover{background:#d6f1e3!important}
+@media(max-width:800px){.reminder-appt{grid-template-columns:1fr 1fr}.reminder-appt .wa-action{grid-column:1/-1}.whatsapp-btn{width:100%}}
+
 </style>
 </head>
 <body>
@@ -1606,7 +1616,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.5 · etapas manuais coloridas · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.6 · lembretes manuais WhatsApp · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2227,7 +2237,7 @@ function renderStaff(){
     ['laboratorio','Laboratório & Prótese'],
     ['crm','Reativação'],
     ['estoque','Estoque'],
-    ['confirmacoes','Confirmações'],
+    ['confirmacoes','Lembretes'],
     ['sac','SAC'],
     ['preconsultas','Pré-consultas'],
     ['marketing','Marketing'],
@@ -3327,17 +3337,65 @@ function renderRecordHistory(p){
   return out;
 }
 
+function appointmentConfirmationMessage(a){
+  var proc=procById(a.procedureId),prof=profById(a.professionalId);
+  return 'Olá, '+(a.name||'')+'! Tudo bem? 💙\n\n'+
+    'Aqui é da equipe do Instituto Lins Rabello. Estamos entrando em contato para confirmar sua consulta:\n\n'+
+    '📅 Data: '+fullDisplay(a.date)+'\n'+
+    '🕐 Horário: '+a.time+'\n'+
+    '🦷 Atendimento: '+(proc?proc.name:'Consulta odontológica')+'\n'+
+    '👩‍⚕️👨‍⚕️ Profissional: '+(prof?prof.name:'Equipe Instituto Lins Rabello')+'\n\n'+
+    'Por favor, responda esta mensagem confirmando sua presença. Caso precise reagendar, avise-nos com antecedência para que possamos organizar o horário da melhor forma.\n\n'+
+    'Até breve! 💙\nInstituto Lins Rabello · Odontologia Integrada';
+}
+function appointmentWhatsAppLink(a){
+  var phone=normalizePhone(a.phone);
+  if(!phone)return '#';
+  var countryPhone=phone.indexOf('55')===0?phone:'55'+phone;
+  return 'https://wa.me/'+countryPhone+'?text='+encodeURIComponent(appointmentConfirmationMessage(a));
+}
+function futureScheduledAppointments(){
+  var now=todayISO();
+  return (store.appointments||[]).filter(function(a){
+    return a.date>=now && ['cancelado','falta','realizado'].indexOf(a.status)<0;
+  }).sort(function(a,b){
+    return (String(a.date)+String(a.time)).localeCompare(String(b.date)+String(b.time));
+  });
+}
 function renderConfirmacoes(){
-  var logs = store.logs.slice().reverse();
-  var out = '<div class="section-title">Lembretes automáticos</div><div class="card">';
-  out += '<p style="color:var(--ink-soft);font-size:13px;margin-top:0;">Cada agendamento gera automaticamente um lembrete de 24h e de 2h antes da consulta, enviados ao telefone do paciente.</p>';
-  if(logs.length===0) out += '<div class="empty-state">Nenhum lembrete agendado ainda.</div>';
-  else{
-    logs.forEach(function(l){
-      out += '<div class="log-item"><div class="top"><span>'+l.at+'</span><span class="pill '+(l.status==='enviado'?'confirmado':'pendente')+'">'+(l.status==='enviado'?'Enviado':'Agendado')+'</span></div><div class="msg">'+esc(l.message)+'</div></div>';
-    });
-  }
-  out += '</div>';
+  var items=futureScheduledAppointments(),today=todayISO(),
+      todayCount=items.filter(function(a){return a.date===today;}).length,
+      next7=items.filter(function(a){return a.date>=today&&a.date<=addDays(today,7);}).length,
+      noPhone=items.filter(function(a){return normalizePhone(a.phone).length<10;}).length;
+
+  var out='<div class="section-title">Lembretes de consultas</div>'+
+    '<div class="card" style="margin-bottom:14px;background:var(--grey-soft)">'+
+      '<h3 style="margin:0 0 5px">Confirmação manual pelo WhatsApp</h3>'+
+      '<p style="margin:0;color:var(--ink-soft);font-size:13px;line-height:1.55">Todos os pacientes com consulta futura aparecem aqui. Nada é enviado automaticamente: clique em <strong>Abrir WhatsApp</strong>, revise a mensagem já preenchida e envie manualmente pelo WhatsApp Web ou aplicativo.</p>'+
+    '</div>';
+
+  out+='<div class="reminder-kpis">'+
+    '<div class="card reminder-kpi"><div class="k">Consultas futuras</div><div class="v">'+items.length+'</div></div>'+
+    '<div class="card reminder-kpi"><div class="k">Hoje</div><div class="v">'+todayCount+'</div></div>'+
+    '<div class="card reminder-kpi"><div class="k">Próximos 7 dias</div><div class="v">'+next7+'</div></div>'+
+    '<div class="card reminder-kpi"><div class="k">Sem telefone válido</div><div class="v">'+noPhone+'</div></div>'+
+  '</div>';
+
+  out+='<div class="card"><div class="reminder-list">';
+  if(!items.length)out+='<div class="empty-state">Nenhuma consulta futura aguardando acompanhamento.</div>';
+
+  items.forEach(function(a){
+    var proc=procById(a.procedureId),prof=profById(a.professionalId),phone=normalizePhone(a.phone),
+        isToday=a.date===today,link=appointmentWhatsAppLink(a);
+    out+='<div class="reminder-appt '+(isToday?'today':'')+'">'+
+      '<div class="date"><strong>'+dayDisplay(a.date)+' · '+a.time+'</strong><small>'+(isToday?'HOJE':weekdayShort(a.date))+'</small></div>'+
+      '<div><strong>'+esc(a.name||'Paciente')+'</strong><div class="meta">'+esc(a.phone||'Telefone não informado')+'</div></div>'+
+      '<div><strong>'+esc(proc?proc.name:'Consulta')+'</strong><div class="meta">'+esc(prof?prof.name:'Profissional não informado')+'</div></div>'+
+      '<div><span class="pill '+(a.status||'pendente')+'">'+esc(STATUS_LABEL[a.status]||a.status||'Agendado')+'</span></div>'+
+      '<div class="wa-action">'+(phone.length>=10?'<a class="btn btn-ghost btn-sm whatsapp-btn" href="'+link+'" target="_blank" rel="noopener">WhatsApp · confirmar</a>':'<button class="btn btn-ghost btn-sm" disabled>Sem telefone</button>')+'</div>'+
+    '</div>';
+  });
+  out+='</div></div>';
   return out;
 }
 
