@@ -930,6 +930,15 @@
 .signature-status.signed{background:#e8f7ef;border-color:#b3dfc7;color:#20704b}
 @media(max-width:650px){.signature-status-grid{grid-template-columns:1fr}}
 
+
+/* ===== ETAPAS MANUAIS: ORÇAMENTO E LABORATÓRIO ===== */
+.status-select{width:100%;min-width:135px;padding:8px 9px;border-radius:9px;border:1px solid var(--border);font-weight:750;font-size:11.5px;background:#fff;cursor:pointer}
+.status-select.status-proposto,.status-select.status-enviado{background:#fff6df;border-color:#e8b44e;color:#805c13}
+.status-select.status-apresentado,.status-select.status-producao{background:#e8f2fc;border-color:#b8d6f1;color:#235b8d}
+.status-select.status-negociacao,.status-select.status-prova{background:#f2e9fb;border-color:#d5b9e9;color:#713794}
+.status-select.status-aceito,.status-select.status-recebido{background:#e9f7f5;border-color:#a9ddd6;color:#176d65}
+.status-select.status-realizado,.status-select.status-entregue{background:#e8f7ef;border-color:#b3dfc7;color:#20704b}
+
 </style>
 </head>
 <body>
@@ -1571,7 +1580,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.3 · orçamento com logo institucional · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.4 · etapas manuais · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2818,6 +2827,38 @@ function crmRegisterContact(patientId,feedbackOnly){
 }
 
 
+
+function budgetStatusClass(s){
+  s=String(s||'proposto').toLowerCase();
+  return s==='apresentado'?'status-apresentado':s==='negociacao'?'status-negociacao':s==='aceito'?'status-aceito':s==='realizado'?'status-realizado':'status-proposto';
+}
+function budgetStatusSelect(x){
+  var opts=[['proposto','Proposto'],['apresentado','Apresentado'],['negociacao','Em negociação'],['aceito','Aceito'],['realizado','Realizado']];
+  return '<select class="status-select '+budgetStatusClass(x.status)+'" data-change="budget-status" data-id="'+x.id+'">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(x.status===o[0]?'selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';
+}
+function labStatusClass(s){
+  s=String(s||'enviado').toLowerCase();
+  return s==='em produção'?'status-producao':s==='prova'?'status-prova':s==='recebido'?'status-recebido':s==='entregue'?'status-entregue':'status-enviado';
+}
+function labStatusSelect(x){
+  var opts=[['enviado','Enviado ao laboratório'],['em produção','Em produção'],['prova','Em prova'],['recebido','Recebido na clínica'],['entregue','Entregue ao paciente']];
+  return '<select class="status-select '+labStatusClass(x.status)+'" data-change="lab-status" data-id="'+x.id+'">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(x.status===o[0]?'selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';
+}
+function setBudgetStatus(id,status){
+  var x=(store.treatmentPlans||[]).find(function(v){return v.id===id;});
+  if(!x)return;
+  var allowed=['proposto','apresentado','negociacao','aceito','realizado'];
+  if(allowed.indexOf(status)<0)return;
+  x.status=status;persist();
+}
+function setLabStatus(id,status){
+  var x=(store.labCases||[]).find(function(v){return v.id===id;});
+  if(!x)return;
+  var allowed=['enviado','em produção','prova','recebido','entregue'];
+  if(allowed.indexOf(status)<0)return;
+  x.status=status;persist();
+}
+
 function renderLaboratorio(){
   var cases=(store.labCases||[]).slice().sort(function(a,b){return String(b.dueDate||'').localeCompare(String(a.dueDate||''));});
   var open=cases.filter(function(x){return x.status!=='entregue';}), cost=cases.reduce(function(s,x){return s+n(x.cost);},0);
@@ -2825,7 +2866,7 @@ function renderLaboratorio(){
   if(state.labMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.labMessage)+'</div>';
   out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Casos laboratoriais</h3><div class="mini-note">Laboratório, trabalho, elemento, cor, prazo, custo e entrega.</div></div><button class="btn btn-primary" data-action="lab-add">+ Novo caso</button></div><div class="lab-row head"><div>Paciente / trabalho</div><div>Laboratório</div><div>Prazo</div><div>Custo</div><div>Status</div><div>Ações</div></div>';
   if(!cases.length)out+='<div class="empty-state">Nenhum caso laboratorial cadastrado.</div>';
-  cases.forEach(function(x){var p=patientById(x.patientId);out+='<div class="lab-row"><div><strong>'+esc(p?p.name:'Paciente')+'</strong><br><span class="mini-note">'+esc(x.work||'')+' '+esc(x.tooth||'')+'</span></div><div>'+esc(x.lab||'—')+'</div><div>'+(x.dueDate?dayDisplay(x.dueDate):'—')+'</div><div>'+fmtMoney(n(x.cost))+'</div><div><span class="pill '+(x.status==='entregue'?'realizado':'pendente')+'">'+esc(x.status||'enviado')+'</span></div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="lab-cycle" data-id="'+x.id+'">Avançar</button><button class="btn btn-ghost btn-sm" data-action="lab-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
+  cases.forEach(function(x){var p=patientById(x.patientId);out+='<div class="lab-row"><div><strong>'+esc(p?p.name:'Paciente')+'</strong><br><span class="mini-note">'+esc(x.work||'')+' '+esc(x.tooth||'')+'</span></div><div>'+esc(x.lab||'—')+'</div><div>'+(x.dueDate?dayDisplay(x.dueDate):'—')+'</div><div>'+fmtMoney(n(x.cost))+'</div><div>'+labStatusSelect(x)+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="lab-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
   out+='</div>';return out;
 }
 function addLabCase(){
@@ -2925,7 +2966,7 @@ function renderOrcamentos(){
   out+='<h3>Itens deste orçamento</h3><div class="plan-row head"><div>Procedimento</div><div>Dente/região</div><div>Valor</div><div>Status</div><div>Observação</div><div>Ações</div></div>';
   if(!plans.length)out+='<div class="empty-state">Nenhum procedimento registrado neste orçamento.</div>';
   plans.forEach(function(x){
-    out+='<div class="plan-row"><div><strong>'+esc(x.name)+'</strong></div><div><strong>'+esc(x.tooth||'Geral')+'</strong></div><div>'+fmtMoney(n(x.price))+'</div><div><span class="pill '+(x.status==='realizado'?'realizado':x.status==='aceito'?'confirmado':'pendente')+'">'+esc(x.status||'proposto')+'</span></div><div>'+esc(x.note||'—')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="budget-cycle" data-id="'+x.id+'">Avançar</button><button class="btn btn-ghost btn-sm" data-action="budget-delete" data-id="'+x.id+'">Excluir</button></div></div>';
+    out+='<div class="plan-row"><div><strong>'+esc(x.name)+'</strong></div><div><strong>'+esc(x.tooth||'Geral')+'</strong></div><div>'+fmtMoney(n(x.price))+'</div><div>'+budgetStatusSelect(x)+'</div><div>'+esc(x.note||'—')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="budget-delete" data-id="'+x.id+'">Excluir</button></div></div>';
   });
   out+='</div></div></div>';
   return out;
@@ -3406,6 +3447,12 @@ function renderRelatorios(){
 /* ---------------- events ---------------- */
 function attachEvents(){
   var root = document.getElementById('root');
+  root.onchange = function(e){
+    var t=e.target.closest('[data-change]');
+    if(!t)return;
+    if(t.dataset.change==='budget-status'){setBudgetStatus(t.dataset.id,t.value);return;}
+    if(t.dataset.change==='lab-status'){setLabStatus(t.dataset.id,t.value);return;}
+  };
   root.onclick = function(e){
     var t = e.target.closest('[data-action], [data-role], [data-stafftab]');
     if(!t) return;
@@ -3472,7 +3519,6 @@ function attachEvents(){
     else if(a==='budget-patient'){state.budgetPatientId=t.dataset.id;state.budgetTooth=null;state.budgetMessage='';render();return;}
     else if(a==='budget-tooth'){state.budgetTooth=t.dataset.id;render();return;}
     else if(a==='budget-add'){addBudgetItem();return;}
-    else if(a==='budget-cycle'){cycleTreatmentPlan(t.dataset.id);return;}
     else if(a==='budget-delete'){if(confirm('Excluir este item do orçamento?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
     else if(a==='budget-quote'){state.budgetQuotePreview=true;render();return;}
     else if(a==='quote-close'){state.quotePreview=false;state.budgetQuotePreview=false;render();return;}
@@ -3484,7 +3530,6 @@ function attachEvents(){
     else if(a==='plan-cycle'){cycleTreatmentPlan(t.dataset.id);return;}
     else if(a==='plan-delete'){if(confirm('Excluir este item do plano?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
     else if(a==='lab-add'){addLabCase();return;}
-    else if(a==='lab-cycle'){cycleLab(t.dataset.id);return;}
     else if(a==='lab-delete'){if(confirm('Excluir este caso laboratorial?')){store.labCases=(store.labCases||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
 
     else if(a==='stock-search'){ var ss=document.getElementById('stock-search');state.stockSearch=ss?ss.value:'';render();return; }
