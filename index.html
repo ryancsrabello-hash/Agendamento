@@ -858,6 +858,17 @@
   }
 }
 
+
+/* ===== ORCAMENTO PROFISSIONAL / IMPRESSAO ===== */
+.quote-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.quote-sheet{background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px;max-width:900px;margin:0 auto}
+.quote-head{display:flex;justify-content:space-between;gap:20px;border-bottom:2px solid var(--teal);padding-bottom:16px;margin-bottom:16px}
+.quote-brand{display:flex;gap:14px;align-items:center}.quote-brand img{width:78px;height:78px;object-fit:contain;border-radius:12px}.quote-brand h2{margin:0;color:var(--ink)}.quote-meta{text-align:right;font-size:12px}
+.quote-patient{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin:15px 0;padding:12px;background:var(--grey-soft);border-radius:10px}
+.quote-table{width:100%;border-collapse:collapse;margin:15px 0}.quote-table th,.quote-table td{padding:9px;border-bottom:1px solid var(--border);font-size:12px;text-align:left}.quote-table th{text-transform:uppercase;font-size:10px;color:var(--ink-soft)}
+.quote-total{text-align:right;font:800 19px 'Space Grotesk';margin:16px 0}.quote-footer{border-top:1px solid var(--border);margin-top:26px;padding-top:14px;text-align:center;font-size:11px;color:var(--ink-soft)}
+@media print{body *{visibility:hidden!important}.quote-sheet,.quote-sheet *{visibility:visible!important}.quote-sheet{position:absolute;left:0;top:0;width:100%;max-width:none;border:0;padding:18mm;box-shadow:none}.quote-toolbar{display:none!important}.sidebar,.topbar,.tabs{display:none!important}@page{size:A4;margin:0}}
+
 </style>
 </head>
 <body>
@@ -929,7 +940,7 @@ var state = {
   staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false, teamProfiles:[], teamLoading:false, teamMessage:'',
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
-  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas',
+  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas', quotePreview:false,
   pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
@@ -1499,7 +1510,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.7.1 · menu priorizado · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.8.0 · fases completas + orçamento PDF · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2075,11 +2086,11 @@ function renderStaff(){
     ['recepcao','Recepção'],
     ['agenda','Agenda'],
     ['pacientes','Pacientes'],
-    ['tarefas','Tarefas'],
+    ['tarefas','Central de tarefas'],
     ['pendencias','Pendências'],
     ['financeiro','Financeiro'],
     ['crm','Reativação'],
-    ['laboratorio','Laboratório'],
+    ['laboratorio','Laboratório & Prótese'],
     ['estoque','Estoque'],
     ['confirmacoes','Confirmações'],
     ['sac','SAC'],
@@ -2768,15 +2779,48 @@ function clinicalToothMap(){
   return map;
 }
 
+
+function clinicQuoteInfo(){
+  return {name:'Instituto Lins Rabello',address:'Itapecerica da Serra - SP',logo:'assets/logo.png'};
+}
+function quoteProfessionalName(){
+  var d=currentDentist();
+  if(d&&d.name)return d.name;
+  return state.staffRole==='amanda'?'Dra. Amanda Chrislen Costa Lins':state.staffRole==='ryan'?'Dr. Ryan Rabello':'Equipe Instituto Lins Rabello';
+}
+function renderQuoteDocument(p){
+  var plans=patientTreatmentPlans(p.id).filter(function(x){return x.status!=='realizado';});
+  var total=plans.reduce(function(s,x){return s+n(x.price);},0),c=clinicQuoteInfo(),date=todayISO(),out='';
+  out+='<div class="quote-toolbar"><button class="btn btn-primary" data-action="quote-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="quote-whatsapp">Enviar resumo no WhatsApp</button><button class="btn btn-ghost" data-action="quote-close">Voltar ao plano</button></div>';
+  out+='<div class="quote-sheet" id="quote-sheet"><div class="quote-head"><div class="quote-brand"><img src="'+escAttr(c.logo)+'" alt="Logo Instituto Lins Rabello"><div><h2>'+esc(c.name)+'</h2><div>Odontologia humanizada e tecnologia</div></div></div><div class="quote-meta"><strong>ORÇAMENTO ODONTOLÓGICO</strong><br>Data: '+dayDisplay(date)+'<br>Profissional: '+esc(quoteProfessionalName())+'</div></div>';
+  out+='<div class="quote-patient"><div><strong>Paciente:</strong> '+esc(p.name||'')+'</div><div><strong>Telefone:</strong> '+esc(p.phone||'—')+'</div><div><strong>CPF:</strong> '+esc(p.cpf||'—')+'</div><div><strong>Nascimento:</strong> '+esc(p.birthDate?dayDisplay(p.birthDate):'—')+'</div></div>';
+  out+='<table class="quote-table"><thead><tr><th>Procedimento</th><th>Dente / região</th><th>Observação</th><th>Valor</th></tr></thead><tbody>';
+  plans.forEach(function(x){out+='<tr><td>'+esc(x.name)+'</td><td>'+esc(x.tooth||'—')+'</td><td>'+esc(x.note||'—')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';});
+  if(!plans.length)out+='<tr><td colspan="4">Nenhum procedimento pendente no orçamento.</td></tr>';
+  out+='</tbody></table><div class="quote-total">Valor total: '+fmtMoney(total)+'</div>';
+  out+='<div style="font-size:11.5px;line-height:1.55"><strong>Observações:</strong> Este documento apresenta o planejamento e os valores registrados no momento da emissão. Alterações clínicas identificadas durante o tratamento poderão exigir reavaliação e novo planejamento, sempre comunicados ao paciente.</div>';
+  out+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:55px;text-align:center;font-size:11px"><div style="border-top:1px solid #555;padding-top:6px">Paciente / responsável</div><div style="border-top:1px solid #555;padding-top:6px">'+esc(quoteProfessionalName())+'</div></div>';
+  out+='<div class="quote-footer"><strong>'+esc(c.name)+'</strong><br>'+esc(c.address)+'<br>Atendimento mediante agendamento · Documento emitido pelo ERP do Instituto Lins Rabello</div></div>';
+  return out;
+}
+function quoteWhatsApp(){
+  var p=patientById(state.recordPatientId);if(!p)return;
+  var plans=patientTreatmentPlans(p.id).filter(function(x){return x.status!=='realizado';}),total=plans.reduce(function(s,x){return s+n(x.price);},0);
+  var msg='Olá, '+(p.name||'')+'! Segue o resumo do seu orçamento no Instituto Lins Rabello:\\n\\n'+plans.map(function(x){return '• '+x.name+(x.tooth?' ('+x.tooth+')':'')+' — '+fmtMoney(n(x.price));}).join('\\n')+'\\n\\nTotal: '+fmtMoney(total)+'\\n\\nSe tiver qualquer dúvida sobre o planejamento, estamos à disposição.';
+  var ph=normalizePhone(p.phone);if(!ph){alert('Paciente sem telefone cadastrado.');return;}
+  window.open('https://wa.me/55'+ph+'?text='+encodeURIComponent(msg),'_blank');
+}
+
 function patientTreatmentPlans(patientId){
   return (store.treatmentPlans||[]).filter(function(x){return x.patientId===patientId;}).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''));});
 }
 function renderTreatmentPlan(p){
+  if(state.quotePreview)return renderQuoteDocument(p);
   var plans=patientTreatmentPlans(p.id), total=plans.reduce(function(s,x){return s+n(x.price);},0),
       accepted=plans.filter(function(x){return ['aceito','realizado'].indexOf(x.status)>=0;}).reduce(function(s,x){return s+n(x.price);},0);
   var out='<div class="phase-grid"><div class="card phase-card"><div class="num">Plano</div><div class="big">'+plans.length+' item(ns)</div></div><div class="card phase-card"><div class="num">Valor proposto</div><div class="big">'+fmtMoney(total)+'</div></div><div class="card phase-card"><div class="num">Aceito / realizado</div><div class="big">'+fmtMoney(accepted)+'</div></div></div>';
   if(state.planMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.planMessage)+'</div>';
-  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Plano de tratamento e orçamento</h3><div class="mini-note">Integra indicação clínica, dente/região, proposta, aceite e execução.</div></div><button class="btn btn-primary" data-action="plan-add">+ Adicionar procedimento</button></div>';
+  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Plano de tratamento e orçamento</h3><div class="mini-note">Integra indicação clínica, dente/região, proposta, aceite e execução.</div></div><div class="row-actions"><button class="btn btn-ghost" data-action="quote-preview">Gerar orçamento / PDF</button><button class="btn btn-primary" data-action="plan-add">+ Adicionar procedimento</button></div></div>';
   out+='<div class="plan-row head"><div>Procedimento</div><div>Dente/região</div><div>Valor</div><div>Status</div><div>Observação</div><div>Ações</div></div>';
   if(!plans.length)out+='<div class="empty-state">Nenhum item no plano de tratamento.</div>';
   plans.forEach(function(x){out+='<div class="plan-row"><div><strong>'+esc(x.name)+'</strong></div><div>'+esc(x.tooth||'—')+'</div><div>'+fmtMoney(n(x.price))+'</div><div><span class="pill '+(x.status==='realizado'?'realizado':x.status==='aceito'?'confirmado':'pendente')+'">'+esc(x.status||'proposto')+'</span></div><div>'+esc(x.note||'—')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="plan-cycle" data-id="'+x.id+'">Avançar</button><button class="btn btn-ghost btn-sm" data-action="plan-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
@@ -3201,6 +3245,10 @@ function attachEvents(){
     else if(a==='crm-contact'){crmRegisterContact(t.dataset.id,false);return;}
     else if(a==='crm-feedback'){crmRegisterContact(t.dataset.id,true);return;}
 
+    else if(a==='quote-preview'){state.quotePreview=true;render();return;}
+    else if(a==='quote-close'){state.quotePreview=false;render();return;}
+    else if(a==='quote-print'){window.print();return;}
+    else if(a==='quote-whatsapp'){quoteWhatsApp();return;}
     else if(a==='plan-add'){addTreatmentPlan();return;}
     else if(a==='plan-cycle'){cycleTreatmentPlan(t.dataset.id);return;}
     else if(a==='plan-delete'){if(confirm('Excluir este item do plano?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
