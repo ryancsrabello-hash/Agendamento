@@ -805,6 +805,20 @@
 .slot.schedule-open small{color:#125d50!important;font-weight:750}
 .slot.blocked{background-image:repeating-linear-gradient(45deg,var(--danger-soft),var(--danger-soft) 6px,#fff 6px,#fff 12px)!important}
 
+
+/* v2.6 CRM de Reativação + Precificação Avançada */
+.crm-kpis,.price-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:12px 0 16px}
+.crm-kpi,.price-kpi{padding:15px}.crm-kpi .k,.price-kpi .k{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);font-weight:800}.crm-kpi .v,.price-kpi .v{font-family:'Space Grotesk';font-size:22px;font-weight:800;margin-top:4px}
+.crm-tabs{display:flex;gap:7px;overflow-x:auto;margin-bottom:14px}.crm-tabs button{white-space:nowrap}
+.crm-row{display:grid;grid-template-columns:minmax(170px,1.4fr) 120px 130px 130px minmax(180px,1.2fr) auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.crm-row.head{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);font-weight:800}
+.crm-priority{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800}.crm-priority.alta{background:var(--danger-soft);color:var(--danger)}.crm-priority.media{background:var(--amber-soft);color:#805510}.crm-priority.baixa{background:var(--success-soft);color:var(--teal-deep)}
+.price-shell{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(0,2.2fr);gap:14px}.price-list{max-height:680px;overflow:auto}.price-proc{display:block;width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer}.price-proc.active{border-color:var(--teal);background:var(--success-soft)}.price-proc small{display:block;color:var(--ink-soft);margin-top:3px}
+.cost-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.cost-grid .field{margin:0}.cost-total{padding:13px;border-radius:12px;background:var(--grey-soft);margin-top:12px}.price-final{background:var(--success-soft);border:1px solid rgba(32,149,132,.22);padding:14px;border-radius:13px;margin-top:12px}
+.price-note{font-size:11.5px;line-height:1.5;color:var(--ink-soft);margin-top:10px}
+@media(max-width:900px){.price-shell{grid-template-columns:1fr}.price-list{max-height:260px}.cost-grid{grid-template-columns:1fr 1fr}.crm-row{grid-template-columns:1fr 1fr}.crm-row.head{display:none}}
+@media(max-width:560px){.cost-grid{grid-template-columns:1fr}.crm-row{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -876,7 +890,7 @@ var state = {
   staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false, teamProfiles:[], teamLoading:false, teamMessage:'',
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
-  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia',
+  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'',
   pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
@@ -1076,6 +1090,72 @@ function defaultProcedureRecipes(){
     canal:[{itemId:'mat-anestesico',qty:2},{itemId:'mat-luva',qty:.04},{itemId:'mat-gaze',qty:.05}]
   };
 }
+
+function pricingLibrary(){
+  return [
+    ['avaliacao','Avaliação inicial','Clínico Geral',90,18,0,0,22,8,12,8,10,4,6,5,180],
+    ['urgencia','Urgência odontológica','Clínico Geral',60,35,0,0,28,10,15,10,12,5,8,7,250],
+    ['limpeza','Limpeza / profilaxia','Prevenção',60,28,0,0,26,10,14,9,10,5,7,6,220],
+    ['raspagem','Raspagem periodontal por sessão','Periodontia',60,42,0,0,30,12,16,10,12,6,8,7,280],
+    ['restauracao','Restauração em resina','Dentística',60,48,0,0,30,12,16,10,12,6,8,8,320],
+    ['restauracao_complexa','Restauração complexa / reconstrução','Dentística',90,85,0,0,42,16,20,13,16,8,10,10,480],
+    ['clareamento_consultorio','Clareamento de consultório','Estética',90,145,0,0,45,18,22,15,18,9,12,12,850],
+    ['clareamento_caseiro','Clareamento caseiro com moldeiras','Estética',60,115,85,0,35,14,18,12,15,8,10,10,650],
+    ['faceta_resina','Faceta direta em resina - por dente','Estética',90,110,0,0,50,18,24,15,20,10,12,12,650],
+    ['lente_porcelana','Lente / faceta cerâmica - por dente','Prótese',90,65,520,0,55,20,28,18,22,12,15,14,1800],
+    ['coroa_ceramica','Coroa cerâmica','Prótese',90,55,650,0,55,20,28,18,22,12,15,14,2200],
+    ['provisorio','Coroa / elemento provisório','Prótese',60,55,90,0,35,14,18,12,15,8,10,10,450],
+    ['protese_total','Prótese total','Prótese',120,95,950,0,75,25,35,22,30,15,18,16,3200],
+    ['ppr','Prótese parcial removível','Prótese',120,90,1050,0,75,25,35,22,30,15,18,16,3500],
+    ['canal','Tratamento endodôntico','Endodontia',90,135,0,0,55,20,26,16,20,10,14,12,1100],
+    ['retratamento_canal','Retratamento endodôntico','Endodontia',120,190,0,0,70,24,30,18,24,12,16,15,1600],
+    ['exodontia','Exodontia simples','Cirurgia',60,75,0,0,40,16,20,13,16,8,10,10,450],
+    ['exodontia_complexa','Exodontia complexa','Cirurgia',90,145,0,0,60,20,28,17,22,11,14,13,850],
+    ['siso','Terceiro molar / siso','Cirurgia',90,180,0,0,70,24,32,20,25,12,16,15,1100],
+    ['implante','Implante dentário - fase cirúrgica','Implante',90,185,0,850,75,25,35,22,30,15,18,16,2200],
+    ['coroa_implante','Coroa sobre implante','Implante',90,55,650,380,60,22,30,18,25,12,16,14,2200],
+    ['enxerto_osseo','Enxerto ósseo','Implante',120,220,0,650,85,28,40,25,35,18,22,18,2400],
+    ['protocolo','Prótese protocolo sobre implantes','Implante',240,480,3500,3200,180,55,75,45,60,30,40,25,12000],
+    ['overdenture','Overdenture','Implante',180,260,2200,1500,130,40,55,35,45,24,30,22,7500],
+    ['placa_bruxismo','Placa miorrelaxante','Prótese',60,45,280,0,35,14,18,12,15,8,10,10,850],
+    ['gengivoplastia','Gengivoplastia','Periodontia',90,95,0,0,50,18,24,15,20,10,12,12,750]
+  ];
+}
+function defaultProcedurePricing(){
+  var out={};
+  pricingLibrary().forEach(function(x){
+    out[x[0]]={id:x[0],name:x[1],specialty:x[2],minutes:x[3],
+      materials:x[4],lab:x[5],components:x[6],clinicalTime:x[7],sterilization:x[8],
+      structure:x[9],admin:x[10],maintenance:x[11],waste:x[12],marketing:x[13],risk:x[14],
+      taxRate:12,financialRate:4.5,profitRate:25,suggested:x[15],finalPrice:x[15]};
+  });
+  return out;
+}
+function mergeProcedurePricing(v){
+  var d=defaultProcedurePricing(), x=v||{};
+  Object.keys(x).forEach(function(k){d[k]=Object.assign({},d[k]||{},x[k]||{});});
+  return d;
+}
+function pricingNumbers(p){
+  p=p||{};
+  var base=n(p.materials)+n(p.lab)+n(p.components)+n(p.clinicalTime)+n(p.sterilization)+n(p.structure)+n(p.admin)+n(p.maintenance)+n(p.waste)+n(p.marketing)+n(p.risk);
+  var variableRate=n(p.taxRate)+n(p.financialRate);
+  var minimum=variableRate>=95?base:base/(1-variableRate/100);
+  var suggested=minimum/(1-Math.min(80,n(p.profitRate))/100);
+  return {base:base,minimum:minimum,suggested:suggested};
+}
+function applyFinalProcedurePrices(pricing){
+  if(!pricing)return;
+  PROCEDURES.forEach(function(proc){
+    var p=pricing[proc.id];
+    if(p && n(p.finalPrice)>0) proc.price=n(p.finalPrice);
+  });
+}
+function allPricingProcedures(){
+  var map=mergeProcedurePricing(store&&store.procedurePricing);
+  return Object.keys(map).map(function(k){return map[k];});
+}
+
 function seedStore(){
   return {
     appointments: [],
@@ -1088,7 +1168,9 @@ function seedStore(){
     waitlist: [],
     inventory: defaultInventoryItems(),
     inventoryMovements: [],
-    procedureRecipes: defaultProcedureRecipes()
+    procedureRecipes: defaultProcedureRecipes(),
+    procedurePricing: defaultProcedurePricing(),
+    crmContacts: []
   };
 }
 
@@ -1151,6 +1233,9 @@ function normalizeStore(value){
   base.inventory = Array.isArray(value.inventory) ? value.inventory : defaultInventoryItems();
   base.inventoryMovements = Array.isArray(value.inventoryMovements) ? value.inventoryMovements : [];
   base.procedureRecipes = value.procedureRecipes && typeof value.procedureRecipes==='object' ? value.procedureRecipes : defaultProcedureRecipes();
+  base.procedurePricing = mergeProcedurePricing(value.procedurePricing);
+  base.crmContacts = Array.isArray(value.crmContacts) ? value.crmContacts : [];
+  applyFinalProcedurePrices(base.procedurePricing);
   return base;
 }
 
@@ -1363,12 +1448,13 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function escAttr(s){ return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function render(){
+  if(store&&store.procedurePricing)applyFinalProcedurePrices(store.procedurePricing);
   var root = document.getElementById('root');
   var html = renderHeader();
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.1 · build agenda 2026-08-15 · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.0 · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -1783,8 +1869,8 @@ function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepca
 function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
 function allowedStaffTabs(){
   var role=currentStaffRole();
-  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
-  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque','crm'];
+  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','crm','relatorios'];
   return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
@@ -1939,7 +2025,7 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['crm','Reativação'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
@@ -1955,6 +2041,7 @@ function renderStaff(){
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
   else if(state.staffTab==='estoque') out += renderEstoque();
+  else if(state.staffTab==='crm') out += renderCRM();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
@@ -2217,15 +2304,7 @@ function renderAgenda(){
       (isWeekend(state.agendaDate) && !isWeekendExceptionOpen(state.agendaDate)) ||
       (!canEditScheduleExceptions() && defaultClosed);
 
-    var inlineStyle='';
-    if(actual.free){
-      inlineStyle='background:#e5f7f1!important;background-image:none!important;border-color:#3ca88f!important;color:#125d50!important;';
-    }else if(isOcc){
-      inlineStyle='background:#edf1f0!important;background-image:none!important;border-color:#dde7e4!important;color:#5b7180!important;';
-    }else{
-      inlineStyle='background:repeating-linear-gradient(45deg,#fbe1e3,#fbe1e3 6px,#fff 6px,#fff 12px)!important;border-color:#d64550!important;color:#d64550!important;';
-    }
-    out += '<button class="slot '+cls+'" style="'+inlineStyle+'" '+(disabled?'disabled':'')+
+    out += '<button class="slot '+cls+'" '+(disabled?'disabled':'')+
       ' data-action="toggle-block" data-id="'+t+'">'+t+'<small>'+label+'</small></button>';
   });
   out += '</div></div>';
@@ -2374,6 +2453,16 @@ function daysUntil(iso){if(!iso)return 99999;return Math.ceil((parseISO(iso)-par
 function stockStatus(i){var exp=daysUntil(i.expiry);if(n(i.qty)<=n(i.minQty))return {label:'REPOR',cls:'low'};if(exp<=30)return {label:exp<0?'VENCIDO':'VALIDADE',cls:'exp'};return {label:'OK',cls:'ok'};}
 function stockValue(){return (store.inventory||[]).reduce(function(a,i){return a+n(i.qty)*n(i.cost);},0);}
 function procedureMaterialCost(procId){var rec=(store.procedureRecipes||{})[procId]||[];return rec.reduce(function(sum,r){var item=(store.inventory||[]).find(function(i){return i.id===r.itemId;});return sum+(item?n(item.cost)*n(r.qty):0);},0);}
+
+function saveProcedurePricing(){
+  var id=state.priceProcedure, pricing=mergeProcedurePricing(store.procedurePricing), p=Object.assign({},pricing[id]||{});
+  document.querySelectorAll('.price-field').forEach(function(el){p[el.dataset.key]=n(el.value);});
+  var final=document.getElementById('price-final'); p.finalPrice=final?n(final.value):n(p.finalPrice);
+  pricing[id]=p; store.procedurePricing=pricing; applyFinalProcedurePrices(pricing);
+  state.stockMessage='Precificação de '+(p.name||id)+' salva. O valor final foi aplicado ao ERP.';
+  persist();
+}
+
 function renderEstoque(){
   var items=(store.inventory||[]).slice(), q=(state.stockSearch||'').toLowerCase();
   if(q)items=items.filter(function(i){return [i.name,i.category,i.supplier,i.lot].join(' ').toLowerCase().indexOf(q)>=0;});
@@ -2381,7 +2470,7 @@ function renderEstoque(){
   var exp=(store.inventory||[]).filter(function(i){return i.expiry&&daysUntil(i.expiry)<=30;}).length;
   var out='<div class="section-title">Estoque inteligente</div>';
   if(state.stockMessage)out+='<div class="good-card" style="margin-bottom:12px;">'+esc(state.stockMessage)+'</div>';
-  out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['procedimentos','Custos por procedimento'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['procedimentos','Custos por procedimento'],['precificacao','Formação de preço'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
   out+='<div class="stock-grid"><div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div><div class="card stock-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:var(--danger)">'+low+'</div></div><div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div><div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div></div>';
   if(state.stockTab==='itens'){
     out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><button class="btn btn-ghost" data-action="stock-search">Buscar</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
@@ -2394,10 +2483,87 @@ function renderEstoque(){
     var mov=(store.inventoryMovements||[]).slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));}).slice(0,150);out+='<div class="card stock-table-wrap"><table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Motivo</th></tr></thead><tbody>';if(!mov.length)out+='<tr><td colspan="5">Nenhuma movimentação registrada.</td></tr>';mov.forEach(function(m){var it=(store.inventory||[]).find(function(i){return i.id===m.itemId;});out+='<tr><td>'+new Date(m.createdAt).toLocaleString('pt-BR')+'</td><td>'+esc(it?it.name:m.itemName||'Item removido')+'</td><td>'+esc(m.type)+'</td><td>'+n(m.qty).toLocaleString('pt-BR')+'</td><td>'+esc(m.reason||'—')+'</td></tr>';});out+='</tbody></table></div>';
   } else if(state.stockTab==='procedimentos'){
     var pid=state.recipeProcedure||PROCEDURES[0].id, recipe=(store.procedureRecipes||{})[pid]||[], pc=procById(pid), cost=procedureMaterialCost(pid);out+='<div class="card"><div class="stock-toolbar"><div class="field"><label>Procedimento</label><select id="recipe-proc">'+PROCEDURES.map(function(p){return '<option value="'+p.id+'" '+(pid===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="recipe-load">Carregar</button></div><h3>Materiais consumidos por atendimento</h3><div id="recipe-list">';recipe.forEach(function(r,idx){var it=(store.inventory||[]).find(function(i){return i.id===r.itemId;});out+='<div class="recipe-row"><select id="recipe-item-'+idx+'">'+(store.inventory||[]).map(function(x){return '<option value="'+x.id+'" '+(r.itemId===x.id?'selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select><input id="recipe-qty-'+idx+'" type="number" step="0.01" min="0" value="'+n(r.qty)+'"><button class="btn btn-ghost btn-sm" data-action="recipe-remove" data-id="'+idx+'">Remover</button></div>';});out+='</div><div class="row-actions"><button class="btn btn-ghost" data-action="recipe-add">+ Material</button><button class="btn btn-primary" data-action="recipe-save">Salvar consumo padrão</button></div><div class="alert-card" style="margin-top:14px;">Custo estimado de materiais: <strong>'+fmtMoney(cost)+'</strong> · Preço cadastrado: <strong>'+fmtMoney(n(pc.price))+'</strong> · Margem antes de outros custos: <strong>'+fmtMoney(n(pc.price)-cost)+'</strong>.</div><p class="mini-note">Ao marcar uma consulta como Finalizada, o ERP dá baixa nesses materiais uma única vez e registra a movimentação.</p></div>';
+  } else if(state.stockTab==='precificacao'){
+    var pricing=mergeProcedurePricing(store.procedurePricing), selected=pricing[state.priceProcedure]||pricing.avaliacao, nums=pricingNumbers(selected);
+    var plist=Object.keys(pricing).map(function(k){return pricing[k];});
+    out+='<div class="price-kpis"><div class="card price-kpi"><div class="k">Custo base</div><div class="v">'+fmtMoney(nums.base)+'</div></div><div class="card price-kpi"><div class="k">Preço mínimo sustentável</div><div class="v">'+fmtMoney(nums.minimum)+'</div></div><div class="card price-kpi"><div class="k">Preço sugerido calculado</div><div class="v">'+fmtMoney(nums.suggested)+'</div></div><div class="card price-kpi"><div class="k">Valor final praticado</div><div class="v">'+fmtMoney(n(selected.finalPrice))+'</div></div></div>';
+    out+='<div class="price-shell"><div class="card price-list"><h3 style="margin-top:0">Procedimentos</h3>'+plist.map(function(p){return '<button class="price-proc '+(p.id===selected.id?'active':'')+'" data-action="price-select" data-id="'+p.id+'"><strong>'+esc(p.name)+'</strong><small>'+esc(p.specialty)+' · '+p.minutes+' min · final '+fmtMoney(n(p.finalPrice))+'</small></button>';}).join('')+'</div>';
+    out+='<div class="card"><h3 style="margin-top:0">'+esc(selected.name)+'</h3><div class="cost-grid">';
+    [['materials','Materiais / insumos'],['lab','Laboratório / protético'],['components','Componentes / implante'],['clinicalTime','Hora clínica / equipe'],['sterilization','EPI + esterilização'],['structure','Estrutura / aluguel / utilidades'],['admin','Administrativo / software / contabilidade'],['maintenance','Manutenção + equipamentos'],['waste','RSS / limpeza / descarte'],['marketing','Marketing / aquisição'],['risk','Perdas / retrabalho / garantia']].forEach(function(f){out+='<div class="field"><label>'+f[1]+'</label><input class="price-field" data-key="'+f[0]+'" type="number" step="0.01" min="0" value="'+n(selected[f[0]])+'"></div>';});
+    out+='</div><h4>Taxas e margem</h4><div class="cost-grid">'+
+      '<div class="field"><label>Tributos / provisão (%)</label><input class="price-field" data-key="taxRate" type="number" step="0.1" value="'+n(selected.taxRate)+'"></div>'+
+      '<div class="field"><label>Taxas financeiras médias (%)</label><input class="price-field" data-key="financialRate" type="number" step="0.1" value="'+n(selected.financialRate)+'"></div>'+
+      '<div class="field"><label>Margem alvo (%)</label><input class="price-field" data-key="profitRate" type="number" step="0.1" value="'+n(selected.profitRate)+'"></div></div>'+
+      '<div class="cost-total"><div class="summary-line"><span>Custos diretos + indiretos</span><strong>'+fmtMoney(nums.base)+'</strong></div><div class="summary-line"><span>Preço mínimo sustentável</span><strong>'+fmtMoney(nums.minimum)+'</strong></div><div class="summary-line"><span>Preço sugerido pelo cálculo</span><strong>'+fmtMoney(nums.suggested)+'</strong></div></div>'+
+      '<div class="price-final"><div class="field"><label><strong>VALOR FINAL PRATICADO</strong> — valor usado pelo ERP para este procedimento</label><input id="price-final" type="number" step="0.01" min="0" value="'+n(selected.finalPrice)+'"></div><div class="row-actions"><button class="btn btn-primary" data-action="price-save">Salvar custos e valor final</button></div></div>'+
+      '<p class="price-note">Valores iniciais são premissas gerenciais de referência e devem ser substituídos pelos custos reais do Instituto. Tributos variam conforme enquadramento e situação fiscal. O sistema separa custo gerencial de dedutibilidade tributária.</p></div></div>';
   } else if(state.stockTab==='compras'){
     var buy=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty)|| (i.expiry&&daysUntil(i.expiry)<=30);});out+='<div class="card"><h3 style="margin-top:0;">Lista inteligente de reposição</h3>';if(!buy.length)out+='<div class="good-card">Nenhum item exige atenção neste momento.</div>';else{out+='<div class="stock-table-wrap"><table><thead><tr><th>Material</th><th>Atual</th><th>Mínimo</th><th>Sugestão de compra</th><th>Fornecedor</th><th>Motivo</th></tr></thead><tbody>';buy.forEach(function(i){var sug=Math.max(0,n(i.minQty)*2-n(i.qty)),reason=[];if(n(i.qty)<=n(i.minQty))reason.push('estoque baixo');if(i.expiry&&daysUntil(i.expiry)<=30)reason.push(daysUntil(i.expiry)<0?'vencido':'validade próxima');out+='<tr><td>'+esc(i.name)+'</td><td>'+n(i.qty)+' '+esc(i.unit)+'</td><td>'+n(i.minQty)+'</td><td><strong>'+sug.toLocaleString('pt-BR')+' '+esc(i.unit)+'</strong></td><td>'+esc(i.supplier||'—')+'</td><td>'+esc(reason.join(' e '))+'</td></tr>';});out+='</tbody></table></div>';}out+='</div>';
   }
   return out;
+}
+
+
+function crmContact(patientId){
+  return (store.crmContacts||[]).filter(function(c){return c.patientId===patientId;}).sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));})[0]||null;
+}
+function crmPatientRows(){
+  var today=todayISO();
+  return patientRecords().map(function(p){
+    var hist=patientHistory(p).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+    var last=hist[0]||null, future=hist.some(function(a){return a.date>=today && a.status!=='cancelado'&&a.status!=='falta';});
+    var days=last?Math.max(0,Math.floor((parseISO(today)-parseISO(last.date))/86400000)):9999;
+    var pend=(store.payments||[]).filter(function(x){
+      var ap=(store.appointments||[]).find(function(a){return a.id===x.appointmentId;});
+      return ap&&normalizePhone(ap.phone)===normalizePhone(p.phone)&&String(x.status||'').toLowerCase()!=='pago';
+    }).reduce(function(s,x){return s+n(x.gross)-n(x.discount);},0);
+    var contact=crmContact(p.id);
+    var score=(future?0:30)+(days>365?30:days>180?20:days>90?10:0)+(pend>0?20:0)+(hist.length?10:0);
+    return {p:p,last:last,days:days,future:future,pending:pend,contact:contact,score:score,priority:score>=60?'alta':score>=35?'media':'baixa'};
+  });
+}
+function renderCRM(){
+  var rows=crmPatientRows(), tab=state.crmTab||'inativos', today=todayISO();
+  if(tab==='inativos') rows=rows.filter(function(r){return !r.future&&r.days>=180;});
+  else if(tab==='oportunidades') rows=rows.filter(function(r){return !r.future&&(r.pending>0||r.score>=50);});
+  else if(tab==='feedback') rows=rows.filter(function(r){return r.last&&!r.future;});
+  else if(tab==='contatados') rows=rows.filter(function(r){return !!r.contact;});
+  rows.sort(function(a,b){return b.score-a.score;});
+  var inactive=crmPatientRows().filter(function(r){return !r.future&&r.days>=180;}).length;
+  var high=crmPatientRows().filter(function(r){return !r.future&&r.priority==='alta';}).length;
+  var contacted=(store.crmContacts||[]).length;
+  var returned=(store.crmContacts||[]).filter(function(c){return c.result==='agendou'||c.result==='retornou';}).length;
+  var out='<div class="section-title">Relacionamento e Reativação</div>';
+  if(state.crmMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.crmMessage)+'</div>';
+  out+='<div class="crm-kpis">'+
+    '<div class="card crm-kpi"><div class="k">Pacientes inativos</div><div class="v">'+inactive+'</div></div>'+
+    '<div class="card crm-kpi"><div class="k">Prioridade alta</div><div class="v">'+high+'</div></div>'+
+    '<div class="card crm-kpi"><div class="k">Contatos registrados</div><div class="v">'+contacted+'</div></div>'+
+    '<div class="card crm-kpi"><div class="k">Retornos / agendamentos</div><div class="v">'+returned+'</div></div></div>';
+  out+='<div class="crm-tabs">'+[['inativos','Inativos'],['oportunidades','Oportunidades'],['feedback','Feedback'],['contatados','Histórico de contatos']].map(function(x){return '<button class="btn '+(tab===x[0]?'btn-primary':'btn-ghost')+'" data-action="crm-tab" data-id="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="card"><div class="crm-row head"><div>Paciente</div><div>Última visita</div><div>Tempo sem retorno</div><div>Prioridade</div><div>Último contato</div><div>Ações</div></div>';
+  if(!rows.length)out+='<div class="empty-state">Nenhum paciente nesta categoria.</div>';
+  rows.forEach(function(r){
+    var c=r.contact, phone=normalizePhone(r.p.phone), wa=phone?('https://wa.me/55'+phone+'?text='+encodeURIComponent('Olá, '+(r.p.name||'')+'! Aqui é do Instituto Lins Rabello. Estamos entrando em contato para saber como foi sua experiência conosco e acompanhar sua saúde bucal. Já faz algum tempo desde sua última visita e ficaremos felizes em receber você novamente.')):'#';
+    out+='<div class="crm-row"><div><strong>'+esc(r.p.name||'Paciente')+'</strong><br><span class="mini-note">'+esc(r.p.phone||'Sem telefone')+(r.pending>0?' · pendência '+fmtMoney(r.pending):'')+'</span></div>'+
+      '<div>'+(r.last?dayDisplay(r.last.date):'Sem histórico')+'</div><div>'+(r.days===9999?'—':r.days+' dias')+'</div><div><span class="crm-priority '+r.priority+'">'+r.priority.toUpperCase()+'</span></div>'+
+      '<div>'+(c?esc(c.date)+' · '+esc(c.result||'contato'):'Nunca contatado')+'</div><div class="row-actions">'+
+      (phone?'<a class="btn btn-primary btn-sm" href="'+wa+'" target="_blank" rel="noopener">WhatsApp</a>':'')+
+      '<button class="btn btn-ghost btn-sm" data-action="crm-contact" data-id="'+escAttr(r.p.id)+'">Registrar contato</button>'+
+      '<button class="btn btn-ghost btn-sm" data-action="crm-feedback" data-id="'+escAttr(r.p.id)+'">Feedback</button></div></div>';
+  });
+  out+='</div><p class="mini-note">O módulo apenas organiza oportunidades e contatos. Respeite pedidos de não contato e registre consentimento/opt-out quando aplicável.</p>';
+  return out;
+}
+function crmRegisterContact(patientId,feedbackOnly){
+  var p=patientById(patientId); if(!p)return;
+  var result=prompt(feedbackOnly?'Como foi o feedback? (positivo, neutro, negativo, sem resposta)':'Resultado do contato? (sem resposta, interessado, agendou, não tem interesse, não contatar)','sem resposta');
+  if(result===null)return;
+  var note=prompt('Observação do contato (opcional):','')||'';
+  store.crmContacts=store.crmContacts||[];
+  store.crmContacts.push({id:'crm'+Date.now(),patientId:patientId,date:todayISO(),result:String(result).toLowerCase(),note:note,feedback:!!feedbackOnly});
+  state.crmMessage='Contato registrado para '+(p.name||'paciente')+'.';
+  persist();
 }
 
 function renderPacientes(){
@@ -2790,6 +2956,11 @@ function attachEvents(){
     else if(a==='add-expense'){ addExpense(); return; }
     else if(a==='del-expense'){ delExpense(t.dataset.id); return; }
     else if(a==='stock-tab'){ state.stockTab=t.dataset.id; state.stockMessage=''; render(); return; }
+    else if(a==='price-select'){state.priceProcedure=t.dataset.id;render();return;}
+    else if(a==='price-save'){saveProcedurePricing();return;}
+    else if(a==='crm-tab'){state.crmTab=t.dataset.id;state.crmMessage='';render();return;}
+    else if(a==='crm-contact'){crmRegisterContact(t.dataset.id,false);return;}
+    else if(a==='crm-feedback'){crmRegisterContact(t.dataset.id,true);return;}
     else if(a==='stock-search'){ var ss=document.getElementById('stock-search');state.stockSearch=ss?ss.value:'';render();return; }
     else if(a==='stock-new'){ state.stockEditingId='new';render();return; }
     else if(a==='stock-edit'){ state.stockEditingId=t.dataset.id;render();return; }
@@ -3182,7 +3353,7 @@ function copyWaitlistPhone(id){var w=(store.waitlist||[]).find(function(x){retur
 var deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstallPrompt=e;document.querySelectorAll('.install-app').forEach(function(b){b.style.display='inline-flex';});});
 function installPwa(){if(!deferredInstallPrompt){alert('No celular, use “Adicionar à tela inicial”. No computador, procure o ícone de instalação na barra do navegador.');return;}deferredInstallPrompt.prompt();deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});}
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.1-agenda-cachefix').catch(function(e){console.warn('PWA indisponível:',e);});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.0-pendencias-recall-sac1').catch(function(e){console.warn('PWA indisponível:',e);});});}
 
 function cycleOrSetStatus(t){
   var id = t.dataset.id;
@@ -3318,21 +3489,6 @@ try{
 }
 
 })();
-
-(function(){
-  try{
-    var BUILD='2.5.1-agenda-cachefix';
-    var KEY='ilr_build_seen';
-    if(localStorage.getItem(KEY)!==BUILD && 'caches' in window){
-      caches.keys().then(function(keys){
-        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
-      }).finally(function(){
-        localStorage.setItem(KEY,BUILD);
-      });
-    }
-  }catch(e){ console.warn('Limpeza de cache não aplicada',e); }
-})();
-
 </script>
 </body>
 </html>
