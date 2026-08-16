@@ -869,6 +869,21 @@
 .quote-total{text-align:right;font:800 19px 'Space Grotesk';margin:16px 0}.quote-footer{border-top:1px solid var(--border);margin-top:26px;padding-top:14px;text-align:center;font-size:11px;color:var(--ink-soft)}
 @media print{body *{visibility:hidden!important}.quote-sheet,.quote-sheet *{visibility:visible!important}.quote-sheet{position:absolute;left:0;top:0;width:100%;max-width:none;border:0;padding:18mm;box-shadow:none}.quote-toolbar{display:none!important}.sidebar,.topbar,.tabs{display:none!important}@page{size:A4;margin:0}}
 
+
+/* ===== ORÇAMENTOS SEPARADOS + ODONTOGRAMA COMERCIAL ===== */
+.budget-shell{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px}
+.budget-patients{max-height:720px;overflow:auto}.budget-patient-btn{display:block;width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer}.budget-patient-btn.active{border-color:var(--teal);background:var(--success-soft)}
+.budget-patient-btn small{display:block;color:var(--ink-soft);margin-top:3px}
+.budget-odonto-wrap{overflow-x:auto;padding-bottom:4px}.budget-odontogram{min-width:760px;display:grid;gap:10px}
+.budget-arch{display:grid;grid-template-columns:repeat(16,1fr);gap:5px}
+.budget-tooth{min-height:54px;border:1px solid var(--border);background:#fff;border-radius:9px;cursor:pointer;padding:5px 2px;text-align:center}.budget-tooth strong{display:block;font-size:12px}.budget-tooth small{font-size:8px;color:var(--ink-soft)}
+.budget-tooth.selected{outline:2px solid var(--ink);outline-offset:1px}.budget-tooth.proposto{background:#fff6df;border-color:#e8b44e}.budget-tooth.aceito{background:#e5f7f1;border-color:#3ca88f}.budget-tooth.realizado{background:#e7eef9;border-color:#6687bb}
+.budget-form{display:grid;grid-template-columns:1.2fr .65fr .65fr 1.4fr auto;gap:8px;align-items:end;margin:14px 0}
+.budget-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.budget-stat{padding:13px;border:1px solid var(--border);border-radius:12px;background:#fff}.budget-stat .k{font-size:10px;color:var(--ink-soft);font-weight:800;text-transform:uppercase}.budget-stat .v{font:800 19px 'Space Grotesk';margin-top:4px}
+@media(max-width:900px){.budget-shell{grid-template-columns:1fr}.budget-patients{max-height:230px}.budget-form{grid-template-columns:1fr 1fr}.budget-form .wide{grid-column:1/-1}.budget-summary{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.budget-form,.budget-summary{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -940,7 +955,7 @@ var state = {
   staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false, teamProfiles:[], teamLoading:false, teamMessage:'',
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
-  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas', quotePreview:false,
+  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas', quotePreview:false, budgetPatientId:null, budgetTooth:null, budgetProcedure:'avaliacao', budgetMessage:'', budgetQuotePreview:false,
   pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
@@ -1510,7 +1525,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.8.1 · pré-consulta personalizada · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.0 · orçamentos dente a dente · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -1957,9 +1972,9 @@ function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepca
 function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
 function allowedStaffTabs(){
   var role=currentStaffRole();
-  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque','laboratorio','tarefas','crm'];
-  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','laboratorio','tarefas','crm','relatorios'];
-  return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','orcamentos','confirmacoes','estoque','laboratorio','tarefas','crm'];
+  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','orcamentos','confirmacoes','estoque','laboratorio','tarefas','crm','relatorios'];
+  return ['visao','recepcao','agenda','pacientes','orcamentos','tarefas','pendencias','financeiro','laboratorio','crm','estoque','confirmacoes','sac','preconsultas','marketing','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -2118,11 +2133,12 @@ function renderStaff(){
     ['recepcao','Recepção'],
     ['agenda','Agenda'],
     ['pacientes','Pacientes'],
+    ['orcamentos','Orçamentos'],
     ['tarefas','Central de tarefas'],
     ['pendencias','Pendências'],
     ['financeiro','Financeiro'],
-    ['crm','Reativação'],
     ['laboratorio','Laboratório & Prótese'],
+    ['crm','Reativação'],
     ['estoque','Estoque'],
     ['confirmacoes','Confirmações'],
     ['sac','SAC'],
@@ -2150,6 +2166,7 @@ function renderStaff(){
   else if(state.staffTab==='laboratorio') out += renderLaboratorio();
   else if(state.staffTab==='tarefas') out += renderTaskCenter();
   else if(state.staffTab==='crm') out += renderCRM();
+  else if(state.staffTab==='orcamentos') out += renderOrcamentos();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
@@ -2252,7 +2269,7 @@ function renderVisaoGeral(){
   out+=dashboardCard('Despesas no mês',fmtMoney(fs.expenses),fmtMoney(fs.unpaidExp)+' em aberto',fs.unpaidExp>0?'negative':'');
   out+=dashboardCard('Resultado estimado',fmtMoney(fs.result),'após custos e provisões',fs.result>=0?'positive':'negative');
   out+='</div>';
-  out+='<div class="quick-actions"><button class="btn btn-primary" data-stafftab="agenda">Abrir agenda</button><button class="btn btn-ghost" data-stafftab="pacientes">Buscar paciente</button><button class="btn btn-ghost" data-stafftab="financeiro">Abrir financeiro</button><button class="btn btn-ghost" data-stafftab="estoque">Estoque</button><button class="btn btn-ghost" data-stafftab="relatorios">Relatórios e backup</button></div>';
+  out+='<div class="quick-actions"><button class="btn btn-primary" data-stafftab="agenda">Abrir agenda</button><button class="btn btn-ghost" data-stafftab="pacientes">Buscar paciente</button><button class="btn btn-ghost" data-stafftab="financeiro">Abrir financeiro</button><button class="btn btn-ghost" data-stafftab="orcamentos">Orçamentos</button><button class="btn btn-ghost" data-stafftab="laboratorio">Laboratório & Prótese</button><button class="btn btn-ghost" data-stafftab="estoque">Estoque</button><button class="btn btn-ghost" data-stafftab="relatorios">Relatórios e backup</button></div>';
   var alerts=[];
   if(d.todayItems.length===0) alerts.push('Nenhuma consulta marcada para hoje.');
   if(fs.pending>0) alerts.push('Existem '+fmtMoney(fs.pending)+' em recebimentos pendentes.');
@@ -2768,6 +2785,102 @@ function addLabCase(){
 }
 function cycleLab(id){var x=(store.labCases||[]).find(function(v){return v.id===id;});if(!x)return;var s=['enviado','em produção','prova','recebido','entregue'],i=s.indexOf(x.status);x.status=s[Math.min(s.length-1,i+1)];persist();}
 
+
+function budgetToothNumbers(){
+  return ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
+          '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
+}
+function budgetPlansForTooth(patientId,tooth){
+  return patientTreatmentPlans(patientId).filter(function(x){return String(x.tooth||'')===String(tooth||'');});
+}
+function budgetToothStatus(patientId,tooth){
+  var xs=budgetPlansForTooth(patientId,tooth);
+  if(xs.some(function(x){return x.status==='realizado';}))return 'realizado';
+  if(xs.some(function(x){return x.status==='aceito';}))return 'aceito';
+  if(xs.length)return 'proposto';
+  return '';
+}
+function budgetPatientTotals(patientId){
+  var xs=patientTreatmentPlans(patientId), proposed=0,accepted=0,done=0;
+  xs.forEach(function(x){
+    if(x.status!=='realizado')proposed+=n(x.price);
+    if(x.status==='aceito')accepted+=n(x.price);
+    if(x.status==='realizado')done+=n(x.price);
+  });
+  return {count:xs.length,proposed:proposed,accepted:accepted,done:done};
+}
+function renderBudgetOdontogram(patientId){
+  var teeth=budgetToothNumbers(), top=teeth.slice(0,16), bottom=teeth.slice(16);
+  function tooth(t){
+    var status=budgetToothStatus(patientId,t), xs=budgetPlansForTooth(patientId,t);
+    return '<button type="button" class="budget-tooth '+status+' '+(state.budgetTooth===t?'selected':'')+'" data-action="budget-tooth" data-id="'+t+'"><strong>'+t+'</strong><small>'+(xs.length?xs.length+' item(ns)':'livre')+'</small></button>';
+  }
+  return '<div class="budget-odonto-wrap"><div class="budget-odontogram"><div class="mini-note"><strong>ODONTOGRAMA DO ORÇAMENTO</strong> · amarelo = proposto · verde = aceito · azul = realizado</div><div class="budget-arch">'+top.map(tooth).join('')+'</div><div style="height:8px;border-top:1px dashed var(--border)"></div><div class="budget-arch">'+bottom.map(tooth).join('')+'</div></div></div>';
+}
+function renderBudgetPatientList(){
+  var pts=patientRecords().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
+  if(!pts.length)return '<div class="empty-state">Nenhum paciente cadastrado.</div>';
+  return pts.map(function(p){
+    var t=budgetPatientTotals(p.id);
+    return '<button class="budget-patient-btn '+(state.budgetPatientId===p.id?'active':'')+'" data-action="budget-patient" data-id="'+escAttr(p.id)+'"><strong>'+esc(p.name||'Paciente')+'</strong><small>'+esc(p.phone||'Sem telefone')+' · '+t.count+' item(ns) · '+fmtMoney(t.proposed)+'</small></button>';
+  }).join('');
+}
+function renderOrcamentos(){
+  if(state.budgetQuotePreview){
+    var qp=patientById(state.budgetPatientId);
+    return '<div class="section-title">Orçamentos</div>'+(qp?renderQuoteDocument(qp):'<div class="empty-state">Selecione um paciente.</div>');
+  }
+
+  var p=state.budgetPatientId?patientById(state.budgetPatientId):null;
+  if(!p){
+    var first=patientRecords()[0];
+    if(first){state.budgetPatientId=first.id;p=first;}
+  }
+  var out='<div class="section-title">Orçamentos <span style="font-size:12px;color:var(--ink-soft);font-weight:500">planejamento dente a dente</span></div>';
+  if(state.budgetMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.budgetMessage)+'</div>';
+  out+='<div class="budget-shell"><div class="card budget-patients"><h3 style="margin-top:0">Pacientes</h3>'+renderBudgetPatientList()+'</div><div>';
+  if(!p)return out+'<div class="card empty-state">Cadastre um paciente para criar um orçamento.</div></div></div>';
+
+  var totals=budgetPatientTotals(p.id), plans=patientTreatmentPlans(p.id);
+  out+='<div class="budget-summary">'+
+    '<div class="budget-stat"><div class="k">Paciente</div><div class="v" style="font-size:16px">'+esc(p.name||'')+'</div></div>'+
+    '<div class="budget-stat"><div class="k">Itens planejados</div><div class="v">'+totals.count+'</div></div>'+
+    '<div class="budget-stat"><div class="k">Em orçamento</div><div class="v">'+fmtMoney(totals.proposed)+'</div></div>'+
+    '<div class="budget-stat"><div class="k">Realizado</div><div class="v">'+fmtMoney(totals.done)+'</div></div></div>';
+
+  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Odontograma do orçamento</h3><div class="mini-note">Selecione o dente e registre o procedimento, valor e observação. O documento final sairá discriminado dente a dente.</div></div><div class="row-actions"><button class="btn btn-ghost" data-action="budget-quote">Gerar orçamento / PDF</button></div></div>';
+  out+=renderBudgetOdontogram(p.id);
+
+  var pricing=allPricingProcedures(), selectedProc=pricing.find(function(x){return x.id===state.budgetProcedure;})||pricing[0]||null;
+  out+='<div class="budget-form">'+
+    '<div class="field"><label>Procedimento</label><select id="budget-procedure">'+pricing.map(function(x){return '<option value="'+escAttr(x.id)+'" '+(selectedProc&&x.id===selectedProc.id?'selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="field"><label>Dente / região</label><input id="budget-tooth-input" value="'+escAttr(state.budgetTooth||'')+'" placeholder="Selecione acima"></div>'+
+    '<div class="field"><label>Valor</label><input id="budget-price" type="number" min="0" step="0.01" value="'+n(selectedProc?selectedProc.finalPrice:0)+'"></div>'+
+    '<div class="field wide"><label>Observação clínica / condição</label><input id="budget-note" placeholder="Ex.: face distal, cor, material, etapa, condição comercial"></div>'+
+    '<button class="btn btn-primary" data-action="budget-add">Adicionar</button>'+
+  '</div>';
+
+  out+='<h3>Itens deste orçamento</h3><div class="plan-row head"><div>Procedimento</div><div>Dente/região</div><div>Valor</div><div>Status</div><div>Observação</div><div>Ações</div></div>';
+  if(!plans.length)out+='<div class="empty-state">Nenhum procedimento registrado neste orçamento.</div>';
+  plans.forEach(function(x){
+    out+='<div class="plan-row"><div><strong>'+esc(x.name)+'</strong></div><div><strong>'+esc(x.tooth||'Geral')+'</strong></div><div>'+fmtMoney(n(x.price))+'</div><div><span class="pill '+(x.status==='realizado'?'realizado':x.status==='aceito'?'confirmado':'pendente')+'">'+esc(x.status||'proposto')+'</span></div><div>'+esc(x.note||'—')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="budget-cycle" data-id="'+x.id+'">Avançar</button><button class="btn btn-ghost btn-sm" data-action="budget-delete" data-id="'+x.id+'">Excluir</button></div></div>';
+  });
+  out+='</div></div></div>';
+  return out;
+}
+function addBudgetItem(){
+  var p=patientById(state.budgetPatientId);if(!p)return;
+  var procEl=document.getElementById('budget-procedure'),toothEl=document.getElementById('budget-tooth-input'),
+      priceEl=document.getElementById('budget-price'),noteEl=document.getElementById('budget-note');
+  var pid=procEl?procEl.value:state.budgetProcedure, pr=allPricingProcedures().find(function(x){return x.id===pid;});
+  var tooth=toothEl?toothEl.value.trim():(state.budgetTooth||'');
+  if(!pr){alert('Selecione um procedimento.');return;}
+  if(!tooth){alert('Selecione um dente no odontograma ou informe uma região.');return;}
+  store.treatmentPlans=store.treatmentPlans||[];
+  store.treatmentPlans.push({id:'tp'+Date.now(),patientId:p.id,procedureId:pid,name:pr.name,tooth:tooth,price:priceEl?n(priceEl.value):n(pr.finalPrice),status:'proposto',note:noteEl?noteEl.value.trim():'',createdAt:new Date().toISOString()});
+  state.budgetProcedure=pid;state.budgetTooth=null;state.budgetMessage='Procedimento adicionado ao orçamento de '+(p.name||'paciente')+'.';persist();
+}
+
 function renderPacientes(){
   var list=patientRecords();
   var q=String(state.patientSearch||'').trim().toLowerCase().replace(/\D/g,function(m){return m;});
@@ -2826,9 +2939,9 @@ function renderQuoteDocument(p){
   out+='<div class="quote-toolbar"><button class="btn btn-primary" data-action="quote-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="quote-whatsapp">Enviar resumo no WhatsApp</button><button class="btn btn-ghost" data-action="quote-close">Voltar ao plano</button></div>';
   out+='<div class="quote-sheet" id="quote-sheet"><div class="quote-head"><div class="quote-brand"><img src="'+escAttr(c.logo)+'" alt="Logo Instituto Lins Rabello"><div><h2>'+esc(c.name)+'</h2><div>Odontologia humanizada e tecnologia</div></div></div><div class="quote-meta"><strong>ORÇAMENTO ODONTOLÓGICO</strong><br>Data: '+dayDisplay(date)+'<br>Profissional: '+esc(quoteProfessionalName())+'</div></div>';
   out+='<div class="quote-patient"><div><strong>Paciente:</strong> '+esc(p.name||'')+'</div><div><strong>Telefone:</strong> '+esc(p.phone||'—')+'</div><div><strong>CPF:</strong> '+esc(p.cpf||'—')+'</div><div><strong>Nascimento:</strong> '+esc(p.birthDate?dayDisplay(p.birthDate):'—')+'</div></div>';
-  out+='<table class="quote-table"><thead><tr><th>Procedimento</th><th>Dente / região</th><th>Observação</th><th>Valor</th></tr></thead><tbody>';
-  plans.forEach(function(x){out+='<tr><td>'+esc(x.name)+'</td><td>'+esc(x.tooth||'—')+'</td><td>'+esc(x.note||'—')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';});
-  if(!plans.length)out+='<tr><td colspan="4">Nenhum procedimento pendente no orçamento.</td></tr>';
+  out+='<table class="quote-table"><thead><tr><th>Dente / região</th><th>Procedimento</th><th>Status</th><th>Observação</th><th>Valor</th></tr></thead><tbody>';
+  plans.sort(function(a,b){return String(a.tooth||'').localeCompare(String(b.tooth||''),'pt-BR');}).forEach(function(x){out+='<tr><td><strong>'+esc(x.tooth||'Geral')+'</strong></td><td>'+esc(x.name)+'</td><td>'+esc(x.status||'proposto')+'</td><td>'+esc(x.note||'—')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';});
+  if(!plans.length)out+='<tr><td colspan="5">Nenhum procedimento pendente no orçamento.</td></tr>';
   out+='</tbody></table><div class="quote-total">Valor total: '+fmtMoney(total)+'</div>';
   out+='<div style="font-size:11.5px;line-height:1.55"><strong>Observações:</strong> Este documento apresenta o planejamento e os valores registrados no momento da emissão. Alterações clínicas identificadas durante o tratamento poderão exigir reavaliação e novo planejamento, sempre comunicados ao paciente.</div>';
   out+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:55px;text-align:center;font-size:11px"><div style="border-top:1px solid #555;padding-top:6px">Paciente / responsável</div><div style="border-top:1px solid #555;padding-top:6px">'+esc(quoteProfessionalName())+'</div></div>';
@@ -2836,7 +2949,7 @@ function renderQuoteDocument(p){
   return out;
 }
 function quoteWhatsApp(){
-  var p=patientById(state.recordPatientId);if(!p)return;
+  var p=patientById(state.budgetPatientId||state.recordPatientId);if(!p)return;
   var plans=patientTreatmentPlans(p.id).filter(function(x){return x.status!=='realizado';}),total=plans.reduce(function(s,x){return s+n(x.price);},0);
   var msg='Olá, '+(p.name||'')+'! Segue o resumo do seu orçamento no Instituto Lins Rabello:\\n\\n'+plans.map(function(x){return '• '+x.name+(x.tooth?' ('+x.tooth+')':'')+' — '+fmtMoney(n(x.price));}).join('\\n')+'\\n\\nTotal: '+fmtMoney(total)+'\\n\\nSe tiver qualquer dúvida sobre o planejamento, estamos à disposição.';
   var ph=normalizePhone(p.phone);if(!ph){alert('Paciente sem telefone cadastrado.');return;}
@@ -2886,11 +2999,10 @@ function renderClinicalRecord(){
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
   out+=renderClinicalAlerts();
-  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['plano','Plano & orçamento'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(state.recordTab==='saude') out+=renderHealthAlerts();
   else if(state.recordTab==='anamnese') out+=renderAnamnesis();
   else if(state.recordTab==='lembretes') out+=renderPatientReminders(p);
-  else if(state.recordTab==='plano') out+=renderTreatmentPlan(p);
   else if(state.recordTab==='odontograma') out+=renderOdontogram();
   else if(state.recordTab==='evolucoes') out+=renderEvolutions();
   else if(state.recordTab==='documentos') out+=renderClinicalDocuments(p);
@@ -3277,8 +3389,15 @@ function attachEvents(){
     else if(a==='crm-contact'){crmRegisterContact(t.dataset.id,false);return;}
     else if(a==='crm-feedback'){crmRegisterContact(t.dataset.id,true);return;}
 
+    else if(a==='budget-patient'){state.budgetPatientId=t.dataset.id;state.budgetTooth=null;state.budgetMessage='';render();return;}
+    else if(a==='budget-tooth'){state.budgetTooth=t.dataset.id;render();return;}
+    else if(a==='budget-add'){addBudgetItem();return;}
+    else if(a==='budget-cycle'){cycleTreatmentPlan(t.dataset.id);return;}
+    else if(a==='budget-delete'){if(confirm('Excluir este item do orçamento?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
+    else if(a==='budget-quote'){state.budgetQuotePreview=true;render();return;}
+    else if(a==='quote-close'){state.quotePreview=false;state.budgetQuotePreview=false;render();return;}
     else if(a==='quote-preview'){state.quotePreview=true;render();return;}
-    else if(a==='quote-close'){state.quotePreview=false;render();return;}
+    
     else if(a==='quote-print'){window.print();return;}
     else if(a==='quote-whatsapp'){quoteWhatsApp();return;}
     else if(a==='plan-add'){addTreatmentPlan();return;}
