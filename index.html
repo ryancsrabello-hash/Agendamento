@@ -1046,7 +1046,7 @@ var state = {
   staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false, teamProfiles:[], teamLoading:false, teamMessage:'',
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
-  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas', quotePreview:false, budgetPatientId:null, budgetTooth:null, budgetProcedure:'avaliacao', budgetMessage:'', budgetQuotePreview:false,
+  stockSearch:'', stockCategory:'Todas', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas', quotePreview:false, budgetPatientId:null, budgetTooth:null, budgetProcedure:'avaliacao', budgetMessage:'', budgetQuotePreview:false,
   pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
@@ -1230,14 +1230,172 @@ function timeToMinutes(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt
 /* ---------------- storage (Supabase + cache local) ---------------- */
 function defaultInventoryItems(){
   return [
-    {id:'mat-anestesico',name:'Tubete anestésico',category:'Anestesia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-gaze',name:'Gaze estéril',category:'Descartáveis',unit:'pct',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-luva',name:'Luva de procedimento',category:'EPI',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lamina',name:'Lâmina de bisturi',category:'Cirurgia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-sutura',name:'Fio de sutura',category:'Cirurgia',unit:'un',qty:0,minQty:8,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-resina',name:'Resina composta',category:'Dentística',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''}
+    {id:'mat-anestesico',name:'Tubete anestésico',category:'Anestesia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-agulha-curta',name:'Agulha gengival curta',category:'Anestesia',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-agulha-longa',name:'Agulha gengival longa',category:'Anestesia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-anestesico-topico',name:'Anestésico tópico',category:'Anestesia',unit:'pote',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-luva',name:'Luva de procedimento',category:'EPI',unit:'cx',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-luva-esteril',name:'Luva cirúrgica estéril',category:'EPI',unit:'par',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-mascara',name:'Máscara cirúrgica',category:'EPI',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-touca',name:'Touca descartável',category:'EPI',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-prope',name:'Propé descartável',category:'EPI',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-oculos-desc',name:'Óculos de proteção descartável / visitante',category:'EPI',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-avental-desc',name:'Avental descartável',category:'EPI',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-campo-desc',name:'Campo descartável',category:'EPI',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-sugador',name:'Sugador descartável',category:'Descartáveis',unit:'pct',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-sugador-cirurgico',name:'Sugador cirúrgico',category:'Descartáveis',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-gaze',name:'Gaze estéril',category:'Descartáveis',unit:'pct',qty:0,minQty:8,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-algodao-rolete',name:'Rolete de algodão',category:'Descartáveis',unit:'pct',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-algodao-bola',name:'Algodão em bolas',category:'Descartáveis',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-copo',name:'Copo descartável',category:'Descartáveis',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-guardanapo',name:'Guardanapo / babador odontológico',category:'Descartáveis',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-protetor-refletor',name:'Protetor descartável para refletor',category:'Barreiras',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-filme-pvc',name:'Filme PVC para barreira',category:'Barreiras',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-barreira',name:'Barreira plástica / capa protetora',category:'Barreiras',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-capa-seringa',name:'Capa para seringa tríplice',category:'Barreiras',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-capa-cadeira',name:'Capa protetora para cadeira',category:'Barreiras',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-pasta-profilatica',name:'Pasta profilática',category:'Prevenção',unit:'bis',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-pedra-pomes',name:'Pedra-pomes',category:'Prevenção',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-escova-robinson',name:'Escova de Robinson',category:'Prevenção',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-taca-borracha',name:'Taça de borracha',category:'Prevenção',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-fio-dental',name:'Fio dental',category:'Prevenção',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-fluor-gel',name:'Flúor gel',category:'Prevenção',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-verniz-fluor',name:'Verniz fluoretado',category:'Prevenção',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-resina',name:'Resina composta universal',category:'Dentística',unit:'ser',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-resina-flow',name:'Resina flow',category:'Dentística',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-resina-opaca',name:'Resina opaca / dentina',category:'Dentística',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-acido-fosforico',name:'Ácido fosfórico 37%',category:'Dentística',unit:'ser',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-adesivo',name:'Sistema adesivo',category:'Dentística',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-silano',name:'Silano',category:'Dentística',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-primer-ceramica',name:'Primer para cerâmica / zircônia',category:'Dentística',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-microbrush',name:'Microbrush',category:'Dentística',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-aplicador',name:'Aplicador descartável',category:'Dentística',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-tira-poliester',name:'Tira de poliéster',category:'Dentística',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-matriz-aco',name:'Matriz de aço',category:'Dentística',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-matriz-seccional',name:'Matriz seccional',category:'Dentística',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cunha-madeira',name:'Cunha de madeira',category:'Dentística',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cunha-plastica',name:'Cunha plástica',category:'Dentística',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-papel-carbono',name:'Papel carbono articular',category:'Dentística',unit:'bl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lixa-resina',name:'Tira de lixa para resina',category:'Dentística',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-disco-lixa',name:'Discos de acabamento e polimento',category:'Dentística',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-borracha-polimento',name:'Borrachas para polimento',category:'Dentística',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-pasta-polimento',name:'Pasta de polimento',category:'Dentística',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-ionomero-rest',name:'Cimento de ionômero de vidro restaurador',category:'Dentística',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-ionomero-forro',name:'Ionômero de vidro para forramento',category:'Dentística',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-hidroxido-calcio',name:'Hidróxido de cálcio',category:'Dentística',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-mta',name:'MTA / biocerâmico reparador',category:'Dentística',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cimento-temp',name:'Cimento provisório sem eugenol',category:'Cimentos',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cimento-fosfato',name:'Cimento de fosfato de zinco',category:'Cimentos',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cimento-ionomero',name:'Cimento de ionômero de vidro para cimentação',category:'Cimentos',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cimento-resinoso-dual',name:'Cimento resinoso dual',category:'Cimentos',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cimento-resinoso-foto',name:'Cimento resinoso fotoativado',category:'Cimentos',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cimento-auto',name:'Cimento resinoso autoadesivo',category:'Cimentos',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-eugenol',name:'Óxido de zinco e eugenol',category:'Cimentos',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-provisorio-bisacrilica',name:'Resina bisacrílica para provisórios',category:'Prótese',unit:'cart',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-acrilico-po',name:'Resina acrílica pó',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-acrilico-liq',name:'Resina acrílica líquido',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-isolante-acrilico',name:'Isolante para resina acrílica',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-fio-retrator',name:'Fio retrator gengival',category:'Prótese',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-hemostatico',name:'Agente hemostático gengival',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-silicone-adicao-pesado',name:'Silicone de adição pesado',category:'Moldagem',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-silicone-adicao-leve',name:'Silicone de adição leve',category:'Moldagem',unit:'cart',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-silicone-condensacao',name:'Silicone de condensação',category:'Moldagem',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-alginato',name:'Alginato',category:'Moldagem',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-gesso-tipo-iv',name:'Gesso tipo IV',category:'Moldagem',unit:'kg',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-gesso-pedra',name:'Gesso pedra',category:'Moldagem',unit:'kg',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cera-7',name:'Cera 7',category:'Prótese',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cera-utilidade',name:'Cera utilidade',category:'Prótese',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-pasta-zinco-enolica',name:'Pasta zinco-enólica',category:'Prótese',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-adesivo-moldeira',name:'Adesivo para moldeira',category:'Moldagem',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-moldeira-desc',name:'Moldeira descartável',category:'Moldagem',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lenco-borracha',name:'Lençol de borracha',category:'Endodontia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-arco-isolamento',name:'Arco para isolamento absoluto',category:'Endodontia',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-fio-dental-endo',name:'Fio dental para amarração',category:'Endodontia',unit:'rl',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lima-k',name:'Lima manual tipo K',category:'Endodontia',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lima-h',name:'Lima Hedström',category:'Endodontia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lima-rotatoria',name:'Limas rotatórias / reciprocantes',category:'Endodontia',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cone-guta',name:'Cones de guta-percha',category:'Endodontia',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cone-papel',name:'Cones de papel absorvente',category:'Endodontia',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cimento-endo',name:'Cimento endodôntico',category:'Endodontia',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-hipoclorito',name:'Hipoclorito de sódio',category:'Endodontia',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-edta',name:'EDTA',category:'Endodontia',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-clorexidina',name:'Clorexidina solução',category:'Endodontia',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-seringa-irrigacao',name:'Seringa para irrigação',category:'Endodontia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-agulha-irrigacao',name:'Agulha para irrigação endodôntica',category:'Endodontia',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lubrificante-endo',name:'Gel lubrificante endodôntico',category:'Endodontia',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-curativo-endo',name:'Medicação intracanal / hidróxido de cálcio',category:'Endodontia',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-obturador-temp',name:'Material restaurador provisório',category:'Endodontia',unit:'pote',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lamina',name:'Lâmina de bisturi',category:'Cirurgia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-sutura',name:'Fio de sutura',category:'Cirurgia',unit:'un',qty:0,minQty:15,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-soro',name:'Soro fisiológico estéril',category:'Cirurgia',unit:'fr',qty:0,minQty:6,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-seringa-20',name:'Seringa 20 ml',category:'Cirurgia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-seringa-10',name:'Seringa 10 ml',category:'Cirurgia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-agulha-hipo',name:'Agulha hipodérmica',category:'Cirurgia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-hemostatico-cir',name:'Esponja hemostática absorvível',category:'Cirurgia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-colageno',name:'Membrana / esponja de colágeno',category:'Cirurgia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-campo-cirurgico',name:'Campo cirúrgico estéril',category:'Cirurgia',unit:'kit',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-kit-aspiracao-cir',name:'Kit de aspiração cirúrgica',category:'Cirurgia',unit:'un',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-curetagem-alveolo',name:'Material hemostático alveolar',category:'Cirurgia',unit:'un',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-implante',name:'Implante dentário',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-tampa-implante',name:'Tampa de cobertura',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cicatrizador',name:'Cicatrizador',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-transfer',name:'Transfer de moldagem',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-analogo',name:'Análogo de implante',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-pilar',name:'Pilar / munhão protético',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-parafuso-prot',name:'Parafuso protético',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-biomaterial',name:'Biomaterial / substituto ósseo',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-membrana',name:'Membrana para regeneração óssea',category:'Implantodontia',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-clareador-consultorio',name:'Gel clareador de consultório',category:'Clareamento',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-clareador-caseiro',name:'Gel clareador caseiro',category:'Clareamento',unit:'ser',qty:0,minQty:6,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-barreira-gengival',name:'Barreira gengival fotopolimerizável',category:'Clareamento',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-dessensibilizante',name:'Dessensibilizante',category:'Clareamento',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-placa-vacuo',name:'Placa para moldeira de clareamento',category:'Clareamento',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-broca-diamantada',name:'Brocas diamantadas variadas',category:'Brocas',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-broca-carbide',name:'Brocas carbide variadas',category:'Brocas',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-broca-cirurgica',name:'Brocas cirúrgicas',category:'Brocas',unit:'un',qty:0,minQty:6,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-broca-endo',name:'Brocas Endo-Z / acesso',category:'Brocas',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-fresa-acrilico',name:'Fresas para acrílico',category:'Brocas',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-disco-carborundum',name:'Disco de carborundum',category:'Brocas',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-filme-rx',name:'Filme radiográfico intraoral',category:'Radiologia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-envelope-rx',name:'Envelope / barreira para sensor radiográfico',category:'Radiologia',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-posicionador-rx',name:'Posicionador radiográfico descartável / bite block',category:'Radiologia',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-envelope-autoclave',name:'Envelope grau cirúrgico',category:'Esterilização',unit:'rl',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-envelope-autoclave-p',name:'Envelope grau cirúrgico pequeno',category:'Esterilização',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-envelope-autoclave-m',name:'Envelope grau cirúrgico médio',category:'Esterilização',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-indicador-quimico',name:'Indicador químico para autoclave',category:'Esterilização',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-integrador',name:'Integrador químico classe 5',category:'Esterilização',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-teste-biologico',name:'Indicador biológico',category:'Esterilização',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-fita-autoclave',name:'Fita indicadora para autoclave',category:'Esterilização',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-detergente-enzimatico',name:'Detergente enzimático',category:'Esterilização',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lubrificante-instrumental',name:'Lubrificante para instrumentais',category:'Esterilização',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-desinfetante-superficie',name:'Desinfetante de superfícies',category:'Biossegurança',unit:'fr',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-alcool-70',name:'Álcool 70%',category:'Biossegurança',unit:'fr',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-sabao-antisseptico',name:'Sabonete antisséptico',category:'Biossegurança',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-papel-toalha',name:'Papel toalha',category:'Limpeza',unit:'pct',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-saco-lixo',name:'Saco para lixo comum',category:'Limpeza',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-saco-infectante',name:'Saco branco leitoso infectante',category:'RSS',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-coletor-perfuro',name:'Coletor de perfurocortantes',category:'RSS',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-saco-esterilizacao',name:'Saco para transporte de material contaminado',category:'RSS',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-vaselina',name:'Vaselina sólida',category:'Materiais gerais',unit:'pote',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-bicarbonato',name:'Bicarbonato para profilaxia',category:'Prevenção',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-agua-destilada',name:'Água destilada para autoclave',category:'Esterilização',unit:'gl',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-papel-mistura',name:'Bloco de papel para manipulação',category:'Materiais gerais',unit:'bl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-dappen-desc',name:'Pote Dappen descartável',category:'Descartáveis',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-ponta-aplicadora',name:'Pontas aplicadoras descartáveis',category:'Descartáveis',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-ponta-mistura',name:'Pontas de automistura',category:'Prótese',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-ponta-intraoral',name:'Pontas intraorais para material de moldagem',category:'Prótese',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-fio-seda',name:'Fio de seda / afastamento',category:'Materiais gerais',unit:'rl',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-cotonete',name:'Hastes flexíveis',category:'Descartáveis',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''}
   ];
 }
+
+function mergeInventoryCatalog(existing){
+  var catalog=defaultInventoryItems(), current=Array.isArray(existing)?existing.slice():[], byId={};
+  current.forEach(function(i){if(i&&i.id)byId[i.id]=i;});
+  catalog.forEach(function(def){if(!byId[def.id])current.push(def);});
+  return current;
+}
+
 function defaultProcedureRecipes(){
   return {
     limpeza:[{itemId:'mat-luva',qty:.04},{itemId:'mat-gaze',qty:.05}],
@@ -1389,7 +1547,7 @@ function normalizeStore(value){
   base.logs = Array.isArray(value.logs) ? value.logs : [];
   base.blocks = cleanScheduleBlocks(Array.isArray(value.blocks) ? value.blocks : []);
   base.waitlist = Array.isArray(value.waitlist) ? value.waitlist : [];
-  base.inventory = Array.isArray(value.inventory) ? value.inventory : defaultInventoryItems();
+  base.inventory = mergeInventoryCatalog(Array.isArray(value.inventory) ? value.inventory : []);
   base.inventoryMovements = Array.isArray(value.inventoryMovements) ? value.inventoryMovements : [];
   base.procedureRecipes = value.procedureRecipes && typeof value.procedureRecipes==='object' ? value.procedureRecipes : defaultProcedureRecipes();
   base.procedurePricing = mergeProcedurePricing(value.procedurePricing);
@@ -1616,7 +1774,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.6 · lembretes manuais WhatsApp · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.7 · catálogo completo de estoque · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2772,6 +2930,8 @@ function renderEstoque(){
   if(['procedimentos','precificacao'].indexOf(state.stockTab)>=0) state.stockTab='itens';
   var items=(store.inventory||[]).slice(), q=(state.stockSearch||'').toLowerCase();
   if(q)items=items.filter(function(i){return [i.name,i.category,i.supplier,i.lot].join(' ').toLowerCase().indexOf(q)>=0;});
+  if(state.stockCategory&&state.stockCategory!=='Todas')items=items.filter(function(i){return i.category===state.stockCategory;});
+  items.sort(function(a,b){var c=String(a.category||'').localeCompare(String(b.category||''),'pt-BR');return c||String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
   var low=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty);}).length;
   var exp=(store.inventory||[]).filter(function(i){return i.expiry&&daysUntil(i.expiry)<=30;}).length;
   var out='<div class="section-title">Estoque inteligente</div>';
@@ -2779,7 +2939,8 @@ function renderEstoque(){
   out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
   out+='<div class="stock-grid"><div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div><div class="card stock-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:var(--danger)">'+low+'</div></div><div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div><div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div></div>';
   if(state.stockTab==='itens'){
-    out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><button class="btn btn-ghost" data-action="stock-search">Buscar</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
+    var stockCats=['Todas'].concat(Array.from(new Set((store.inventory||[]).map(function(i){return i.category||'Outros';}))).sort(function(a,b){return a.localeCompare(b,'pt-BR');}));
+    out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><div class="field"><label>Categoria</label><select id="stock-category">'+stockCats.map(function(c){return '<option '+(state.stockCategory===c?'selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="stock-search">Aplicar filtros</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
     if(state.stockEditingId){var d=state.stockEditingId==='new'?{id:'',name:'',category:'Materiais',unit:'un',qty:0,minQty:0,cost:0,supplier:'',lot:'',expiry:''}:(store.inventory||[]).find(function(i){return i.id===state.stockEditingId;})||{};out+='<div class="card"><h3 style="margin-top:0;">'+(d.id?'Editar material':'Novo material')+'</h3><div class="stock-form"><div class="field span-2"><label>Material</label><input id="st-name" value="'+escAttr(d.name||'')+'"></div><div class="field"><label>Categoria</label><input id="st-cat" value="'+escAttr(d.category||'')+'"></div><div class="field"><label>Unidade</label><input id="st-unit" value="'+escAttr(d.unit||'un')+'" placeholder="un, cx, pct, ml"></div><div class="field"><label>Quantidade atual</label><input id="st-qty" type="number" step="0.01" value="'+n(d.qty)+'"></div><div class="field"><label>Estoque mínimo</label><input id="st-min" type="number" step="0.01" value="'+n(d.minQty)+'"></div><div class="field"><label>Custo unitário</label><input id="st-cost" type="number" step="0.01" value="'+n(d.cost)+'"></div><div class="field"><label>Validade</label><input id="st-expiry" type="date" value="'+escAttr(d.expiry||'')+'"></div><div class="field span-2"><label>Fornecedor</label><input id="st-supplier" value="'+escAttr(d.supplier||'')+'"></div><div class="field span-2"><label>Lote</label><input id="st-lot" value="'+escAttr(d.lot||'')+'"></div></div><div class="patient-actions"><button class="btn btn-ghost" data-action="stock-cancel">Cancelar</button><button class="btn btn-primary" data-action="stock-save" data-id="'+escAttr(d.id||'')+'">Salvar material</button></div></div>';}
     out+='<div class="card stock-table-wrap"><table><thead><tr><th>Material</th><th>Categoria</th><th>Estoque</th><th>Mínimo</th><th>Custo un.</th><th>Lote / validade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
     if(!items.length)out+='<tr><td colspan="8">Nenhum material encontrado.</td></tr>';
@@ -3616,7 +3777,7 @@ function attachEvents(){
     else if(a==='lab-add'){addLabCase();return;}
     else if(a==='lab-delete'){if(confirm('Excluir este caso laboratorial?')){store.labCases=(store.labCases||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
 
-    else if(a==='stock-search'){ var ss=document.getElementById('stock-search');state.stockSearch=ss?ss.value:'';render();return; }
+    else if(a==='stock-search'){var ss=document.getElementById('stock-search'),sc=document.getElementById('stock-category');state.stockSearch=ss?ss.value:'';state.stockCategory=sc?sc.value:'Todas';render();return;}
     else if(a==='stock-new'){ state.stockEditingId='new';render();return; }
     else if(a==='stock-edit'){ state.stockEditingId=t.dataset.id;render();return; }
     else if(a==='stock-cancel'){ state.stockEditingId=null;render();return; }
