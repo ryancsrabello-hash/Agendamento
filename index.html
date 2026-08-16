@@ -828,6 +828,36 @@
 .health-score{display:flex;align-items:center;gap:12px}.health-ring{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--teal) calc(var(--score)*1%),var(--grey-soft) 0);position:relative}.health-ring:after{content:"";position:absolute;width:48px;height:48px;border-radius:50%;background:#fff}.health-ring strong{z-index:1;font-size:16px}
 @media(max-width:800px){.plan-row,.lab-row,.task-row{grid-template-columns:1fr 1fr}.plan-row.head,.lab-row.head,.task-row.head{display:none}}
 
+
+/* ===== MENU ERP PRIORIZADO ===== */
+.tabs{
+  scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+.tabs button{
+  flex:0 0 auto;
+}
+@media(max-width:760px){
+  .tabs{
+    position:relative;
+    gap:6px;
+    padding-bottom:7px;
+  }
+  .tabs button{
+    border:1px solid var(--border);
+    border-bottom-width:1px;
+    border-radius:999px;
+    padding:9px 13px;
+    background:#fff;
+  }
+  .tabs button.active{
+    background:var(--ink);
+    color:#fff;
+    border-color:var(--ink);
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1469,7 +1499,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.7.0 · fases 1–5 · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.7.1 · menu priorizado · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2040,7 +2070,25 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['pendencias','Pendências'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['recepcao','Recepção'],['agenda','Agenda'],['financeiro','Financeiro'],['estoque','Estoque'],['laboratorio','Laboratório'],['tarefas','Tarefas'],['crm','Reativação'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['relatorios','Relatórios'],['administracao','Administração'],['auditoria','Auditoria']];
+  var allTabs = [
+    ['visao','Visão geral'],
+    ['recepcao','Recepção'],
+    ['agenda','Agenda'],
+    ['pacientes','Pacientes'],
+    ['tarefas','Tarefas'],
+    ['pendencias','Pendências'],
+    ['financeiro','Financeiro'],
+    ['crm','Reativação'],
+    ['laboratorio','Laboratório'],
+    ['estoque','Estoque'],
+    ['confirmacoes','Confirmações'],
+    ['sac','SAC'],
+    ['preconsultas','Pré-consultas'],
+    ['marketing','Marketing'],
+    ['relatorios','Relatórios'],
+    ['administracao','Administração'],
+    ['auditoria','Auditoria']
+  ];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs">';
