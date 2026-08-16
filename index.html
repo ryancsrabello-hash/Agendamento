@@ -794,6 +794,17 @@
 .slot.schedule-open small{color:#125d50!important;font-weight:700}
 .slot.occupied small,.slot.blocked small{font-weight:700}
 
+
+/* ===== AGENDA: STATUS SEM AMBIGUIDADE ===== */
+.slot.schedule-open{
+  background:#e5f7f1!important;
+  background-image:none!important;
+  border-color:#3ca88f!important;
+  color:#125d50!important;
+}
+.slot.schedule-open small{color:#125d50!important;font-weight:750}
+.slot.blocked{background-image:repeating-linear-gradient(45deg,var(--danger-soft),var(--danger-soft) 6px,#fff 6px,#fff 12px)!important}
+
 </style>
 </head>
 <body>
@@ -1010,6 +1021,40 @@ function timeSlots(){
   }
   return out;
 }
+
+function canonicalTime(t){
+  if(t==null) return '';
+  var s=String(t).trim();
+  var m=s.match(/^(\d{1,2}):(\d{2})/);
+  if(!m) return s;
+  return pad(parseInt(m[1],10))+':'+m[2];
+}
+function isRealManualBlock(bl){
+  return !!bl &&
+    bl.allDay!==true &&
+    bl.weekendOpen!==true &&
+    bl.scheduleOpen!==true &&
+    bl.professionalId!=='all-day' &&
+    bl.professionalId!=='weekend-open' &&
+    bl.professionalId!=='schedule-open';
+}
+function blockOverlapsSlot(bl,professionalId,date,time,duration){
+  if(!isRealManualBlock(bl)) return false;
+  if(bl.professionalId!==professionalId || bl.date!==date) return false;
+  var bt=canonicalTime(bl.time);
+  if(!/^\d{2}:\d{2}$/.test(bt)) return false;
+  var bs=timeToMinutes(bt), be=bs+60;
+  var ss=timeToMinutes(canonicalTime(time)), se=ss+(duration||60);
+  return rangesOverlap(ss,se,bs,be);
+}
+function manualBlockForSlot(professionalId,date,time,duration){
+  var arr=store.blocks||[];
+  for(var i=0;i<arr.length;i++){
+    if(blockOverlapsSlot(arr[i],professionalId,date,time,duration)) return arr[i];
+  }
+  return null;
+}
+
 function timeToMinutes(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]); }
 
 /* ---------------- storage (Supabase + cache local) ---------------- */
@@ -1053,8 +1098,25 @@ var realtimeStarted = false;
 
 function cleanScheduleBlocks(blocks){
   var out=[],seen={};
-  (blocks||[]).forEach(function(bl){
-    if(!bl || !bl.date) return;
+  var validSlots=timeSlots();
+
+  (blocks||[]).forEach(function(raw){
+    if(!raw || !raw.date) return;
+    var bl=Object.assign({},raw);
+
+    if(bl.time!=null) bl.time=canonicalTime(bl.time);
+
+    // Mantém marcadores especiais (dia inteiro, fim de semana aberto e exceções).
+    var special = bl.allDay===true || bl.weekendOpen===true || bl.scheduleOpen===true ||
+      bl.professionalId==='all-day' || bl.professionalId==='weekend-open' || bl.professionalId==='schedule-open';
+
+    // A agenda atual trabalha apenas em horas cheias.
+    // Bloqueios antigos em :30 ou horários que não existem mais são ignorados,
+    // pois poderiam bloquear indevidamente um horário que aparece como aberto.
+    if(!special && isRealManualBlock(bl)){
+      if(validSlots.indexOf(bl.time)<0) return;
+    }
+
     var key=[
       bl.professionalId||'',
       bl.targetProfessionalId||'',
@@ -1074,7 +1136,11 @@ function cleanScheduleBlocks(blocks){
 function normalizeStore(value){
   var base = seedStore();
   if(!value || typeof value !== 'object') return base;
-  base.appointments = Array.isArray(value.appointments) ? value.appointments : [];
+  base.appointments = (Array.isArray(value.appointments) ? value.appointments : []).map(function(a){
+    var x=Object.assign({},a);
+    if(x.time!=null) x.time=canonicalTime(x.time);
+    return x;
+  });
   base.patients = Array.isArray(value.patients) ? value.patients : [];
   base.expenses = Array.isArray(value.expenses) ? value.expenses : [];
   base.payments = Array.isArray(value.payments) ? value.payments : [];
@@ -1190,20 +1256,22 @@ function procById(id){ for(var i=0;i<PROCEDURES.length;i++) if(PROCEDURES[i].id=
 function busyRanges(professionalId, date){
   var ranges = [];
   if(isDayClosed(date)) return [[0,24*60]];
-  // O Instituto possui uma única cadeira: qualquer consulta ocupa o horário para ambos os dentistas.
-  store.appointments.forEach(function(a){
+
+  // Cadeira única: uma consulta de qualquer profissional ocupa o mesmo intervalo.
+  (store.appointments||[]).forEach(function(a){
     if(a.date===date && a.status!=='cancelado' && a.status!=='falta'){
-      var proc = procById(a.procedureId);
-      var start = timeToMinutes(a.time);
-      ranges.push([start, start + (proc ? proc.duration : 60)]);
+      var proc=procById(a.procedureId);
+      var start=timeToMinutes(canonicalTime(a.time));
+      ranges.push([start,start+(proc?proc.duration:60),'appointment']);
     }
   });
-  // Bloqueios administrativos continuam individuais por profissional.
-  store.blocks.forEach(function(bl){
-    if(bl.scheduleOpen===true || bl.weekendOpen===true || bl.allDay===true) return;
+
+  // Bloqueios administrativos reais do profissional.
+  (store.blocks||[]).forEach(function(bl){
+    if(!isRealManualBlock(bl)) return;
     if(bl.professionalId===professionalId && bl.date===date){
-      var start = timeToMinutes(bl.time);
-      ranges.push([start, start+60]);
+      var start=timeToMinutes(canonicalTime(bl.time));
+      ranges.push([start,start+60,'manual']);
     }
   });
   return ranges;
@@ -1215,7 +1283,7 @@ function isFreeSlot(professionalId, date, time, duration){
 }
 
 function slotBlocked(professionalId, date, time){
-  return store.blocks.some(function(bl){ return bl.professionalId===professionalId && bl.date===date && bl.time===time; });
+  return !!manualBlockForSlot(professionalId,date,time,60);
 }
 function slotOccupiedByAppointment(professionalId, date, time){
   var start = timeToMinutes(time), end = start+60;
@@ -1235,20 +1303,32 @@ function slotOccupiedByAppointment(professionalId, date, time){
 
 function slotAvailability(professionalId,date,time,duration){
   duration=duration||60;
+  time=canonicalTime(time);
 
   if(isDayClosed(date)) return {free:false,reason:'Dia fechado'};
   if(isWeekend(date) && !isWeekendExceptionOpen(date)) return {free:false,reason:'Fim de semana fechado'};
   if(professionalScheduleClosed(professionalId,date,time)) return {free:false,reason:'Fechado pela escala'};
 
-  var start=timeToMinutes(time);
-  var end=start+duration;
-  if(end>20*60) return {free:false,reason:'Ultrapassa o horário de atendimento'};
+  var start=timeToMinutes(time),end=start+duration;
+  if(end>19*60) return {free:false,reason:'Fora do horário de atendimento'};
 
-  var ranges=busyRanges(professionalId,date);
-  for(var i=0;i<ranges.length;i++){
-    if(rangesOverlap(start,end,ranges[i][0],ranges[i][1])) return {free:false,reason:'Cadeira ocupada'};
-  }
-  return {free:true,reason:'Disponível'};
+  var manual=manualBlockForSlot(professionalId,date,time,duration);
+  if(manual) return {free:false,reason:'Fechado manualmente'};
+
+  // Cadeira única: verifica somente consultas ativas.
+  var occupied=false;
+  (store.appointments||[]).forEach(function(a){
+    if(occupied) return;
+    if(a.date===date && a.status!=='cancelado' && a.status!=='falta'){
+      var proc=procById(a.procedureId);
+      var as=timeToMinutes(canonicalTime(a.time));
+      var ae=as+(proc?proc.duration:60);
+      if(rangesOverlap(start,end,as,ae)) occupied=true;
+    }
+  });
+  if(occupied) return {free:false,reason:'Cadeira ocupada'};
+
+  return {free:true,reason:'Disponível ao paciente'};
 }
 
 function availableSlots(professionalId, date, duration){
@@ -2126,12 +2206,12 @@ function renderAgenda(){
 
     var label='';
     if(isOcc) label='Cadeira ocupada';
-    else if(isDayClosed(state.agendaDate)) label='Dia fechado';
-    else if(isWeekend(state.agendaDate) && !isWeekendExceptionOpen(state.agendaDate)) label='Fim de semana fechado';
-    else if(manualBlocked) label='Fechado manualmente';
-    else if(defaultClosed && !overrideOpen) label='Fechado por padrão';
-    else if(defaultClosed && overrideOpen) label='Aberto por exceção';
-    else label='Disponível ao paciente';
+    else if(actual.reason==='Dia fechado') label='Dia fechado';
+    else if(actual.reason==='Fim de semana fechado') label='Fim de semana fechado';
+    else if(actual.reason==='Fechado manualmente') label='Fechado manualmente';
+    else if(actual.reason==='Fechado pela escala' && defaultClosed && !overrideOpen) label='Fechado por padrão';
+    else if(defaultClosed && overrideOpen && actual.free) label='Aberto por exceção';
+    else label=actual.free?'Disponível ao paciente':actual.reason;
 
     var disabled=isOcc || isDayClosed(state.agendaDate) ||
       (isWeekend(state.agendaDate) && !isWeekendExceptionOpen(state.agendaDate)) ||
@@ -3142,13 +3222,15 @@ function toggleDayClosed(){
 }
 
 function toggleBlock(time){
-  var prof = state.agendaBlockProf, date = state.agendaDate;
-  if(slotOccupiedByAppointment(prof, date, time)) return;
+  var prof=state.agendaBlockProf,date=state.agendaDate;
+  time=canonicalTime(time);
+
+  if(slotOccupiedByAppointment(prof,date,time)) return;
 
   var defaultClosed=defaultProfessionalClosed(prof,date,time);
   var overrideOpen=scheduleOverrideOpen(prof,date,time);
 
-  // Apenas administrador pode alterar exceções da escala-padrão.
+  // Escala-padrão: administrador abre/fecha uma exceção.
   if(defaultClosed){
     if(!canEditScheduleExceptions()){
       alert('Este horário faz parte da escala padrão do profissional. Somente um administrador pode abrir uma exceção.');
@@ -3156,23 +3238,30 @@ function toggleBlock(time){
     }
     setScheduleOverrideOpen(prof,date,time,!overrideOpen);
 
-    // Se abrirmos por exceção, removemos um eventual bloqueio manual do mesmo horário.
     if(!overrideOpen){
+      // Ao abrir uma exceção, elimina bloqueios manuais sobrepostos do mesmo horário.
       store.blocks=(store.blocks||[]).filter(function(bl){
-        return !(bl.professionalId===prof && bl.date===date && bl.time===time && !bl.scheduleOpen);
+        return !blockOverlapsSlot(bl,prof,date,time,60);
       });
     }
     persist();
     return;
   }
 
-  // Horário normalmente aberto: comportamento tradicional fechar / reabrir.
-  var idx = -1;
-  for(var i=0;i<store.blocks.length;i++){
-    if(store.blocks[i].professionalId===prof && store.blocks[i].date===date && store.blocks[i].time===time && !store.blocks[i].scheduleOpen){ idx = i; break; }
+  // Horário normalmente aberto.
+  var overlapping=(store.blocks||[]).filter(function(bl){
+    return blockOverlapsSlot(bl,prof,date,time,60);
+  });
+
+  if(overlapping.length){
+    // Reabrir: remove qualquer bloqueio real que esteja afetando esta hora.
+    store.blocks=(store.blocks||[]).filter(function(bl){
+      return !blockOverlapsSlot(bl,prof,date,time,60);
+    });
+  }else{
+    // Fechar: grava sempre no formato HH:MM.
+    store.blocks.push({id:'b'+Date.now(),professionalId:prof,date:date,time:time});
   }
-  if(idx>=0){ store.blocks.splice(idx,1); }
-  else{ store.blocks.push({id:'b'+Date.now(), professionalId:prof, date:date, time:time}); }
   persist();
 }
 
