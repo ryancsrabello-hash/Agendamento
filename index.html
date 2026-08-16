@@ -1368,7 +1368,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.0 · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.1 · build agenda 2026-08-15 · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2217,7 +2217,15 @@ function renderAgenda(){
       (isWeekend(state.agendaDate) && !isWeekendExceptionOpen(state.agendaDate)) ||
       (!canEditScheduleExceptions() && defaultClosed);
 
-    out += '<button class="slot '+cls+'" '+(disabled?'disabled':'')+
+    var inlineStyle='';
+    if(actual.free){
+      inlineStyle='background:#e5f7f1!important;background-image:none!important;border-color:#3ca88f!important;color:#125d50!important;';
+    }else if(isOcc){
+      inlineStyle='background:#edf1f0!important;background-image:none!important;border-color:#dde7e4!important;color:#5b7180!important;';
+    }else{
+      inlineStyle='background:repeating-linear-gradient(45deg,#fbe1e3,#fbe1e3 6px,#fff 6px,#fff 12px)!important;border-color:#d64550!important;color:#d64550!important;';
+    }
+    out += '<button class="slot '+cls+'" style="'+inlineStyle+'" '+(disabled?'disabled':'')+
       ' data-action="toggle-block" data-id="'+t+'">'+t+'<small>'+label+'</small></button>';
   });
   out += '</div></div>';
@@ -3174,7 +3182,7 @@ function copyWaitlistPhone(id){var w=(store.waitlist||[]).find(function(x){retur
 var deferredInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstallPrompt=e;document.querySelectorAll('.install-app').forEach(function(b){b.style.display='inline-flex';});});
 function installPwa(){if(!deferredInstallPrompt){alert('No celular, use “Adicionar à tela inicial”. No computador, procure o ícone de instalação na barra do navegador.');return;}deferredInstallPrompt.prompt();deferredInstallPrompt.userChoice.finally(function(){deferredInstallPrompt=null;});}
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.0-pendencias-recall-sac1').catch(function(e){console.warn('PWA indisponível:',e);});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./service-worker.js?v=2.5.1-agenda-cachefix').catch(function(e){console.warn('PWA indisponível:',e);});});}
 
 function cycleOrSetStatus(t){
   var id = t.dataset.id;
@@ -3310,6 +3318,21 @@ try{
 }
 
 })();
+
+(function(){
+  try{
+    var BUILD='2.5.1-agenda-cachefix';
+    var KEY='ilr_build_seen';
+    if(localStorage.getItem(KEY)!==BUILD && 'caches' in window){
+      caches.keys().then(function(keys){
+        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      }).finally(function(){
+        localStorage.setItem(KEY,BUILD);
+      });
+    }
+  }catch(e){ console.warn('Limpeza de cache não aplicada',e); }
+})();
+
 </script>
 </body>
 </html>
