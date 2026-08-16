@@ -939,6 +939,32 @@
 .status-select.status-aceito,.status-select.status-recebido{background:#e9f7f5;border-color:#a9ddd6;color:#176d65}
 .status-select.status-realizado,.status-select.status-entregue{background:#e8f7ef;border-color:#b3dfc7;color:#20704b}
 
+
+/* ===== CORES INDIVIDUAIS DAS ETAPAS ===== */
+.status-select option[value="proposto"],
+.status-select option[value="enviado"]{background:#fff2c9;color:#795600}
+.status-select option[value="apresentado"]{background:#dceeff;color:#15578e}
+.status-select option[value="negociacao"]{background:#eadcf7;color:#6d328d}
+.status-select option[value="aceito"]{background:#d9f3ec;color:#116c60}
+.status-select option[value="realizado"]{background:#d8f1df;color:#17643b}
+
+.status-select option[value="em produção"]{background:#dceeff;color:#15578e}
+.status-select option[value="prova"]{background:#eadcf7;color:#6d328d}
+.status-select option[value="recebido"]{background:#d9f3ec;color:#116c60}
+.status-select option[value="entregue"]{background:#d8f1df;color:#17643b}
+
+.status-select.status-proposto{background:#fff2c9!important;border-color:#d8a51f!important;color:#795600!important}
+.status-select.status-apresentado{background:#dceeff!important;border-color:#68a9df!important;color:#15578e!important}
+.status-select.status-negociacao{background:#eadcf7!important;border-color:#ad7aca!important;color:#6d328d!important}
+.status-select.status-aceito{background:#d9f3ec!important;border-color:#54b5a6!important;color:#116c60!important}
+.status-select.status-realizado{background:#d8f1df!important;border-color:#62ad78!important;color:#17643b!important}
+
+.status-select.status-enviado{background:#fff2c9!important;border-color:#d8a51f!important;color:#795600!important}
+.status-select.status-producao{background:#dceeff!important;border-color:#68a9df!important;color:#15578e!important}
+.status-select.status-prova{background:#eadcf7!important;border-color:#ad7aca!important;color:#6d328d!important}
+.status-select.status-recebido{background:#d9f3ec!important;border-color:#54b5a6!important;color:#116c60!important}
+.status-select.status-entregue{background:#d8f1df!important;border-color:#62ad78!important;color:#17643b!important}
+
 </style>
 </head>
 <body>
@@ -1580,7 +1606,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.4 · etapas manuais · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.5 · etapas manuais coloridas · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -3450,8 +3476,8 @@ function attachEvents(){
   root.onchange = function(e){
     var t=e.target.closest('[data-change]');
     if(!t)return;
-    if(t.dataset.change==='budget-status'){setBudgetStatus(t.dataset.id,t.value);return;}
-    if(t.dataset.change==='lab-status'){setLabStatus(t.dataset.id,t.value);return;}
+    if(t.dataset.change==='budget-status'){t.className='status-select '+budgetStatusClass(t.value);setBudgetStatus(t.dataset.id,t.value);return;}
+    if(t.dataset.change==='lab-status'){t.className='status-select '+labStatusClass(t.value);setLabStatus(t.dataset.id,t.value);return;}
   };
   root.onclick = function(e){
     var t = e.target.closest('[data-action], [data-role], [data-stafftab]');
