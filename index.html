@@ -2103,7 +2103,7 @@ function estimateIR2026(base,dependents){
   if(b<=2428.80)tax=0; else if(b<=2826.65)tax=b*.075-182.16; else if(b<=3751.05)tax=b*.15-394.16; else if(b<=4664.68)tax=b*.225-675.49; else tax=b*.275-908.73;
   tax=Math.max(0,tax); var reduction=0; if(b<=5000)reduction=Math.min(tax,312.89); else if(b<=7350)reduction=Math.max(0,978.62-.133145*b); return Math.max(0,tax-reduction);
 }
-function financeTabs(){var tabs=[['resumo','Resumo'],['fluxo','Fluxo de caixa'],['dre','DRE'],['rentabilidade','Rentabilidade'],['recebimentos','Recebimentos'],['despesas','Despesas'],['doutores','Doutores'],['impostos','Impostos'],['config','Configurações']];return '<div class="finance-tabs">'+tabs.map(function(t){return '<button class="'+(state.finTab===t[0]?'active':'')+'" data-action="finance-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';}
+function financeTabs(){var tabs=[['resumo','Resumo'],['fluxo','Fluxo de caixa'],['dre','DRE'],['rentabilidade','Rentabilidade'],['precificacao','Formação de preço'],['recebimentos','Recebimentos'],['despesas','Despesas'],['doutores','Doutores'],['impostos','Impostos'],['config','Configurações']];return '<div class="finance-tabs">'+tabs.map(function(t){return '<button class="'+(state.finTab===t[0]?'active':'')+'" data-action="finance-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';}
 function monthPicker(){return '<div style="display:flex;gap:8px;align-items:end;margin-bottom:14px;"><div class="field" style="margin:0;max-width:190px;"><label>Mês de referência</label><input type="month" id="finance-month" value="'+monthRef()+'"></div><button class="btn btn-ghost" data-action="finance-month">Atualizar</button></div>';}
 function financeKpi(label,value,sub,cls){return '<div class="card finance-kpi"><div class="k-label">'+label+'</div><div class="k-value" '+(cls?'style="color:'+cls+'"':'')+'>'+value+'</div><div class="k-sub">'+sub+'</div></div>';}
 
@@ -2348,6 +2348,87 @@ function renderProfitabilityPremium(ref,f){var rows=procedureProfitability(ref),
   out+='<div class="card"><h3 style="margin-top:0;">Rentabilidade por procedimento</h3><div class="finance-table-wrap">';if(!rows.length)return out+'<div class="empty-state">Finalize atendimentos para calcular a rentabilidade.</div></div></div>';
   out+='<table><thead><tr><th>Procedimento</th><th>Atendimentos</th><th>Receita</th><th>Custos diretos estimados</th><th>Resultado</th><th>Margem</th></tr></thead><tbody>';rows.forEach(function(g){out+='<tr><td>'+esc(g.name)+'</td><td>'+g.count+'</td><td>'+fmtMoney(g.revenue)+'</td><td>'+fmtMoney(g.cost)+'</td><td class="'+(g.profit>=0?'trend-up':'trend-down')+'"><strong>'+fmtMoney(g.profit)+'</strong></td><td>'+g.margin.toFixed(1)+'%</td></tr>';});return out+'</tbody></table></div><p class="mini-note">Custos diretos estimados consideram taxas do recebimento, materiais configurados no estoque, custo/hora, comissão e rateio dos tributos estimados.</p></div>';}
 
+
+function renderFinancePricing(){
+  var pricing=mergeProcedurePricing(store.procedurePricing),
+      selected=pricing[state.priceProcedure]||pricing.avaliacao,
+      nums=pricingNumbers(selected),
+      plist=Object.keys(pricing).map(function(k){return pricing[k];}),
+      out='';
+
+  out+='<div class="section-title">Formação de preço <span style="font-size:12px;color:var(--ink-soft);font-weight:500;">custos, taxas, margem e valor praticado</span></div>';
+
+  out+='<div class="price-kpis">'+
+    '<div class="card price-kpi"><div class="k">Custo base completo</div><div class="v">'+fmtMoney(nums.base)+'</div><div class="mini-note">Custos diretos + indiretos</div></div>'+
+    '<div class="card price-kpi"><div class="k">Preço mínimo sustentável</div><div class="v">'+fmtMoney(nums.minimum)+'</div><div class="mini-note">Após taxas e tributos configurados</div></div>'+
+    '<div class="card price-kpi"><div class="k">Preço sugerido</div><div class="v">'+fmtMoney(nums.suggested)+'</div><div class="mini-note">Considerando a margem alvo</div></div>'+
+    '<div class="card price-kpi"><div class="k">Valor final praticado</div><div class="v">'+fmtMoney(n(selected.finalPrice))+'</div><div class="mini-note">Valor reconhecido pelo ERP</div></div>'+
+  '</div>';
+
+  out+='<div class="price-shell"><div class="card price-list">'+
+    '<h3 style="margin-top:0;">Procedimentos</h3>'+
+    '<p class="mini-note">Selecione um procedimento para revisar sua composição financeira.</p>'+
+    plist.map(function(p){
+      return '<button class="price-proc '+(p.id===selected.id?'active':'')+'" data-action="price-select" data-id="'+p.id+'">'+
+        '<strong>'+esc(p.name)+'</strong>'+
+        '<small>'+esc(p.specialty)+' · '+p.minutes+' min · final '+fmtMoney(n(p.finalPrice))+'</small>'+
+      '</button>';
+    }).join('')+
+  '</div>';
+
+  out+='<div class="card"><h3 style="margin-top:0;">'+esc(selected.name)+'</h3>'+
+    '<div class="alert-card" style="margin-bottom:14px;">Esta análise pertence ao <strong>Financeiro</strong>. O Estoque continua responsável apenas por materiais, movimentações e reposição.</div>'+
+    '<h4 style="margin:0 0 10px;">Custos diretos e indiretos</h4><div class="cost-grid">';
+
+  [
+    ['materials','Materiais / insumos'],
+    ['lab','Laboratório / protético'],
+    ['components','Componentes / implante'],
+    ['clinicalTime','Hora clínica / equipe'],
+    ['sterilization','EPI + esterilização'],
+    ['structure','Estrutura / aluguel / utilidades'],
+    ['admin','Administrativo / software / contabilidade'],
+    ['maintenance','Manutenção + equipamentos'],
+    ['waste','RSS / limpeza / descarte'],
+    ['marketing','Marketing / aquisição'],
+    ['risk','Perdas / retrabalho / garantia']
+  ].forEach(function(f){
+    out+='<div class="field"><label>'+f[1]+'</label>'+
+      '<input class="price-field" data-key="'+f[0]+'" type="number" step="0.01" min="0" value="'+n(selected[f[0]])+'">'+
+    '</div>';
+  });
+
+  out+='</div><h4>Taxas, provisões e margem</h4><div class="cost-grid">'+
+    '<div class="field"><label>Tributos / provisão (%)</label><input class="price-field" data-key="taxRate" type="number" step="0.1" min="0" value="'+n(selected.taxRate)+'"></div>'+
+    '<div class="field"><label>Taxas financeiras médias (%)</label><input class="price-field" data-key="financialRate" type="number" step="0.1" min="0" value="'+n(selected.financialRate)+'"></div>'+
+    '<div class="field"><label>Margem alvo (%)</label><input class="price-field" data-key="profitRate" type="number" step="0.1" min="0" max="80" value="'+n(selected.profitRate)+'"></div>'+
+  '</div>';
+
+  out+='<div class="cost-total">'+
+    '<div class="summary-line"><span>Materiais / insumos</span><strong>'+fmtMoney(n(selected.materials))+'</strong></div>'+
+    '<div class="summary-line"><span>Laboratório / protético</span><strong>'+fmtMoney(n(selected.lab))+'</strong></div>'+
+    '<div class="summary-line"><span>Componentes</span><strong>'+fmtMoney(n(selected.components))+'</strong></div>'+
+    '<div class="summary-line"><span>Hora clínica / equipe</span><strong>'+fmtMoney(n(selected.clinicalTime))+'</strong></div>'+
+    '<div class="summary-line"><span>Demais custos indiretos</span><strong>'+fmtMoney(
+      n(selected.sterilization)+n(selected.structure)+n(selected.admin)+n(selected.maintenance)+n(selected.waste)+n(selected.marketing)+n(selected.risk)
+    )+'</strong></div>'+
+    '<div class="summary-line"><span><strong>Custo base completo</strong></span><strong>'+fmtMoney(nums.base)+'</strong></div>'+
+    '<div class="summary-line"><span>Preço mínimo sustentável</span><strong>'+fmtMoney(nums.minimum)+'</strong></div>'+
+    '<div class="summary-line"><span>Preço sugerido calculado</span><strong>'+fmtMoney(nums.suggested)+'</strong></div>'+
+  '</div>';
+
+  out+='<div class="price-final">'+
+    '<div class="field"><label><strong>VALOR FINAL PRATICADO</strong> — valor que o ERP utiliza para este procedimento</label>'+
+      '<input id="price-final" type="number" step="0.01" min="0" value="'+n(selected.finalPrice)+'">'+
+    '</div>'+
+    '<div class="row-actions"><button class="btn btn-primary" data-action="price-save">Salvar formação de preço</button></div>'+
+  '</div>'+
+  '<p class="price-note">Os valores iniciais são referências gerenciais editáveis. Substitua-os pelos custos reais do Instituto conforme fornecedores, laboratório, equipamentos, estrutura, tributação e meios de pagamento. O valor final praticado é independente do preço sugerido e permanece sob controle administrativo.</p>'+
+  '</div></div>';
+
+  return out;
+}
+
 function renderFinanceiro(){
   var ref=monthRef(), f=financeSummary(ref), out='<div class="section-title">Financeiro inteligente</div>'+monthPicker()+financeTabs();
   if(state.financeMessage) out+='<div class="good-card" style="margin-bottom:14px;">'+esc(state.financeMessage)+'</div>';
@@ -2363,6 +2444,8 @@ function renderFinanceiro(){
     out+=renderDREPremium(ref,f);
   }else if(state.finTab==='rentabilidade'){
     out+=renderProfitabilityPremium(ref,f);
+  }else if(state.finTab==='precificacao'){
+    out+=renderFinancePricing();
   }else if(state.finTab==='recebimentos'){
     var appts=f.realized.slice().sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?1:-1;});
     out+='<div class="card"><h3 style="margin-top:0;">Atendimentos realizados</h3><div class="finance-table-wrap">';
@@ -2459,18 +2542,19 @@ function saveProcedurePricing(){
   document.querySelectorAll('.price-field').forEach(function(el){p[el.dataset.key]=n(el.value);});
   var final=document.getElementById('price-final'); p.finalPrice=final?n(final.value):n(p.finalPrice);
   pricing[id]=p; store.procedurePricing=pricing; applyFinalProcedurePrices(pricing);
-  state.stockMessage='Precificação de '+(p.name||id)+' salva. O valor final foi aplicado ao ERP.';
+  state.financeMessage='Precificação de '+(p.name||id)+' salva. O valor final foi aplicado ao ERP.';
   persist();
 }
 
 function renderEstoque(){
+  if(['procedimentos','precificacao'].indexOf(state.stockTab)>=0) state.stockTab='itens';
   var items=(store.inventory||[]).slice(), q=(state.stockSearch||'').toLowerCase();
   if(q)items=items.filter(function(i){return [i.name,i.category,i.supplier,i.lot].join(' ').toLowerCase().indexOf(q)>=0;});
   var low=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty);}).length;
   var exp=(store.inventory||[]).filter(function(i){return i.expiry&&daysUntil(i.expiry)<=30;}).length;
   var out='<div class="section-title">Estoque inteligente</div>';
   if(state.stockMessage)out+='<div class="good-card" style="margin-bottom:12px;">'+esc(state.stockMessage)+'</div>';
-  out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['procedimentos','Custos por procedimento'],['precificacao','Formação de preço'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
   out+='<div class="stock-grid"><div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div><div class="card stock-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:var(--danger)">'+low+'</div></div><div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div><div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div></div>';
   if(state.stockTab==='itens'){
     out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><button class="btn btn-ghost" data-action="stock-search">Buscar</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
@@ -2481,22 +2565,6 @@ function renderEstoque(){
     out+='</tbody></table></div>';
   } else if(state.stockTab==='movimentos'){
     var mov=(store.inventoryMovements||[]).slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));}).slice(0,150);out+='<div class="card stock-table-wrap"><table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Motivo</th></tr></thead><tbody>';if(!mov.length)out+='<tr><td colspan="5">Nenhuma movimentação registrada.</td></tr>';mov.forEach(function(m){var it=(store.inventory||[]).find(function(i){return i.id===m.itemId;});out+='<tr><td>'+new Date(m.createdAt).toLocaleString('pt-BR')+'</td><td>'+esc(it?it.name:m.itemName||'Item removido')+'</td><td>'+esc(m.type)+'</td><td>'+n(m.qty).toLocaleString('pt-BR')+'</td><td>'+esc(m.reason||'—')+'</td></tr>';});out+='</tbody></table></div>';
-  } else if(state.stockTab==='procedimentos'){
-    var pid=state.recipeProcedure||PROCEDURES[0].id, recipe=(store.procedureRecipes||{})[pid]||[], pc=procById(pid), cost=procedureMaterialCost(pid);out+='<div class="card"><div class="stock-toolbar"><div class="field"><label>Procedimento</label><select id="recipe-proc">'+PROCEDURES.map(function(p){return '<option value="'+p.id+'" '+(pid===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="recipe-load">Carregar</button></div><h3>Materiais consumidos por atendimento</h3><div id="recipe-list">';recipe.forEach(function(r,idx){var it=(store.inventory||[]).find(function(i){return i.id===r.itemId;});out+='<div class="recipe-row"><select id="recipe-item-'+idx+'">'+(store.inventory||[]).map(function(x){return '<option value="'+x.id+'" '+(r.itemId===x.id?'selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select><input id="recipe-qty-'+idx+'" type="number" step="0.01" min="0" value="'+n(r.qty)+'"><button class="btn btn-ghost btn-sm" data-action="recipe-remove" data-id="'+idx+'">Remover</button></div>';});out+='</div><div class="row-actions"><button class="btn btn-ghost" data-action="recipe-add">+ Material</button><button class="btn btn-primary" data-action="recipe-save">Salvar consumo padrão</button></div><div class="alert-card" style="margin-top:14px;">Custo estimado de materiais: <strong>'+fmtMoney(cost)+'</strong> · Preço cadastrado: <strong>'+fmtMoney(n(pc.price))+'</strong> · Margem antes de outros custos: <strong>'+fmtMoney(n(pc.price)-cost)+'</strong>.</div><p class="mini-note">Ao marcar uma consulta como Finalizada, o ERP dá baixa nesses materiais uma única vez e registra a movimentação.</p></div>';
-  } else if(state.stockTab==='precificacao'){
-    var pricing=mergeProcedurePricing(store.procedurePricing), selected=pricing[state.priceProcedure]||pricing.avaliacao, nums=pricingNumbers(selected);
-    var plist=Object.keys(pricing).map(function(k){return pricing[k];});
-    out+='<div class="price-kpis"><div class="card price-kpi"><div class="k">Custo base</div><div class="v">'+fmtMoney(nums.base)+'</div></div><div class="card price-kpi"><div class="k">Preço mínimo sustentável</div><div class="v">'+fmtMoney(nums.minimum)+'</div></div><div class="card price-kpi"><div class="k">Preço sugerido calculado</div><div class="v">'+fmtMoney(nums.suggested)+'</div></div><div class="card price-kpi"><div class="k">Valor final praticado</div><div class="v">'+fmtMoney(n(selected.finalPrice))+'</div></div></div>';
-    out+='<div class="price-shell"><div class="card price-list"><h3 style="margin-top:0">Procedimentos</h3>'+plist.map(function(p){return '<button class="price-proc '+(p.id===selected.id?'active':'')+'" data-action="price-select" data-id="'+p.id+'"><strong>'+esc(p.name)+'</strong><small>'+esc(p.specialty)+' · '+p.minutes+' min · final '+fmtMoney(n(p.finalPrice))+'</small></button>';}).join('')+'</div>';
-    out+='<div class="card"><h3 style="margin-top:0">'+esc(selected.name)+'</h3><div class="cost-grid">';
-    [['materials','Materiais / insumos'],['lab','Laboratório / protético'],['components','Componentes / implante'],['clinicalTime','Hora clínica / equipe'],['sterilization','EPI + esterilização'],['structure','Estrutura / aluguel / utilidades'],['admin','Administrativo / software / contabilidade'],['maintenance','Manutenção + equipamentos'],['waste','RSS / limpeza / descarte'],['marketing','Marketing / aquisição'],['risk','Perdas / retrabalho / garantia']].forEach(function(f){out+='<div class="field"><label>'+f[1]+'</label><input class="price-field" data-key="'+f[0]+'" type="number" step="0.01" min="0" value="'+n(selected[f[0]])+'"></div>';});
-    out+='</div><h4>Taxas e margem</h4><div class="cost-grid">'+
-      '<div class="field"><label>Tributos / provisão (%)</label><input class="price-field" data-key="taxRate" type="number" step="0.1" value="'+n(selected.taxRate)+'"></div>'+
-      '<div class="field"><label>Taxas financeiras médias (%)</label><input class="price-field" data-key="financialRate" type="number" step="0.1" value="'+n(selected.financialRate)+'"></div>'+
-      '<div class="field"><label>Margem alvo (%)</label><input class="price-field" data-key="profitRate" type="number" step="0.1" value="'+n(selected.profitRate)+'"></div></div>'+
-      '<div class="cost-total"><div class="summary-line"><span>Custos diretos + indiretos</span><strong>'+fmtMoney(nums.base)+'</strong></div><div class="summary-line"><span>Preço mínimo sustentável</span><strong>'+fmtMoney(nums.minimum)+'</strong></div><div class="summary-line"><span>Preço sugerido pelo cálculo</span><strong>'+fmtMoney(nums.suggested)+'</strong></div></div>'+
-      '<div class="price-final"><div class="field"><label><strong>VALOR FINAL PRATICADO</strong> — valor usado pelo ERP para este procedimento</label><input id="price-final" type="number" step="0.01" min="0" value="'+n(selected.finalPrice)+'"></div><div class="row-actions"><button class="btn btn-primary" data-action="price-save">Salvar custos e valor final</button></div></div>'+
-      '<p class="price-note">Valores iniciais são premissas gerenciais de referência e devem ser substituídos pelos custos reais do Instituto. Tributos variam conforme enquadramento e situação fiscal. O sistema separa custo gerencial de dedutibilidade tributária.</p></div></div>';
   } else if(state.stockTab==='compras'){
     var buy=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty)|| (i.expiry&&daysUntil(i.expiry)<=30);});out+='<div class="card"><h3 style="margin-top:0;">Lista inteligente de reposição</h3>';if(!buy.length)out+='<div class="good-card">Nenhum item exige atenção neste momento.</div>';else{out+='<div class="stock-table-wrap"><table><thead><tr><th>Material</th><th>Atual</th><th>Mínimo</th><th>Sugestão de compra</th><th>Fornecedor</th><th>Motivo</th></tr></thead><tbody>';buy.forEach(function(i){var sug=Math.max(0,n(i.minQty)*2-n(i.qty)),reason=[];if(n(i.qty)<=n(i.minQty))reason.push('estoque baixo');if(i.expiry&&daysUntil(i.expiry)<=30)reason.push(daysUntil(i.expiry)<0?'vencido':'validade próxima');out+='<tr><td>'+esc(i.name)+'</td><td>'+n(i.qty)+' '+esc(i.unit)+'</td><td>'+n(i.minQty)+'</td><td><strong>'+sug.toLocaleString('pt-BR')+' '+esc(i.unit)+'</strong></td><td>'+esc(i.supplier||'—')+'</td><td>'+esc(reason.join(' e '))+'</td></tr>';});out+='</tbody></table></div>';}out+='</div>';
   }
@@ -2962,8 +3030,8 @@ function attachEvents(){
     else if(a==='add-expense'){ addExpense(); return; }
     else if(a==='del-expense'){ delExpense(t.dataset.id); return; }
     else if(a==='stock-tab'){ state.stockTab=t.dataset.id; state.stockMessage=''; render(); return; }
-    else if(a==='price-select'){state.priceProcedure=t.dataset.id;render();return;}
-    else if(a==='price-save'){saveProcedurePricing();return;}
+    else if(a==='price-select'){state.priceProcedure=t.dataset.id;state.finTab='precificacao';render();return;}
+    else if(a==='price-save'){state.finTab='precificacao';saveProcedurePricing();return;}
     else if(a==='crm-tab'){state.crmTab=t.dataset.id;state.crmMessage='';render();return;}
     else if(a==='crm-contact'){crmRegisterContact(t.dataset.id,false);return;}
     else if(a==='crm-feedback'){crmRegisterContact(t.dataset.id,true);return;}
