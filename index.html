@@ -921,7 +921,7 @@ var state = {
   gateLoading: false,
   staffUser: null,
   staffEmail: null,
-  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', done:false, error:null },
+  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', preConcern:'', preSince:'', prePrevious:'', preGoal:'', done:false, error:null },
   lookupPhone: '',
   lookupResults: [],
   lookupLoading: false,
@@ -1510,7 +1510,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.8.0 · fases completas + orçamento PDF · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.8.1 · pré-consulta personalizada · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -1572,16 +1572,41 @@ function renderTestimonials(){
 }
 function renderPreConsult(){
   var procs=PROCEDURES.map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('');
-  return '<section class="public-section"><div class="card preconsult-card"><div class="public-section-head" style="text-align:left"><h2>Pré-consulta</h2><p>Quer adiantar sua chegada? Envie informações básicas para a equipe antes do atendimento. Isso não substitui anamnese nem avaliação clínica.</p></div>'+
+  return '<section class="public-section"><div class="card preconsult-card"><div class="public-section-head" style="text-align:left"><h2>Conte para nós o que você deseja transformar</h2><p>Esta pré-consulta nos ajuda a entender suas expectativas antes mesmo de você chegar ao Instituto. Assim, nossa equipe consegue preparar uma conversa mais personalizada e direcionada ao que realmente importa para você.</p></div>'+
     (state.preConsultMessage?'<div class="alert-card" style="margin-bottom:12px">'+esc(state.preConsultMessage)+'</div>':'')+
-    '<div class="preconsult-grid"><div class="field"><label>Nome completo</label><input id="pc-name" placeholder="Seu nome"></div><div class="field"><label>Telefone</label><input id="pc-phone" inputmode="numeric" maxlength="11" placeholder="11999998888"></div><div class="field"><label>Procedimento de interesse</label><select id="pc-proc"><option value="">Selecione</option>'+procs+'</select></div><div class="field"><label>Data já agendada (opcional)</label><input id="pc-date" type="date"></div><div class="field full"><label>Motivo da consulta / principal dúvida</label><textarea id="pc-reason" style="width:100%;min-height:86px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Conte brevemente o que você gostaria de avaliar"></textarea></div></div><div class="patient-actions"><span class="mini-note">Não envie exames ou dados médicos sensíveis por este formulário.</span><button class="btn btn-primary" data-action="preconsult-submit">Enviar pré-consulta</button></div></div></section>';
+    '<div class="preconsult-grid">'+
+      '<div class="field"><label>Nome completo</label><input id="pc-name" placeholder="Seu nome"></div>'+
+      '<div class="field"><label>Telefone</label><input id="pc-phone" inputmode="numeric" maxlength="11" placeholder="11999998888"></div>'+
+      '<div class="field"><label>Procedimento de interesse</label><select id="pc-proc"><option value="">Ainda não sei / quero avaliação</option>'+procs+'</select></div>'+
+      '<div class="field"><label>Data já agendada (opcional)</label><input id="pc-date" type="date"></div>'+
+      '<div class="field full"><label>O que mais incomoda você no seu sorriso ou na sua saúde bucal hoje?</label><textarea id="pc-concern" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Conte com suas palavras o que gostaria de mudar ou resolver"></textarea></div>'+
+      '<div class="field"><label>Há quanto tempo isso incomoda você?</label><select id="pc-since"><option value="">Selecione</option><option>Menos de 1 mês</option><option>1 a 6 meses</option><option>6 meses a 1 ano</option><option>Mais de 1 ano</option><option>Há vários anos</option></select></div>'+
+      '<div class="field"><label>Já procurou tratamento anteriormente?</label><select id="pc-previous"><option value="">Selecione</option><option>Não</option><option>Sim, mas não iniciei</option><option>Sim, iniciei e não concluí</option><option>Sim, já realizei tratamento</option></select></div>'+
+      '<div class="field full"><label>Qual resultado você gostaria de alcançar?</label><textarea id="pc-goal" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Como você gostaria de se sentir ou o que gostaria de conseguir após o tratamento?"></textarea></div>'+
+      '<div class="field full"><label>Existe alguma dúvida ou receio que gostaria de compartilhar? <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label><textarea id="pc-reason" style="width:100%;min-height:72px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: medo de dentista, experiências anteriores, dúvidas sobre o tratamento"></textarea></div>'+
+    '</div><div class="patient-actions"><span class="mini-note">Essas informações servem para personalizar o atendimento e não substituem anamnese ou avaliação clínica.</span><button class="btn btn-primary" data-action="preconsult-submit">Enviar pré-consulta</button></div></div></section>';
 }
 function submitPreConsult(){
   function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
-  var name=v('pc-name'), phone=v('pc-phone').replace(/\D/g,''), proc=v('pc-proc'), date=v('pc-date'), reason=v('pc-reason');
-  if(name.length<3){alert('Informe seu nome completo.');return;} if(phone.length!==11){alert('Informe telefone com DDD e 11 números.');return;} if(!reason){alert('Conte brevemente o motivo da consulta.');return;}
-  var c=marketingClient(); if(!c){alert('Serviço temporariamente indisponível.');return;}
-  c.rpc('public_submit_preconsulta',{p_name:name,p_phone:phone,p_procedure:proc||null,p_appointment_date:date||null,p_reason:reason}).then(function(r){if(r.error)throw r.error;state.preConsultMessage='Pré-consulta enviada. Nossa equipe poderá visualizar essas informações antes do atendimento.';logMarketingEvent('preconsulta_submit',{procedure:proc||''});render();}).catch(function(e){console.error(e);alert('Não foi possível enviar a pré-consulta. Verifique a atualização do Supabase.');});
+  var name=v('pc-name'),phone=v('pc-phone').replace(/\D/g,''),proc=v('pc-proc'),date=v('pc-date'),
+      concern=v('pc-concern'),since=v('pc-since'),previous=v('pc-previous'),goal=v('pc-goal'),reason=v('pc-reason');
+  if(name.length<3){alert('Informe seu nome completo.');return;}
+  if(phone.length!==11){alert('Informe telefone com DDD e 11 números.');return;}
+  if(!concern){alert('Conte o que mais incomoda você hoje.');return;}
+  if(!goal){alert('Conte qual resultado gostaria de alcançar.');return;}
+  var brief=[
+    'O QUE MAIS INCOMODA: '+concern,
+    'HÁ QUANTO TEMPO: '+(since||'Não informado'),
+    'JÁ PROCUROU TRATAMENTO: '+(previous||'Não informado'),
+    'RESULTADO QUE DESEJA: '+goal,
+    'DÚVIDAS / RECEIOS / OUTRAS INFORMAÇÕES: '+(reason||'Não informado')
+  ].join('\n\n');
+  var c=marketingClient();if(!c){alert('Serviço temporariamente indisponível.');return;}
+  c.rpc('public_submit_preconsulta',{p_name:name,p_phone:phone,p_procedure:proc||null,p_appointment_date:date||null,p_reason:brief}).then(function(r){
+    if(r.error)throw r.error;
+    state.preConsultMessage='Obrigado! Suas respostas foram enviadas para nossa equipe preparar um atendimento mais personalizado.';
+    logMarketingEvent('preconsulta_submit',{procedure:proc||'',commercial_discovery:true});render();
+  }).catch(function(e){console.error(e);alert('Não foi possível enviar a pré-consulta. Verifique a atualização do Supabase.');});
 }
 function loadPreConsultas(){
   var c=marketingClient();if(!c)return;state.preConsultLoading=true;render();
@@ -1591,7 +1616,7 @@ function renderPreConsultasAdmin(){
   var out='<div class="section-title">Pré-consultas <button class="btn btn-ghost btn-sm" data-action="preconsult-refresh">Atualizar</button></div>';
   if(state.preConsultLoading)return out+'<div class="loading">Carregando…</div>';
   var items=state.preConsultItems||[]; if(!items.length)return out+'<div class="empty-note">Nenhuma pré-consulta recebida.</div>';
-  items.forEach(function(x){out+='<div class="preconsult-admin-item"><h3>'+esc(x.patient_name||'Paciente')+'</h3><div class="meta"><span>'+esc(x.phone||'')+'</span>'+(x.procedure_id?'<span>'+esc(procById(x.procedure_id).name)+'</span>':'')+(x.appointment_date?'<span>Consulta: '+dayDisplay(x.appointment_date)+'</span>':'')+'<span>Recebido: '+new Date(x.created_at).toLocaleString('pt-BR')+'</span></div><div>'+esc(x.reason||'')+'</div><div class="row-actions" style="margin-top:10px">'+(x.status!=='revisado'?'<button class="btn btn-primary btn-sm" data-action="preconsult-reviewed" data-id="'+escAttr(x.id)+'">Marcar revisado</button>':'<span class="pill realizado">Revisado</span>')+'</div></div>';});return out;
+  items.forEach(function(x){out+='<div class="preconsult-admin-item"><h3>'+esc(x.patient_name||'Paciente')+'</h3><div class="meta"><span>'+esc(x.phone||'')+'</span>'+(x.procedure_id?'<span>'+esc(procById(x.procedure_id).name)+'</span>':'')+(x.appointment_date?'<span>Consulta: '+dayDisplay(x.appointment_date)+'</span>':'')+'<span>Recebido: '+new Date(x.created_at).toLocaleString('pt-BR')+'</span></div><div style="white-space:pre-line;line-height:1.65;background:var(--grey-soft);padding:12px;border-radius:10px;margin-top:10px">'+esc(x.reason||'')+'</div><div class="row-actions" style="margin-top:10px">'+(x.status!=='revisado'?'<button class="btn btn-primary btn-sm" data-action="preconsult-reviewed" data-id="'+escAttr(x.id)+'">Marcar revisado</button>':'<span class="pill realizado">Revisado</span>')+'</div></div>';});return out;
 }
 function markPreConsultReviewed(id){var c=marketingClient();if(!c)return;c.from('pre_consultas').update({status:'revisado',reviewed_at:new Date().toISOString()}).eq('id',id).then(function(r){if(r.error)throw r.error;loadPreConsultas();}).catch(function(){alert('Não foi possível atualizar.');});}
 function loadMarketing(){
@@ -1842,8 +1867,15 @@ function renderPatient(){
 
   else if(b.step===6){
     var proc3 = procById(b.procedureId), prof3 = profById(b.professionalId);
-    out += '<h3 style="margin-top:0;">6. Pré-consulta e confirmação</h3><p style="color:var(--ink-soft);font-size:13px">Conte brevemente o principal motivo da sua consulta. Essa informação ajuda nossa equipe a preparar seu atendimento e não substitui a anamnese nem a avaliação clínica.</p>';
-    out += '<div class="field"><label>Motivo da consulta / principal dúvida</label><textarea id="booking-pre-reason" style="width:100%;min-height:100px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: quero avaliar um implante, estou com dor, gostaria de melhorar meu sorriso...">'+esc(b.preReason||'')+'</textarea></div>';
+    out += '<h3 style="margin-top:0;">6. Pré-consulta personalizada</h3>'+
+      '<p style="color:var(--ink-soft);font-size:13px;line-height:1.6">Queremos entender não apenas o procedimento, mas o que realmente trouxe você até nós. Suas respostas ajudam os doutores a preparar uma consulta mais personalizada e focada no resultado que você deseja.</p>';
+    out += '<div class="preconsult-grid">'+
+      '<div class="field full"><label>O que mais incomoda você no seu sorriso ou na sua saúde bucal hoje?</label><textarea id="booking-pre-concern" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: um dente ausente, aparência dos dentes, dor, dificuldade para mastigar...">'+esc(b.preConcern||'')+'</textarea></div>'+
+      '<div class="field"><label>Há quanto tempo isso incomoda você?</label><select id="booking-pre-since"><option value="">Selecione</option><option '+(b.preSince==='Menos de 1 mês'?'selected':'')+'>Menos de 1 mês</option><option '+(b.preSince==='1 a 6 meses'?'selected':'')+'>1 a 6 meses</option><option '+(b.preSince==='6 meses a 1 ano'?'selected':'')+'>6 meses a 1 ano</option><option '+(b.preSince==='Mais de 1 ano'?'selected':'')+'>Mais de 1 ano</option><option '+(b.preSince==='Há vários anos'?'selected':'')+'>Há vários anos</option></select></div>'+
+      '<div class="field"><label>Já procurou tratamento anteriormente?</label><select id="booking-pre-previous"><option value="">Selecione</option><option '+(b.prePrevious==='Não'?'selected':'')+'>Não</option><option '+(b.prePrevious==='Sim, mas não iniciei'?'selected':'')+'>Sim, mas não iniciei</option><option '+(b.prePrevious==='Sim, iniciei e não concluí'?'selected':'')+'>Sim, iniciei e não concluí</option><option '+(b.prePrevious==='Sim, já realizei tratamento'?'selected':'')+'>Sim, já realizei tratamento</option></select></div>'+
+      '<div class="field full"><label>Qual resultado você gostaria de alcançar?</label><textarea id="booking-pre-goal" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: voltar a sorrir sem vergonha, mastigar melhor, eliminar a dor, deixar os dentes mais alinhados e naturais...">'+esc(b.preGoal||'')+'</textarea></div>'+
+      '<div class="field full"><label>Existe alguma dúvida, receio ou informação que gostaria que a equipe soubesse antes da consulta? <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label><textarea id="booking-pre-reason" style="width:100%;min-height:76px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: medo de dentista, dúvida sobre etapas do tratamento, experiência anterior...">'+esc(b.preReason||'')+'</textarea></div>'+
+    '</div>';
     out += '<div class="card" style="background:var(--grey-soft);border:none;margin-top:16px;"><div class="summary-line"><span>Procedimento</span><strong>'+proc3.name+'</strong></div><div class="summary-line"><span>Profissional</span><strong>'+prof3.name+'</strong></div><div class="summary-line"><span>Data e hora</span><strong>'+fullDisplay(b.date)+' às '+b.time+'</strong></div><div class="summary-line"><span>Paciente</span><strong>'+esc(b.name)+'</strong></div></div>';
   }
 
@@ -3214,7 +3246,7 @@ function attachEvents(){
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
     else if(a==='wiz-next'){ if(b.step===5){var ne=document.getElementById('inp-name'),pe=document.getElementById('inp-phone');b.name=ne?ne.value.trim():b.name;b.phone=pe?pe.value.replace(/\D/g,''):b.phone;if(b.name.length<3){b.error='Informe seu nome completo.';render();return;}if(b.phone.length!==11){b.error='Informe o telefone com DDD + 9 dígitos (11 números).';render();return;}b.error=null;} b.step = Math.min(6,b.step+1); }
     else if(a==='wiz-back'){ b.step = Math.max(1,b.step-1); }
-    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', done:false, error:null }; }
+    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', preConcern:'', preSince:'', prePrevious:'', preGoal:'', done:false, error:null }; }
     else if(a==='wiz-confirm'){ confirmBooking(); return; }
     else if(a==='do-lookup'){ doLookup(); return; }
     else if(a==='do-gate'){ doGate(); return; }
@@ -3446,8 +3478,19 @@ function deletePatient(id){
 
 function confirmBooking(){
   var b = state.booking;
-  var nameEl = document.getElementById('inp-name'), phoneEl = document.getElementById('inp-phone'), reasonEl=document.getElementById('booking-pre-reason');
-  if(reasonEl) b.preReason=reasonEl.value.trim();
+  var nameEl=document.getElementById('inp-name'), phoneEl=document.getElementById('inp-phone'),
+      reasonEl=document.getElementById('booking-pre-reason'),
+      concernEl=document.getElementById('booking-pre-concern'),
+      sinceEl=document.getElementById('booking-pre-since'),
+      previousEl=document.getElementById('booking-pre-previous'),
+      goalEl=document.getElementById('booking-pre-goal');
+  if(reasonEl)b.preReason=reasonEl.value.trim();
+  if(concernEl)b.preConcern=concernEl.value.trim();
+  if(sinceEl)b.preSince=sinceEl.value;
+  if(previousEl)b.prePrevious=previousEl.value;
+  if(goalEl)b.preGoal=goalEl.value.trim();
+  if(!b.preConcern){b.error='Conte o que mais incomoda você hoje para que possamos preparar melhor sua consulta.';render();return;}
+  if(!b.preGoal){b.error='Conte qual resultado você gostaria de alcançar.';render();return;}
   b.name = nameEl ? nameEl.value : b.name;
   var rawPhone = phoneEl ? phoneEl.value : b.phone;
   var digits = rawPhone.replace(/\D/g,'');
@@ -3479,7 +3522,13 @@ function confirmBooking(){
     writeLocalStore(store);
     resolveAutoRecallsForPhone(b.phone);
     logMarketingEvent('booking_confirmed',{procedure:b.procedureId,professional:b.professionalId});
-    if(b.preReason){var mc=marketingClient();if(mc){mc.rpc('public_submit_preconsulta',{p_name:b.name,p_phone:b.phone,p_procedure:b.procedureId||null,p_appointment_date:b.date||null,p_reason:b.preReason}).then(function(r){if(r.error)console.warn('Pré-consulta não registrada',r.error);else logMarketingEvent('preconsulta_submit',{procedure:b.procedureId||'',source:'booking'});}).catch(function(e){console.warn('Pré-consulta não registrada',e);});}}
+    if(b.preConcern||b.preGoal||b.preReason){var brief=[
+      'O QUE MAIS INCOMODA: '+(b.preConcern||'Não informado'),
+      'HÁ QUANTO TEMPO: '+(b.preSince||'Não informado'),
+      'JÁ PROCUROU TRATAMENTO: '+(b.prePrevious||'Não informado'),
+      'RESULTADO QUE DESEJA: '+(b.preGoal||'Não informado'),
+      'DÚVIDAS / RECEIOS / OUTRAS INFORMAÇÕES: '+(b.preReason||'Não informado')
+    ].join('\n\n');var mc=marketingClient();if(mc){mc.rpc('public_submit_preconsulta',{p_name:b.name,p_phone:b.phone,p_procedure:b.procedureId||null,p_appointment_date:b.date||null,p_reason:brief}).then(function(r){if(r.error)console.warn('Pré-consulta não registrada',r.error);else logMarketingEvent('preconsulta_submit',{procedure:b.procedureId||'',source:'booking'});}).catch(function(e){console.warn('Pré-consulta não registrada',e);});}}
     render();
   }).catch(function(error){
     console.error('Erro ao criar agendamento:', error);
