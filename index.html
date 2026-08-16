@@ -884,6 +884,52 @@
 @media(max-width:900px){.budget-shell{grid-template-columns:1fr}.budget-patients{max-height:230px}.budget-form{grid-template-columns:1fr 1fr}.budget-form .wide{grid-column:1/-1}.budget-summary{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.budget-form,.budget-summary{grid-template-columns:1fr}}
 
+
+/* ===== ALERTAS CLÍNICOS POR CATEGORIA ===== */
+.clinical-alert{position:relative;overflow:hidden;border-width:1px!important}
+.clinical-alert:before{content:"";width:5px;align-self:stretch;border-radius:99px;flex:0 0 5px}
+.clinical-alert .alert-icon{font-size:18px;line-height:1.1;flex:0 0 auto}
+.clinical-alert .alert-label{display:block;font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
+
+.clinical-alert.alert-allergy{background:#fde8ea!important;color:#a91f2d!important;border-color:#efadb4!important}
+.clinical-alert.alert-allergy:before{background:#d64550}.clinical-alert.alert-allergy .alert-label{color:#c62f3d}
+
+.clinical-alert.alert-anticoagulant{background:#f2e9fb!important;color:#713794!important;border-color:#d5b9e9!important}
+.clinical-alert.alert-anticoagulant:before{background:#8c4caf}.clinical-alert.alert-anticoagulant .alert-label{color:#7d419e}
+
+.clinical-alert.alert-medication{background:#e8f2fc!important;color:#235b8d!important;border-color:#b8d6f1!important}
+.clinical-alert.alert-medication:before{background:#397eb6}.clinical-alert.alert-medication .alert-label{color:#2d6fa8}
+
+.clinical-alert.alert-hypertension{background:#fff0e4!important;color:#a8541c!important;border-color:#f2c39c!important}
+.clinical-alert.alert-hypertension:before{background:#d9772c}.clinical-alert.alert-hypertension .alert-label{color:#bc6221}
+
+.clinical-alert.alert-diabetes{background:#fff7dc!important;color:#836316!important;border-color:#ead58d!important}
+.clinical-alert.alert-diabetes:before{background:#c59a24}.clinical-alert.alert-diabetes .alert-label{color:#987315}
+
+.clinical-alert.alert-pregnancy{background:#fdebf4!important;color:#9c3f70!important;border-color:#eebbd3!important}
+.clinical-alert.alert-pregnancy:before{background:#c85d91}.clinical-alert.alert-pregnancy .alert-label{color:#ac497b}
+
+.clinical-alert.alert-anamnesis{background:#fff8dc!important;color:#7e6518!important;border-color:#eadb95!important}
+.clinical-alert.alert-anamnesis:before{background:#d2ad31}.clinical-alert.alert-anamnesis .alert-label{color:#987a1e}
+
+.clinical-alert.alert-contract{background:#e9f7f5!important;color:#176d65!important;border-color:#a9ddd6!important}
+.clinical-alert.alert-contract:before{background:#249b90}.clinical-alert.alert-contract .alert-label{color:#18796f}
+
+.clinical-alert.alert-terms{background:#eef0ff!important;color:#4a56a2!important;border-color:#c6caf1!important}
+.clinical-alert.alert-terms:before{background:#6975c6}.clinical-alert.alert-terms .alert-label{color:#5561b0}
+
+.clinical-alert.alert-ok{background:#e8f7ef!important;color:#20704b!important;border-color:#b3dfc7!important}
+.clinical-alert.alert-ok:before{background:#34a671}
+
+.signature-status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}
+.signature-status{padding:11px 12px;border-radius:11px;border:1px solid var(--border);font-size:12px;font-weight:750}
+.signature-status strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.signature-status.pending-anamnesis{background:#fff8dc;border-color:#eadb95;color:#7e6518}
+.signature-status.pending-contract{background:#e9f7f5;border-color:#a9ddd6;color:#176d65}
+.signature-status.pending-terms{background:#eef0ff;border-color:#c6caf1;color:#4a56a2}
+.signature-status.signed{background:#e8f7ef;border-color:#b3dfc7;color:#20704b}
+@media(max-width:650px){.signature-status-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -1525,7 +1571,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.0 · orçamentos dente a dente · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.1 · alertas clínicos por cor · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -1983,23 +2029,29 @@ function clinicalAlerts(){
   var r=state.recordData.prontuario||{}, alerts=[];
   var patient=state.recordPatientId?patientById(state.recordPatientId):null;
   var sig=patient&&patient.signatures?patient.signatures:{anamnesis:false,contract:false,terms:false};
-  if(r.alergias&&r.alergias.trim()) alerts.push({text:'Alergias: '+r.alergias,kind:'danger'});
-  if(r.anticoagulante) alerts.push({text:'Paciente em uso de anticoagulante.',kind:'danger'});
-  if(r.hipertensao) alerts.push({text:'Hipertensão relatada.',kind:'warning'});
-  if(r.diabetes) alerts.push({text:'Diabetes relatado.',kind:'warning'});
-  if(r.gestante) alerts.push({text:'Paciente gestante.',kind:'warning'});
-  if(r.medicamentos&&r.medicamentos.trim()) alerts.push({text:'Medicamentos em uso: '+r.medicamentos,kind:'warning'});
+
+  if(r.alergias&&r.alergias.trim()) alerts.push({label:'ALERGIA',text:'Alergias: '+r.alergias,kind:'allergy',icon:'⚠'});
+  if(r.anticoagulante) alerts.push({label:'ANTICOAGULANTE',text:'Paciente em uso de anticoagulante.',kind:'anticoagulant',icon:'🩸'});
+  if(r.medicamentos&&r.medicamentos.trim()) alerts.push({label:'MEDICAÇÃO',text:'Medicamentos em uso: '+r.medicamentos,kind:'medication',icon:'💊'});
+  if(r.hipertensao) alerts.push({label:'HIPERTENSÃO',text:'Hipertensão relatada.',kind:'hypertension',icon:'♥'});
+  if(r.diabetes) alerts.push({label:'DIABETES',text:'Diabetes relatado.',kind:'diabetes',icon:'●'});
+  if(r.gestante) alerts.push({label:'GESTAÇÃO',text:'Paciente gestante.',kind:'pregnancy',icon:'✦'});
+
   if(patient){
-    if(!sig.anamnesis) alerts.push({text:'Anamnese ainda sem confirmação de assinatura.',kind:'warning'});
-    if(!sig.contract) alerts.push({text:'Contrato ainda sem confirmação de assinatura.',kind:'warning'});
-    if(!sig.terms) alerts.push({text:'Termos / consentimentos ainda sem confirmação de assinatura.',kind:'warning'});
+    if(!sig.anamnesis) alerts.push({label:'ASSINATURA · ANAMNESE',text:'Anamnese ainda sem confirmação de assinatura.',kind:'anamnesis',icon:'✎'});
+    if(!sig.contract) alerts.push({label:'ASSINATURA · CONTRATO',text:'Contrato ainda sem confirmação de assinatura.',kind:'contract',icon:'▣'});
+    if(!sig.terms) alerts.push({label:'ASSINATURA · TERMOS',text:'Termos / consentimentos ainda sem confirmação de assinatura.',kind:'terms',icon:'✓'});
   }
   return alerts;
 }
 function renderClinicalAlerts(){
   var a=clinicalAlerts();
-  if(!a.length) return '<div class="clinical-alerts"><div class="clinical-alert" style="background:var(--success-soft);color:var(--teal-deep);border-color:rgba(32,149,132,.18);"><span>✓</span><span><strong>Alertas clínicos:</strong> nenhum alerta registrado para este paciente.</span></div></div>';
-  return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':'')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
+  if(!a.length){
+    return '<div class="clinical-alerts"><div class="clinical-alert alert-ok"><span class="alert-icon">✓</span><span><span class="alert-label">SEM PENDÊNCIAS</span><strong>Alertas clínicos:</strong> nenhum alerta ou documento pendente registrado para este paciente.</span></div></div>';
+  }
+  return '<div class="clinical-alerts">'+a.map(function(x){
+    return '<div class="clinical-alert alert-'+x.kind+'"><span class="alert-icon">'+x.icon+'</span><span><span class="alert-label">'+esc(x.label)+'</span>'+esc(x.text)+'</span></div>';
+  }).join('')+'</div>';
 }
 
 
@@ -3049,7 +3101,12 @@ function renderAnamnesis(){
 function patientSignatureState(p){var s=(p&&p.signatures)||{};return {anamnesis:!!s.anamnesis,contract:!!s.contract,terms:!!s.terms,notes:s.notes||'',updatedAt:s.updatedAt||''};}
 function renderPatientReminders(p){
   var s=patientSignatureState(p),missing=[];if(!s.anamnesis)missing.push('Anamnese');if(!s.contract)missing.push('Contrato');if(!s.terms)missing.push('Termos / consentimentos');
-  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px"><h3 style="margin-top:0">Lembretes de documentos e assinaturas</h3><p style="font-size:13px;color:var(--ink-soft)">Marque o OK somente depois que o paciente assinar presencialmente. O que estiver pendente ficará destacado no topo do prontuário.</p>'+(missing.length?'<div class="alert-card">Pendentes: <strong>'+esc(missing.join(', '))+'</strong></div>':'<div class="good-card">✓ Documentos obrigatórios confirmados como assinados.</div>')+'</div>';
+  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px"><h3 style="margin-top:0">Lembretes de documentos e assinaturas</h3><p style="font-size:13px;color:var(--ink-soft)">Cada tipo de documento tem uma cor própria para permitir identificação imediata no prontuário.</p>'+
+    '<div class="signature-status-grid">'+
+      '<div class="signature-status '+(s.anamnesis?'signed':'pending-anamnesis')+'"><strong>Anamnese</strong>'+(s.anamnesis?'✓ Assinada':'⚠ Assinatura pendente')+'</div>'+
+      '<div class="signature-status '+(s.contract?'signed':'pending-contract')+'"><strong>Contrato</strong>'+(s.contract?'✓ Assinado':'⚠ Assinatura pendente')+'</div>'+
+      '<div class="signature-status '+(s.terms?'signed':'pending-terms')+'"><strong>Termos / consentimentos</strong>'+(s.terms?'✓ Assinados':'⚠ Assinatura pendente')+'</div>'+
+    '</div></div>';
   out+='<div class="card"><div class="record-checks" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><label class="record-check"><input id="sig-anamnesis" type="checkbox" '+(s.anamnesis?'checked':'')+'> Anamnese assinada</label><label class="record-check"><input id="sig-contract" type="checkbox" '+(s.contract?'checked':'')+'> Contrato assinado</label><label class="record-check"><input id="sig-terms" type="checkbox" '+(s.terms?'checked':'')+'> Termos / consentimentos assinados</label></div><div class="field" style="margin-top:14px"><label>Observações</label><textarea id="sig-notes" class="record-textarea" placeholder="Ex.: termo de implante entregue para assinatura no retorno">'+esc(s.notes)+'</textarea></div>'+(s.updatedAt?'<div class="mini-note">Última atualização: '+new Date(s.updatedAt).toLocaleString('pt-BR')+'</div>':'')+'<div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-patient-reminders">Salvar lembretes</button></div></div>';return out;
 }
 function savePatientReminders(){
