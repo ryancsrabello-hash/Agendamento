@@ -990,6 +990,19 @@
 .stock-alert.critical{background:#fff0e4!important;color:#a8541c!important}
 .stock-alert.low{background:#fff8dc!important;color:#7e6518!important}
 
+
+/* ===== FORMAÇÃO DE PREÇO: VALOR REAL x PERCENTUAL ===== */
+.cost-mode-row{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:7px;align-items:end}
+.cost-mode{padding:8px 7px;border-radius:8px;border:1px solid var(--border);font-size:10.5px;font-weight:800;background:#fff}
+.cost-mode.mode-fixed{background:#e9f7f5;border-color:#a9ddd6;color:#176d65}
+.cost-mode.mode-percent{background:#eef0ff;border-color:#c6caf1;color:#4a56a2}
+.cost-origin{display:inline-flex;margin-left:5px;padding:2px 6px;border-radius:999px;font-size:9px;font-weight:900;vertical-align:middle}
+.cost-origin.fixed{background:#e9f7f5;color:#176d65}.cost-origin.percent{background:#eef0ff;color:#4a56a2}
+.price-breakdown{margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.price-breakdown .summary-line{padding:9px 12px;background:#fff}
+.price-breakdown .summary-line:nth-child(even){background:var(--grey-soft)}
+.mode-help{padding:12px 14px;border-radius:11px;background:#f7f9fb;border:1px solid var(--border);font-size:11.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:13px}
+
 </style>
 </head>
 <body>
@@ -1450,29 +1463,114 @@ function pricingLibrary(){
     ['gengivoplastia','Gengivoplastia','Periodontia',90,95,0,0,50,18,24,15,20,10,12,12,750]
   ];
 }
+
+function pricingCostKeys(){
+  return ['materials','lab','components','clinicalTime','sterilization','structure','admin','maintenance','waste','marketing','risk'];
+}
+function defaultCostModes(){
+  return {
+    materials:'fixed',
+    lab:'fixed',
+    components:'fixed',
+    clinicalTime:'fixed',
+    sterilization:'fixed',
+    structure:'percent',
+    admin:'percent',
+    maintenance:'percent',
+    waste:'percent',
+    marketing:'percent',
+    risk:'percent'
+  };
+}
+function convertLegacyIndirectToPercent(p,referencePrice){
+  var ref=Math.max(1,n(referencePrice||p.suggested||p.finalPrice||1)), modes=defaultCostModes();
+  ['structure','admin','maintenance','waste','marketing','risk'].forEach(function(k){
+    if(modes[k]==='percent')p[k]=Math.round((n(p[k])/ref*100)*100)/100;
+  });
+  p.costModes=modes;
+  p.pricingModelVersion=2;
+  return p;
+}
 function defaultProcedurePricing(){
   var out={};
   pricingLibrary().forEach(function(x){
-    out[x[0]]={id:x[0],name:x[1],specialty:x[2],minutes:x[3],
+    var p={id:x[0],name:x[1],specialty:x[2],minutes:x[3],
       materials:x[4],lab:x[5],components:x[6],clinicalTime:x[7],sterilization:x[8],
       structure:x[9],admin:x[10],maintenance:x[11],waste:x[12],marketing:x[13],risk:x[14],
       taxRate:12,financialRate:4.5,profitRate:25,suggested:x[15],finalPrice:x[15]};
+    out[x[0]]=convertLegacyIndirectToPercent(p,x[15]);
   });
   return out;
 }
+function normalizePricingRecord(base,incoming){
+  var p=Object.assign({},base||{},incoming||{});
+  if(!incoming || !incoming.costModes){
+    // Dados antigos eram todos registrados como R$. Mantemos esses dados como valores reais
+    // para não reinterpretar silenciosamente custos já salvos pelo usuário.
+    p.costModes={};
+    pricingCostKeys().forEach(function(k){p.costModes[k]='fixed';});
+    p.pricingModelVersion=2;
+  }else{
+    p.costModes=Object.assign({},defaultCostModes(),incoming.costModes||{});
+    p.pricingModelVersion=2;
+  }
+  return p;
+}
 function mergeProcedurePricing(v){
-  var d=defaultProcedurePricing(), x=v||{};
-  Object.keys(x).forEach(function(k){d[k]=Object.assign({},d[k]||{},x[k]||{});});
+  var d=defaultProcedurePricing(),x=v||{};
+  Object.keys(x).forEach(function(k){d[k]=normalizePricingRecord(d[k]||{},x[k]||{});});
   return d;
 }
 function pricingNumbers(p){
   p=p||{};
-  var base=n(p.materials)+n(p.lab)+n(p.components)+n(p.clinicalTime)+n(p.sterilization)+n(p.structure)+n(p.admin)+n(p.maintenance)+n(p.waste)+n(p.marketing)+n(p.risk);
-  var variableRate=n(p.taxRate)+n(p.financialRate);
-  var minimum=variableRate>=95?base:base/(1-variableRate/100);
-  var suggested=minimum/(1-Math.min(80,n(p.profitRate))/100);
-  return {base:base,minimum:minimum,suggested:suggested};
+  var modes=Object.assign({},defaultCostModes(),p.costModes||{}),
+      fixed=0,percentRate=0,details={fixed:[],percent:[]};
+
+  pricingCostKeys().forEach(function(k){
+    var val=Math.max(0,n(p[k]));
+    if(modes[k]==='percent'){
+      percentRate+=val;
+      details.percent.push({key:k,rate:val});
+    }else{
+      fixed+=val;
+      details.fixed.push({key:k,value:val});
+    }
+  });
+
+  var taxRate=Math.max(0,n(p.taxRate)),
+      financialRate=Math.max(0,n(p.financialRate)),
+      profitRate=Math.max(0,Math.min(80,n(p.profitRate))),
+      variableRate=percentRate+taxRate+financialRate,
+      minDen=1-variableRate/100,
+      suggestedDen=1-(variableRate+profitRate)/100;
+
+  var minimum=minDen<=0?0:fixed/minDen;
+  var suggested=suggestedDen<=0?0:fixed/suggestedDen;
+  var finalPrice=Math.max(0,n(p.finalPrice));
+  var basis=finalPrice>0?finalPrice:suggested;
+
+  return {
+    base:fixed,
+    fixedCost:fixed,
+    percentCostRate:percentRate,
+    taxRate:taxRate,
+    financialRate:financialRate,
+    variableRate:variableRate,
+    profitRate:profitRate,
+    minimum:minimum,
+    suggested:suggested,
+    finalPrice:finalPrice,
+    percentCostValue:basis*percentRate/100,
+    taxValue:basis*taxRate/100,
+    financialValue:basis*financialRate/100,
+    profitValue:basis*profitRate/100,
+    totalCostAtFinal:fixed+basis*(percentRate+taxRate+financialRate)/100,
+    marginAtFinal:basis-(fixed+basis*(percentRate+taxRate+financialRate)/100),
+    details:details,
+    basis:basis
+  };
 }
+
 function applyFinalProcedurePrices(pricing){
   if(!pricing)return;
   PROCEDURES.forEach(function(proc){
@@ -1789,7 +1887,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.9.8 · alertas inteligentes de estoque · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.10.0 · precificação R$ x percentual · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2749,81 +2847,98 @@ function renderFinancePricing(){
       selected=pricing[state.priceProcedure]||pricing.avaliacao,
       nums=pricingNumbers(selected),
       plist=Object.keys(pricing).map(function(k){return pricing[k];}),
+      modes=Object.assign({},defaultCostModes(),selected.costModes||{}),
       out='';
 
-  out+='<div class="section-title">Formação de preço <span style="font-size:12px;color:var(--ink-soft);font-weight:500;">custos, taxas, margem e valor praticado</span></div>';
+  var labels={
+    materials:'Materiais / insumos',
+    lab:'Laboratório / protético',
+    components:'Componentes / implante',
+    clinicalTime:'Hora clínica / equipe',
+    sterilization:'EPI + esterilização',
+    structure:'Estrutura / aluguel / utilidades',
+    admin:'Administrativo / software / contabilidade',
+    maintenance:'Manutenção + equipamentos',
+    waste:'RSS / limpeza / descarte',
+    marketing:'Marketing / aquisição',
+    risk:'Perdas / retrabalho / garantia'
+  };
+
+  out+='<div class="section-title">Formação de preço <span style="font-size:12px;color:var(--ink-soft);font-weight:500;">valor real x percentual sobre faturamento</span></div>';
 
   out+='<div class="price-kpis">'+
-    '<div class="card price-kpi"><div class="k">Custo base completo</div><div class="v">'+fmtMoney(nums.base)+'</div><div class="mini-note">Custos diretos + indiretos</div></div>'+
-    '<div class="card price-kpi"><div class="k">Preço mínimo sustentável</div><div class="v">'+fmtMoney(nums.minimum)+'</div><div class="mini-note">Após taxas e tributos configurados</div></div>'+
-    '<div class="card price-kpi"><div class="k">Preço sugerido</div><div class="v">'+fmtMoney(nums.suggested)+'</div><div class="mini-note">Considerando a margem alvo</div></div>'+
+    '<div class="card price-kpi"><div class="k">Custos em valor real</div><div class="v">'+fmtMoney(nums.fixedCost)+'</div><div class="mini-note">Valores fixos em R$ por procedimento</div></div>'+
+    '<div class="card price-kpi"><div class="k">Custos percentuais</div><div class="v">'+nums.percentCostRate.toFixed(2).replace(".",",")+'%</div><div class="mini-note">Além de tributos e taxas financeiras</div></div>'+
+    '<div class="card price-kpi"><div class="k">Preço mínimo sustentável</div><div class="v">'+fmtMoney(nums.minimum)+'</div><div class="mini-note">Cobre custos + percentuais + taxas</div></div>'+
+    '<div class="card price-kpi"><div class="k">Preço sugerido</div><div class="v">'+fmtMoney(nums.suggested)+'</div><div class="mini-note">Inclui margem alvo de '+nums.profitRate.toFixed(1).replace(".",",")+'%</div></div>'+
     '<div class="card price-kpi"><div class="k">Valor final praticado</div><div class="v">'+fmtMoney(n(selected.finalPrice))+'</div><div class="mini-note">Valor reconhecido pelo ERP</div></div>'+
   '</div>';
 
   out+='<div class="price-shell"><div class="card price-list">'+
     '<h3 style="margin-top:0;">Procedimentos</h3>'+
-    '<p class="mini-note">Selecione um procedimento para revisar sua composição financeira.</p>'+
+    '<p class="mini-note">Selecione um procedimento para revisar a composição financeira.</p>'+
     plist.map(function(p){
+      var z=pricingNumbers(p);
       return '<button class="price-proc '+(p.id===selected.id?'active':'')+'" data-action="price-select" data-id="'+p.id+'">'+
         '<strong>'+esc(p.name)+'</strong>'+
-        '<small>'+esc(p.specialty)+' · '+p.minutes+' min · final '+fmtMoney(n(p.finalPrice))+'</small>'+
+        '<small>'+esc(p.specialty)+' · '+p.minutes+' min · mínimo '+fmtMoney(z.minimum)+' · final '+fmtMoney(n(p.finalPrice))+'</small>'+
       '</button>';
     }).join('')+
   '</div>';
 
   out+='<div class="card"><h3 style="margin-top:0;">'+esc(selected.name)+'</h3>'+
-    '<div class="alert-card" style="margin-bottom:14px;">Esta análise pertence ao <strong>Financeiro</strong>. O Estoque continua responsável apenas por materiais, movimentações e reposição.</div>'+
+    '<div class="mode-help"><strong>Como ler:</strong> <span class="cost-origin fixed">R$ REAL</span> significa um custo previamente definido em reais para executar o procedimento. <span class="cost-origin percent">% DO PREÇO</span> significa que o custo acompanha o valor cobrado do paciente. O cálculo não soma percentuais como se fossem reais: eles entram na fórmula sobre o faturamento.</div>'+
     '<h4 style="margin:0 0 10px;">Custos diretos e indiretos</h4><div class="cost-grid">';
 
-  [
-    ['materials','Materiais / insumos'],
-    ['lab','Laboratório / protético'],
-    ['components','Componentes / implante'],
-    ['clinicalTime','Hora clínica / equipe'],
-    ['sterilization','EPI + esterilização'],
-    ['structure','Estrutura / aluguel / utilidades'],
-    ['admin','Administrativo / software / contabilidade'],
-    ['maintenance','Manutenção + equipamentos'],
-    ['waste','RSS / limpeza / descarte'],
-    ['marketing','Marketing / aquisição'],
-    ['risk','Perdas / retrabalho / garantia']
-  ].forEach(function(f){
-    out+='<div class="field"><label>'+f[1]+'</label>'+
-      '<input class="price-field" data-key="'+f[0]+'" type="number" step="0.01" min="0" value="'+n(selected[f[0]])+'">'+
-    '</div>';
+  pricingCostKeys().forEach(function(k){
+    var mode=modes[k]||'fixed',suffix=mode==='percent'?'%':'R$';
+    out+='<div class="field"><label>'+labels[k]+' <span class="cost-origin '+(mode==='percent'?'percent':'fixed')+'">'+(mode==='percent'?'% DO PREÇO':'R$ REAL')+'</span></label>'+
+      '<div class="cost-mode-row">'+
+        '<input class="price-field" data-key="'+k+'" type="number" step="0.01" min="0" value="'+n(selected[k])+'" placeholder="'+suffix+'">'+
+        '<select class="cost-mode '+(mode==='percent'?'mode-percent':'mode-fixed')+'" data-mode-key="'+k+'">'+
+          '<option value="fixed" '+(mode==='fixed'?'selected':'')+'>R$ REAL</option>'+
+          '<option value="percent" '+(mode==='percent'?'selected':'')+'>% DO PREÇO</option>'+
+        '</select>'+
+      '</div></div>';
   });
 
   out+='</div><h4>Taxas, provisões e margem</h4><div class="cost-grid">'+
-    '<div class="field"><label>Tributos / provisão (%)</label><input class="price-field" data-key="taxRate" type="number" step="0.1" min="0" value="'+n(selected.taxRate)+'"></div>'+
-    '<div class="field"><label>Taxas financeiras médias (%)</label><input class="price-field" data-key="financialRate" type="number" step="0.1" min="0" value="'+n(selected.financialRate)+'"></div>'+
-    '<div class="field"><label>Margem alvo (%)</label><input class="price-field" data-key="profitRate" type="number" step="0.1" min="0" max="80" value="'+n(selected.profitRate)+'"></div>'+
+    '<div class="field"><label>Tributos / provisão <span class="cost-origin percent">% DO PREÇO</span></label><input class="price-field" data-key="taxRate" type="number" step="0.1" min="0" value="'+n(selected.taxRate)+'"></div>'+
+    '<div class="field"><label>Taxas financeiras médias <span class="cost-origin percent">% DO PREÇO</span></label><input class="price-field" data-key="financialRate" type="number" step="0.1" min="0" value="'+n(selected.financialRate)+'"></div>'+
+    '<div class="field"><label>Margem alvo <span class="cost-origin percent">% DO PREÇO</span></label><input class="price-field" data-key="profitRate" type="number" step="0.1" min="0" max="80" value="'+n(selected.profitRate)+'"></div>'+
+  '</div>';
+
+  out+='<div class="price-breakdown">';
+  pricingCostKeys().forEach(function(k){
+    var mode=modes[k]||'fixed',val=n(selected[k]),effective=mode==='percent'?nums.basis*val/100:val;
+    out+='<div class="summary-line"><span>'+labels[k]+' <span class="cost-origin '+(mode==='percent'?'percent':'fixed')+'">'+(mode==='percent'?val.toFixed(2).replace(".",",")+'%':'R$')+'</span></span><strong>'+fmtMoney(effective)+'</strong></div>';
+  });
+  out+='<div class="summary-line"><span>Tributos ('+nums.taxRate.toFixed(2).replace(".",",")+'%)</span><strong>'+fmtMoney(nums.taxValue)+'</strong></div>'+
+    '<div class="summary-line"><span>Taxas financeiras ('+nums.financialRate.toFixed(2).replace(".",",")+'%)</span><strong>'+fmtMoney(nums.financialValue)+'</strong></div>'+
+    '<div class="summary-line"><span><strong>Total de custos estimado no valor final</strong></span><strong>'+fmtMoney(nums.totalCostAtFinal)+'</strong></div>'+
+    '<div class="summary-line"><span>Resultado antes de outras variações</span><strong>'+fmtMoney(nums.marginAtFinal)+'</strong></div>'+
   '</div>';
 
   out+='<div class="cost-total">'+
-    '<div class="summary-line"><span>Materiais / insumos</span><strong>'+fmtMoney(n(selected.materials))+'</strong></div>'+
-    '<div class="summary-line"><span>Laboratório / protético</span><strong>'+fmtMoney(n(selected.lab))+'</strong></div>'+
-    '<div class="summary-line"><span>Componentes</span><strong>'+fmtMoney(n(selected.components))+'</strong></div>'+
-    '<div class="summary-line"><span>Hora clínica / equipe</span><strong>'+fmtMoney(n(selected.clinicalTime))+'</strong></div>'+
-    '<div class="summary-line"><span>Demais custos indiretos</span><strong>'+fmtMoney(
-      n(selected.sterilization)+n(selected.structure)+n(selected.admin)+n(selected.maintenance)+n(selected.waste)+n(selected.marketing)+n(selected.risk)
-    )+'</strong></div>'+
-    '<div class="summary-line"><span><strong>Custo base completo</strong></span><strong>'+fmtMoney(nums.base)+'</strong></div>'+
+    '<div class="summary-line"><span>Custos fixos / reais</span><strong>'+fmtMoney(nums.fixedCost)+'</strong></div>'+
+    '<div class="summary-line"><span>Custos variáveis do procedimento</span><strong>'+nums.percentCostRate.toFixed(2).replace(".",",")+'%</strong></div>'+
+    '<div class="summary-line"><span>Tributos + taxas financeiras</span><strong>'+(nums.taxRate+nums.financialRate).toFixed(2).replace(".",",")+'%</strong></div>'+
+    '<div class="summary-line"><span>Percentual total antes da margem</span><strong>'+nums.variableRate.toFixed(2).replace(".",",")+'%</strong></div>'+
     '<div class="summary-line"><span>Preço mínimo sustentável</span><strong>'+fmtMoney(nums.minimum)+'</strong></div>'+
-    '<div class="summary-line"><span>Preço sugerido calculado</span><strong>'+fmtMoney(nums.suggested)+'</strong></div>'+
+    '<div class="summary-line"><span>Preço sugerido com margem alvo</span><strong>'+fmtMoney(nums.suggested)+'</strong></div>'+
   '</div>';
 
   out+='<div class="price-final">'+
-    '<div class="field"><label><strong>VALOR FINAL PRATICADO</strong> — valor que o ERP utiliza para este procedimento</label>'+
+    '<div class="field"><label><strong>VALOR FINAL PRATICADO</strong> <span class="cost-origin fixed">R$ DEFINIDO</span> — valor usado pelo ERP e pelo agendamento</label>'+
       '<input id="price-final" type="number" step="0.01" min="0" value="'+n(selected.finalPrice)+'">'+
     '</div>'+
-    '<div class="row-actions"><button class="btn btn-primary" data-action="price-save">Salvar formação de preço</button></div>'+
+    '<div class="row-actions"><button class="btn btn-primary" data-action="price-save">Salvar e recalcular</button></div>'+
   '</div>'+
-  '<p class="price-note">Os valores iniciais são referências gerenciais editáveis. Substitua-os pelos custos reais do Instituto conforme fornecedores, laboratório, equipamentos, estrutura, tributação e meios de pagamento. O valor final praticado é independente do preço sugerido e permanece sob controle administrativo.</p>'+
+  '<p class="price-note">Fórmula: custos em R$ são somados diretamente. Custos marcados como percentual, tributos e taxas financeiras são tratados como parcelas do preço cobrado. O preço sugerido considera também a margem alvo como percentual da receita, evitando misturar R$ e % no mesmo somatório.</p>'+
   '</div></div>';
 
   return out;
 }
-
 function renderFinanceiro(){
   var ref=monthRef(), f=financeSummary(ref), out='<div class="section-title">Financeiro inteligente</div>'+monthPicker()+financeTabs();
   if(state.financeMessage) out+='<div class="good-card" style="margin-bottom:14px;">'+esc(state.financeMessage)+'</div>';
@@ -2946,11 +3061,20 @@ function stockValue(){return (store.inventory||[]).reduce(function(a,i){return a
 function procedureMaterialCost(procId){var rec=(store.procedureRecipes||{})[procId]||[];return rec.reduce(function(sum,r){var item=(store.inventory||[]).find(function(i){return i.id===r.itemId;});return sum+(item?n(item.cost)*n(r.qty):0);},0);}
 
 function saveProcedurePricing(){
-  var id=state.priceProcedure, pricing=mergeProcedurePricing(store.procedurePricing), p=Object.assign({},pricing[id]||{});
+  var id=state.priceProcedure,pricing=mergeProcedurePricing(store.procedurePricing),p=Object.assign({},pricing[id]||{});
+  p.costModes=Object.assign({},defaultCostModes(),p.costModes||{});
   document.querySelectorAll('.price-field').forEach(function(el){p[el.dataset.key]=n(el.value);});
-  var final=document.getElementById('price-final'); p.finalPrice=final?n(final.value):n(p.finalPrice);
-  pricing[id]=p; store.procedurePricing=pricing; applyFinalProcedurePrices(pricing);
-  state.financeMessage='Precificação de '+(p.name||id)+' salva. O valor final foi aplicado ao ERP.';
+  document.querySelectorAll('[data-mode-key]').forEach(function(el){
+    p.costModes[el.dataset.modeKey]=el.value==='percent'?'percent':'fixed';
+  });
+  var final=document.getElementById('price-final');
+  p.finalPrice=final?n(final.value):n(p.finalPrice);
+  p.pricingModelVersion=2;
+  pricing[id]=p;
+  store.procedurePricing=pricing;
+  applyFinalProcedurePrices(pricing);
+  var z=pricingNumbers(p);
+  state.financeMessage='Precificação de '+(p.name||id)+' salva. Preço mínimo: '+fmtMoney(z.minimum)+' · sugerido: '+fmtMoney(z.suggested)+' · final praticado: '+fmtMoney(p.finalPrice)+'.';
   persist();
 }
 
@@ -3744,6 +3868,11 @@ function renderRelatorios(){
 function attachEvents(){
   var root = document.getElementById('root');
   root.onchange = function(e){
+    var modeEl=e.target.closest('[data-mode-key]');
+    if(modeEl){
+      modeEl.className='cost-mode '+(modeEl.value==='percent'?'mode-percent':'mode-fixed');
+      return;
+    }
     var t=e.target.closest('[data-change]');
     if(!t)return;
     if(t.dataset.change==='budget-status'){t.className='status-select '+budgetStatusClass(t.value);setBudgetStatus(t.dataset.id,t.value);return;}
