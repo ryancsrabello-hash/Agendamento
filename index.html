@@ -2526,7 +2526,7 @@ function renderCRM(){
   var rows=crmPatientRows(), tab=state.crmTab||'inativos', today=todayISO();
   if(tab==='inativos') rows=rows.filter(function(r){return !r.future&&r.days>=180;});
   else if(tab==='oportunidades') rows=rows.filter(function(r){return !r.future&&(r.pending>0||r.score>=50);});
-  else if(tab==='feedback') rows=rows.filter(function(r){return r.last&&!r.future;});
+  else if(tab==='feedback') rows=rows.filter(function(r){return !!r.last;});
   else if(tab==='contatados') rows=rows.filter(function(r){return !!r.contact;});
   rows.sort(function(a,b){return b.score-a.score;});
   var inactive=crmPatientRows().filter(function(r){return !r.future&&r.days>=180;}).length;
@@ -2540,24 +2540,30 @@ function renderCRM(){
     '<div class="card crm-kpi"><div class="k">Prioridade alta</div><div class="v">'+high+'</div></div>'+
     '<div class="card crm-kpi"><div class="k">Contatos registrados</div><div class="v">'+contacted+'</div></div>'+
     '<div class="card crm-kpi"><div class="k">Retornos / agendamentos</div><div class="v">'+returned+'</div></div></div>';
-  out+='<div class="crm-tabs">'+[['inativos','Inativos'],['oportunidades','Oportunidades'],['feedback','Feedback'],['contatados','Histórico de contatos']].map(function(x){return '<button class="btn '+(tab===x[0]?'btn-primary':'btn-ghost')+'" data-action="crm-tab" data-id="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="crm-tabs">'+[['inativos','Inativos'],['oportunidades','Oportunidades'],['feedback','Pesquisa de experiência'],['contatados','Histórico de contatos']].map(function(x){return '<button class="btn '+(tab===x[0]?'btn-primary':'btn-ghost')+'" data-action="crm-tab" data-id="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
   out+='<div class="card"><div class="crm-row head"><div>Paciente</div><div>Última visita</div><div>Tempo sem retorno</div><div>Prioridade</div><div>Último contato</div><div>Ações</div></div>';
   if(!rows.length)out+='<div class="empty-state">Nenhum paciente nesta categoria.</div>';
   rows.forEach(function(r){
-    var c=r.contact, phone=normalizePhone(r.p.phone), wa=phone?('https://wa.me/55'+phone+'?text='+encodeURIComponent('Olá, '+(r.p.name||'')+'! Aqui é do Instituto Lins Rabello. Estamos entrando em contato para saber como foi sua experiência conosco e acompanhar sua saúde bucal. Já faz algum tempo desde sua última visita e ficaremos felizes em receber você novamente.')):'#';
+    var c=r.contact, phone=normalizePhone(r.p.phone);
+    var feedbackMsg='Olá, '+(r.p.name||'')+'! Tudo bem? 💙\n\nAqui é da equipe do Instituto Lins Rabello. Estamos fazendo um acompanhamento com nossos pacientes e gostaríamos muito de ouvir você.\n\nComo foi sua experiência conosco? Queremos saber sua impressão sobre o atendimento, acolhimento, organização, conforto e também se existe algo que poderíamos melhorar. Sua opinião é muito importante para continuarmos evoluindo e oferecendo uma experiência cada vez melhor.\n\nSe puder, responda esta mensagem contando como foi seu atendimento — pode ser um elogio, sugestão, crítica ou qualquer ponto que considere importante. 😊';
+    if(!r.future && r.days>=180){
+      feedbackMsg+='\n\nPercebemos também que já faz algum tempo desde sua última visita. Se desejar, podemos verificar os próximos horários disponíveis para uma nova avaliação e ajudar você a manter seus cuidados em dia. Será um prazer receber você novamente. 💙';
+    }
+    feedbackMsg+='\n\nInstituto Lins Rabello — cuidado, tecnologia e atenção em cada sorriso.';
+    var wa=phone?('https://wa.me/55'+phone+'?text='+encodeURIComponent(feedbackMsg)):'#';
     out+='<div class="crm-row"><div><strong>'+esc(r.p.name||'Paciente')+'</strong><br><span class="mini-note">'+esc(r.p.phone||'Sem telefone')+(r.pending>0?' · pendência '+fmtMoney(r.pending):'')+'</span></div>'+
       '<div>'+(r.last?dayDisplay(r.last.date):'Sem histórico')+'</div><div>'+(r.days===9999?'—':r.days+' dias')+'</div><div><span class="crm-priority '+r.priority+'">'+r.priority.toUpperCase()+'</span></div>'+
       '<div>'+(c?esc(c.date)+' · '+esc(c.result||'contato'):'Nunca contatado')+'</div><div class="row-actions">'+
       (phone?'<a class="btn btn-primary btn-sm" href="'+wa+'" target="_blank" rel="noopener">WhatsApp</a>':'')+
       '<button class="btn btn-ghost btn-sm" data-action="crm-contact" data-id="'+escAttr(r.p.id)+'">Registrar contato</button>'+
-      '<button class="btn btn-ghost btn-sm" data-action="crm-feedback" data-id="'+escAttr(r.p.id)+'">Feedback</button></div></div>';
+      '<button class="btn btn-ghost btn-sm" data-action="crm-feedback" data-id="'+escAttr(r.p.id)+'">Registrar impressão</button></div></div>';
   });
-  out+='</div><p class="mini-note">O módulo apenas organiza oportunidades e contatos. Respeite pedidos de não contato e registre consentimento/opt-out quando aplicável.</p>';
+  out+='</div><p class="mini-note">A Pesquisa de experiência pode ser enviada a qualquer paciente com atendimento anterior. Para pacientes inativos, a mensagem acrescenta automaticamente um convite para remarcar uma avaliação. Respeite pedidos de não contato e registre consentimento/opt-out quando aplicável.</p>';
   return out;
 }
 function crmRegisterContact(patientId,feedbackOnly){
   var p=patientById(patientId); if(!p)return;
-  var result=prompt(feedbackOnly?'Como foi o feedback? (positivo, neutro, negativo, sem resposta)':'Resultado do contato? (sem resposta, interessado, agendou, não tem interesse, não contatar)','sem resposta');
+  var result=prompt(feedbackOnly?'Qual foi a impressão do paciente? (excelente, positiva, neutra, negativa, crítica, sugestão, sem resposta)':'Resultado do contato? (sem resposta, interessado, agendou, não tem interesse, não contatar)','sem resposta');
   if(result===null)return;
   var note=prompt('Observação do contato (opcional):','')||'';
   store.crmContacts=store.crmContacts||[];
