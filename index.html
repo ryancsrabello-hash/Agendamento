@@ -1003,6 +1003,24 @@
 .price-breakdown .summary-line:nth-child(even){background:var(--grey-soft)}
 .mode-help{padding:12px 14px;border-radius:11px;background:#f7f9fb;border:1px solid var(--border);font-size:11.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:13px}
 
+
+/* ===== LABORATÓRIO & PRÓTESE · ETAPAS VISUAIS E PERSISTENTES ===== */
+.lab-stage-group{display:flex;flex-wrap:wrap;gap:5px;min-width:250px}
+.lab-stage-btn{
+  border:1px solid var(--border);border-radius:999px;padding:6px 9px;
+  font-size:10px;font-weight:850;cursor:pointer;opacity:.72;transition:.15s;
+}
+.lab-stage-btn:hover{opacity:1;transform:translateY(-1px)}
+.lab-stage-btn.active{opacity:1;box-shadow:0 0 0 2px #fff,0 0 0 4px currentColor}
+.lab-stage-btn.stage-enviado{background:#fff2c9;border-color:#d8a51f;color:#795600}
+.lab-stage-btn.stage-producao{background:#dceeff;border-color:#68a9df;color:#15578e}
+.lab-stage-btn.stage-prova{background:#eadcf7;border-color:#ad7aca;color:#6d328d}
+.lab-stage-btn.stage-recebido{background:#d9f3ec;border-color:#54b5a6;color:#116c60}
+.lab-stage-btn.stage-entregue{background:#d8f1df;border-color:#62ad78;color:#17643b}
+.lab-current-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;margin-bottom:7px}
+.lab-current-status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+@media(max-width:800px){.lab-stage-group{min-width:0}.lab-stage-btn{flex:1 1 44%;text-align:center}}
+
 </style>
 </head>
 <body>
@@ -1705,10 +1723,21 @@ function waitForSupabase(timeoutMs){
   });
 }
 
+var syncWriteCount=0;
+function cloneStoreSnapshot(value){
+  try{return normalizeStore(JSON.parse(JSON.stringify(value)));}
+  catch(e){console.warn('Falha ao criar snapshot de sincronização.',e);return normalizeStore(value);}
+}
 function startRealtime(api){
   if(realtimeStarted || !api || typeof api.subscribeStore !== 'function') return;
   realtimeStarted = true;
   realtimeChannel = api.subscribeStore(function(remoteStore){
+    // Não deixa uma leitura remota antiga desfazer uma escolha feita enquanto
+    // o salvamento local ainda está sendo enviado ao Supabase.
+    if(syncWriteCount>0){
+      console.info('Atualização realtime adiada: há salvamento local em andamento.');
+      return;
+    }
     store = normalizeStore(remoteStore);
     writeLocalStore(store);
     render();
@@ -1730,7 +1759,6 @@ function loadStore(cb){
       if(remoteStore){
         store = normalizeStore(remoteStore);
       }else{
-        // Primeira execução: preserva e envia ao Supabase os dados já existentes no navegador.
         store = localCopy || seedStore();
         return api.saveStore(store);
       }
@@ -1749,16 +1777,23 @@ function loadStore(cb){
 
 function persist(cb){
   store = normalizeStore(store);
-  writeLocalStore(store);
+  var snapshot=cloneStoreSnapshot(store);
+  writeLocalStore(snapshot);
   if(cb) cb();
   render();
 
+  syncWriteCount++;
   waitForSupabase(3000).then(function(api){
-    if(!api) return;
+    if(!api)return null;
     startRealtime(api);
-    return api.saveStore(store);
+    return api.saveStore(snapshot);
+  }).then(function(){
+    // O snapshot enviado é a fonte desta gravação. Mantemos o estado local atual,
+    // que pode inclusive já conter uma alteração posterior.
   }).catch(function(error){
     console.error('Os dados ficaram salvos localmente, mas não foi possível sincronizar com o Supabase.', error);
+  }).finally(function(){
+    syncWriteCount=Math.max(0,syncWriteCount-1);
   });
 }
 
@@ -1887,7 +1922,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.10.0 · precificação R$ x percentual · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.10.1 · laboratório etapas persistentes · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -3212,9 +3247,30 @@ function labStatusClass(s){
   s=String(s||'enviado').toLowerCase();
   return s==='em produção'?'status-producao':s==='prova'?'status-prova':s==='recebido'?'status-recebido':s==='entregue'?'status-entregue':'status-enviado';
 }
+function labStatusMeta(s){
+  s=String(s||'enviado').toLowerCase();
+  var map={
+    'enviado':{label:'Enviado ao laboratório',cls:'enviado'},
+    'em produção':{label:'Em produção',cls:'producao'},
+    'prova':{label:'Em prova',cls:'prova'},
+    'recebido':{label:'Recebido na clínica',cls:'recebido'},
+    'entregue':{label:'Entregue ao paciente',cls:'entregue'}
+  };
+  return map[s]||map.enviado;
+}
 function labStatusSelect(x){
-  var opts=[['enviado','Enviado ao laboratório'],['em produção','Em produção'],['prova','Em prova'],['recebido','Recebido na clínica'],['entregue','Entregue ao paciente']];
-  return '<select class="status-select '+labStatusClass(x.status)+'" data-change="lab-status" data-id="'+x.id+'">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(x.status===o[0]?'selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';
+  var opts=[
+    ['enviado','Enviado'],
+    ['em produção','Em produção'],
+    ['prova','Em prova'],
+    ['recebido','Recebido'],
+    ['entregue','Entregue']
+  ], meta=labStatusMeta(x.status);
+  return '<div><span class="lab-current-status stage-'+meta.cls+'">'+meta.label+'</span>'+
+    '<div class="lab-stage-group">'+opts.map(function(o){
+      var m=labStatusMeta(o[0]);
+      return '<button type="button" class="lab-stage-btn stage-'+m.cls+' '+(x.status===o[0]?'active':'')+'" data-action="lab-set-status" data-id="'+x.id+'" data-status="'+o[0]+'">'+o[1]+'</button>';
+    }).join('')+'</div></div>';
 }
 function setBudgetStatus(id,status){
   var x=(store.treatmentPlans||[]).find(function(v){return v.id===id;});
@@ -3228,7 +3284,10 @@ function setLabStatus(id,status){
   if(!x)return;
   var allowed=['enviado','em produção','prova','recebido','entregue'];
   if(allowed.indexOf(status)<0)return;
-  x.status=status;persist();
+  x.status=status;
+  x.statusUpdatedAt=new Date().toISOString();
+  state.labMessage='Etapa atualizada para: '+labStatusMeta(status).label+'.';
+  persist();
 }
 
 function renderLaboratorio(){
@@ -3238,7 +3297,7 @@ function renderLaboratorio(){
   if(state.labMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.labMessage)+'</div>';
   out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Casos laboratoriais</h3><div class="mini-note">Laboratório, trabalho, elemento, cor, prazo, custo e entrega.</div></div><button class="btn btn-primary" data-action="lab-add">+ Novo caso</button></div><div class="lab-row head"><div>Paciente / trabalho</div><div>Laboratório</div><div>Prazo</div><div>Custo</div><div>Status</div><div>Ações</div></div>';
   if(!cases.length)out+='<div class="empty-state">Nenhum caso laboratorial cadastrado.</div>';
-  cases.forEach(function(x){var p=patientById(x.patientId);out+='<div class="lab-row"><div><strong>'+esc(p?p.name:'Paciente')+'</strong><br><span class="mini-note">'+esc(x.work||'')+' '+esc(x.tooth||'')+'</span></div><div>'+esc(x.lab||'—')+'</div><div>'+(x.dueDate?dayDisplay(x.dueDate):'—')+'</div><div>'+fmtMoney(n(x.cost))+'</div><div>'+labStatusSelect(x)+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="lab-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
+  cases.forEach(function(x){var p=patientById(x.patientId);out+='<div class="lab-row"><div><strong>'+esc(p?p.name:'Paciente')+'</strong><br><span class="mini-note">'+esc(x.work||'')+' '+esc(x.tooth||'')+'</span></div><div>'+esc(x.lab||'—')+'</div><div>'+(x.dueDate?dayDisplay(x.dueDate):'—')+'</div><div>'+fmtMoney(n(x.cost))+'</div><div>'+labStatusSelect(x)+(x.statusUpdatedAt?'<div class="mini-note" style="margin-top:6px">Atualizado: '+new Date(x.statusUpdatedAt).toLocaleString('pt-BR')+'</div>':'')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="lab-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
   out+='</div>';return out;
 }
 function addLabCase(){
@@ -3876,7 +3935,7 @@ function attachEvents(){
     var t=e.target.closest('[data-change]');
     if(!t)return;
     if(t.dataset.change==='budget-status'){t.className='status-select '+budgetStatusClass(t.value);setBudgetStatus(t.dataset.id,t.value);return;}
-    if(t.dataset.change==='lab-status'){t.className='status-select '+labStatusClass(t.value);setLabStatus(t.dataset.id,t.value);return;}
+    
   };
   root.onclick = function(e){
     var t = e.target.closest('[data-action], [data-role], [data-stafftab]');
@@ -3954,6 +4013,7 @@ function attachEvents(){
     else if(a==='plan-add'){addTreatmentPlan();return;}
     else if(a==='plan-cycle'){cycleTreatmentPlan(t.dataset.id);return;}
     else if(a==='plan-delete'){if(confirm('Excluir este item do plano?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
+    else if(a==='lab-set-status'){setLabStatus(t.dataset.id,t.dataset.status);return;}
     else if(a==='lab-add'){addLabCase();return;}
     else if(a==='lab-delete'){if(confirm('Excluir este caso laboratorial?')){store.labCases=(store.labCases||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
 
