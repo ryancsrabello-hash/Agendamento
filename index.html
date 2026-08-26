@@ -1951,7 +1951,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.11.0 · cobranças e carnê interno · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.11.1 · carnê com tratamento aprovado · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -3857,19 +3857,48 @@ function splitInstallments(total,count){
   for(var i=0;i<count;i++)out.push((base+(i<rest?1:0))/100);
   return out;
 }
+
+function approvedTreatmentItems(patientId){
+  return patientTreatmentPlans(patientId).filter(function(x){
+    return ['aceito','realizado'].indexOf(String(x.status||'').toLowerCase())>=0;
+  });
+}
+function treatmentItemsTotal(items){
+  return (items||[]).reduce(function(s,x){return s+n(x.price);},0);
+}
+function treatmentItemsSnapshot(patientId){
+  return approvedTreatmentItems(patientId).map(function(x){
+    return {id:x.id,procedureId:x.procedureId||'',name:x.name||'Procedimento',tooth:x.tooth||'Geral',note:x.note||'',status:x.status||'aceito',price:n(x.price)};
+  });
+}
+function chargePlanTreatmentItems(plan){
+  if(plan&&Array.isArray(plan.approvedTreatmentItems)&&plan.approvedTreatmentItems.length)return plan.approvedTreatmentItems;
+  if(plan&&plan.patientId)return treatmentItemsSnapshot(plan.patientId);
+  return [];
+}
+function renderTreatmentDetailsTable(items){
+  if(!items||!items.length)return '<div class="warning">Nenhum procedimento aprovado estava registrado no orçamento no momento da geração deste plano de cobrança.</div>';
+  var total=treatmentItemsTotal(items);
+  return '<h3 style="margin-top:18px">Tratamento aprovado pelo paciente</h3>'+
+    '<table class="quote-table"><thead><tr><th>Dente/região</th><th>Procedimento</th><th>Status</th><th>Observação</th><th>Valor</th></tr></thead><tbody>'+
+    items.map(function(x){return '<tr><td><strong>'+esc(x.tooth||'Geral')+'</strong></td><td>'+esc(x.name||'Procedimento')+'</td><td>'+esc(x.status||'aceito')+'</td><td>'+esc(x.note||'—')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';}).join('')+
+    '</tbody></table><div class="quote-total">Total do tratamento aprovado: '+fmtMoney(total)+'</div>';
+}
+
 function createChargePlan(){
   function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
   var pid=v('chg-patient'),p=patientById(pid),desc=v('chg-desc'),total=n(v('chg-total')),
       count=Math.max(1,Math.min(60,parseInt(v('chg-count')||1))),first=v('chg-first'),
       late=n(v('chg-late')),daily=n(v('chg-daily')),issuer=v('chg-issuer'),cpf=v('chg-cpf').replace(/\D/g,''),
-      instr=v('chg-instructions');
+      instr=v('chg-instructions'),approvedItems=treatmentItemsSnapshot(pid);
   if(!p){alert('Selecione um paciente.');return;}
   if(!desc){alert('Informe a descrição da cobrança.');return;}
   if(total<=0){alert('Informe o valor total.');return;}
   if(!first){first=nextStrategicDate(addDays(todayISO(),2));}
   var plan={id:'cp'+Date.now(),patientId:p.id,description:desc,total:total,installments:count,firstDue:first,
     lateFeeRate:late,dailyInterestRate:daily,issuerName:issuer||'Instituto Lins Rabello',issuerCpf:cpf,
-    paymentInstructions:instr,createdAt:new Date().toISOString(),status:'ativo'};
+    paymentInstructions:instr,createdAt:new Date().toISOString(),status:'ativo',
+    approvedTreatmentItems:approvedItems,approvedTreatmentTotal:treatmentItemsTotal(approvedItems)};
   store.chargePlans=store.chargePlans||[];store.charges=store.charges||[];
   store.chargePlans.push(plan);
   var values=splitInstallments(total,count);
@@ -3913,6 +3942,7 @@ function renderChargeDocument(c){
     '<div class="warning"><strong>Importante:</strong> este documento é um aviso/carnê interno de cobrança e não é boleto bancário. Ele não possui compensação bancária, linha digitável ou registro em instituição financeira.</div>'+
     '<div class="doc-grid"><div><strong>Paciente:</strong> '+esc(p?p.name:'')+'</div><div><strong>CPF do paciente:</strong> '+esc(p&&p.cpf?p.cpf:'—')+'</div><div><strong>Emitente:</strong> '+esc(issuer)+'</div><div><strong>CPF do emitente:</strong> '+esc(cpf||'—')+'</div><div><strong>Vencimento:</strong> '+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'</div><div><strong>Situação:</strong> '+chargeStatus(c).label+'</div></div>'+
     '<p><strong>Descrição:</strong> '+esc(plan?plan.description:'Cobrança de tratamento odontológico')+'</p>'+
+    renderTreatmentDetailsTable(chargePlanTreatmentItems(plan))+
     '<div class="amount">'+fmtMoney(z.total)+'</div>'+
     (z.days>0?'<div class="warning">Valor original: '+fmtMoney(z.base)+' · multa: '+fmtMoney(z.fee)+' · juros por '+z.days+' dia(s): '+fmtMoney(z.interest)+' · total atualizado até '+dayDisplay(todayISO())+'/'+todayISO().slice(0,4)+'.</div>':'')+
     '<p style="font-size:11.5px;line-height:1.6"><strong>Instruções de pagamento:</strong> '+esc(instr||'Entre em contato com a clínica para combinar a forma de pagamento.')+'</p>'+
@@ -3925,6 +3955,7 @@ function renderChargeContract(plan){
   '<div class="contract-doc"><div class="doc-head"><div><h2>Instituto Lins Rabello</h2><div>Odontologia Integrada</div></div><div style="text-align:right"><strong>CONTRATO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS ODONTOLÓGICOS E PAGAMENTO</strong><br>'+dayDisplay(todayISO())+'/'+todayISO().slice(0,4)+'</div></div>'+
   '<div class="doc-grid"><div><strong>Paciente/Contratante:</strong> '+esc(p?p.name:'')+'</div><div><strong>CPF:</strong> '+esc(p&&p.cpf?p.cpf:'—')+'</div><div><strong>Prestador/Emitente:</strong> '+esc(issuer)+'</div><div><strong>CPF:</strong> '+esc(cpf||'—')+'</div></div>'+
   '<h3>1. Objeto</h3><p>O presente contrato tem por objeto a prestação dos serviços odontológicos descritos no plano/orçamento aceito pelo paciente, incluindo as etapas clínicas e laboratoriais que forem necessárias e previamente informadas.</p>'+
+  renderTreatmentDetailsTable(chargePlanTreatmentItems(plan))+
   '<h3>2. Valor e forma de pagamento</h3><p>O valor total contratado é de <strong>'+fmtMoney(plan.total)+'</strong>, dividido em <strong>'+plan.installments+' parcela(s)</strong>, com primeiro vencimento em '+dayDisplay(plan.firstDue)+'/'+plan.firstDue.slice(0,4)+'. As demais parcelas seguem a recorrência mensal registrada no ERP.</p>'+
   '<h3>3. Inadimplência</h3><p>O não pagamento de qualquer parcela até a data de vencimento poderá gerar os encargos configurados neste plano: multa de <strong>'+n(plan.lateFeeRate).toFixed(2).replace(".",",")+'%</strong> e juros de mora de <strong>'+n(plan.dailyInterestRate).toFixed(3).replace(".",",")+'% ao dia</strong>, calculados sobre o valor da parcela vencida enquanto permanecer em aberto. Os percentuais devem respeitar a legislação aplicável e podem ser ajustados pela clínica antes da assinatura.</p>'+
   '<h3>4. Cobrança e lembretes</h3><p>O paciente autoriza o envio de lembretes manuais por WhatsApp ou outros meios de contato informados, inclusive cinco dias, dois dias e no dia do vencimento. Esses lembretes têm caráter de cortesia e sua ausência não altera as datas de vencimento.</p>'+
@@ -3958,7 +3989,7 @@ function renderCobrancas(){
   out+='<div class="charge-grid"><div class="card charge-kpi"><div class="k">A receber</div><div class="v">'+fmtMoney(receivable)+'</div></div><div class="card charge-kpi"><div class="k">Parcelas abertas</div><div class="v">'+open.length+'</div></div><div class="card charge-kpi"><div class="k">Vencem em 7 dias</div><div class="v">'+due7.length+'</div></div><div class="card charge-kpi"><div class="k">Atrasadas</div><div class="v" style="color:var(--danger)">'+overdue.length+'</div></div></div>';
 
   out+='<div class="card" style="margin-bottom:14px"><h3 style="margin-top:0">Criar plano de cobrança</h3><div class="charge-form">'+
-    '<div class="field span-2"><label>Paciente</label><select id="chg-patient"><option value="">Selecione</option>'+pts.map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="field span-2"><label>Paciente</label><select id="chg-patient" data-change="charge-patient"><option value="">Selecione</option>'+pts.map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('')+'</select></div>'+
     '<div class="field span-2"><label>Descrição / tratamento</label><input id="chg-desc" placeholder="Ex.: tratamento com implantes e prótese"></div>'+
     '<div class="field"><label>Valor total</label><input id="chg-total" type="number" min="0" step="0.01"></div>'+
     '<div class="field"><label>Nº parcelas</label><input id="chg-count" type="number" min="1" max="60" value="1"></div>'+
@@ -3969,6 +4000,7 @@ function renderCobrancas(){
     '<div class="field"><label>Emitente</label><input id="chg-issuer" value="'+escAttr(cfg.issuerName)+'"></div>'+
     '<div class="field"><label>CPF do emitente</label><input id="chg-cpf" inputmode="numeric" value="'+escAttr(cfg.issuerCpf)+'" placeholder="Somente números"></div>'+
     '<div class="field span-4"><label>Instruções de pagamento</label><textarea id="chg-instructions" style="width:100%;min-height:70px;padding:10px;border:1px solid var(--border);border-radius:9px">'+esc(cfg.paymentInstructions)+'</textarea></div>'+
+    '<div class="span-4" id="charge-treatment-preview"><div class="mini-note">Selecione o paciente para visualizar os procedimentos do orçamento que já foram <strong>aceitos</strong> ou <strong>realizados</strong>.</div></div>'+
     '</div><div class="patient-actions"><span class="mini-note">O primeiro vencimento é sugerido no próximo dia 05, 15 ou 20. As parcelas seguintes repetem mensalmente o mesmo dia.</span><button class="btn btn-primary" data-action="charge-create">Criar parcelas</button></div></div>';
 
   out+='<div class="finance-tabs">'+[['abertas','Abertas'],['atrasadas','Atrasadas'],['pagas','Pagas'],['todas','Todas']].map(function(x){return '<button class="'+(state.chargeFilter===x[0]?'active':'')+'" data-action="charge-filter" data-id="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
@@ -3978,7 +4010,7 @@ function renderCobrancas(){
     var p=patientById(c.patientId),plan=chargePlanById(c.planId),z=chargeAmountUpdated(c),st=chargeStatus(c),d=daysBetween(today,c.dueDate),phone=normalizePhone(p?p.phone:''),
         show5=d===5,show2=d===2,show0=d===0;
     out+='<div class="charge-row"><div><strong>'+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'</strong></div>'+
-      '<div><strong>'+esc(p?p.name:'Paciente')+'</strong><div class="mini-note">'+esc(plan?plan.description:'')+'</div></div>'+
+      '<div><strong>'+esc(p?p.name:'Paciente')+'</strong><div class="mini-note">'+esc(plan?plan.description:'')+'</div><div class="mini-note">'+(chargePlanTreatmentItems(plan).length?chargePlanTreatmentItems(plan).length+' procedimento(s) aprovado(s) · '+fmtMoney(treatmentItemsTotal(chargePlanTreatmentItems(plan))):'Sem tratamento aprovado vinculado')+'</div></div>'+
       '<div>'+c.number+'/'+c.totalInstallments+'</div><div><strong>'+fmtMoney(z.total)+'</strong>'+(z.days>0?'<div class="mini-note">'+z.days+'d atraso</div>':'')+'</div>'+
       '<div><span class="charge-status '+st.cls+'">'+st.label+'</span></div>'+
       '<div class="charge-reminders">'+
@@ -4168,6 +4200,25 @@ function attachEvents(){
     var t=e.target.closest('[data-change]');
     if(!t)return;
     if(t.dataset.change==='budget-status'){t.className='status-select '+budgetStatusClass(t.value);setBudgetStatus(t.dataset.id,t.value);return;}
+    if(t.dataset.change==='charge-patient'){
+      var preview=document.getElementById('charge-treatment-preview'),
+          totalEl=document.getElementById('chg-total'),
+          descEl=document.getElementById('chg-desc'),
+          items=approvedTreatmentItems(t.value);
+      if(preview){
+        if(items.length){
+          preview.innerHTML='<div class="card" style="background:var(--grey-soft);margin:0"><strong>Tratamento aprovado</strong><div class="mini-note" style="margin:4px 0 8px">Itens aceitos/realizados no orçamento deste paciente.</div>'+
+            '<table class="quote-table"><thead><tr><th>Dente/região</th><th>Procedimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>'+
+            items.map(function(x){return '<tr><td>'+esc(x.tooth||'Geral')+'</td><td>'+esc(x.name||'Procedimento')+'</td><td>'+esc(x.status||'aceito')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';}).join('')+
+            '</tbody></table><div class="quote-total">Total aprovado: '+fmtMoney(treatmentItemsTotal(items))+'</div></div>';
+          if(totalEl && (!totalEl.value || n(totalEl.value)<=0))totalEl.value=treatmentItemsTotal(items).toFixed(2);
+          if(descEl && !descEl.value)descEl.value='Plano de tratamento odontológico aprovado';
+        }else{
+          preview.innerHTML='<div class="alert-card">Este paciente ainda não possui procedimentos marcados como <strong>Aceito</strong> ou <strong>Realizado</strong> no módulo de Orçamentos.</div>';
+        }
+      }
+      return;
+    }
     
   };
   root.onclick = function(e){
