@@ -1021,6 +1021,29 @@
 .lab-current-status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 @media(max-width:800px){.lab-stage-group{min-width:0}.lab-stage-btn{flex:1 1 44%;text-align:center}}
 
+
+/* ===== COBRANÇAS / CARNÊ INTERNO ===== */
+.charge-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0 16px}
+.charge-kpi{padding:14px}.charge-kpi .k{font-size:10px;text-transform:uppercase;color:var(--ink-soft);font-weight:850}.charge-kpi .v{font:800 22px 'Space Grotesk';margin-top:4px}
+.charge-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.charge-form .span-2{grid-column:span 2}.charge-form .span-4{grid-column:1/-1}
+.charge-row{display:grid;grid-template-columns:110px minmax(170px,1.2fr) 120px 120px 135px minmax(170px,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.charge-row.head{font-size:10px;text-transform:uppercase;font-weight:850;color:var(--ink-soft)}
+.charge-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:850}
+.charge-status.open{background:#fff8dc;color:#7e6518}.charge-status.due{background:#fff0e4;color:#a8541c}.charge-status.overdue{background:#fde8ea;color:#a91f2d}.charge-status.paid{background:#e8f7ef;color:#20704b}
+.charge-reminders{display:flex;gap:5px;flex-wrap:wrap}.charge-reminders a,.charge-reminders button{padding:6px 8px!important;font-size:10px!important}
+.charge-doc,.contract-doc{background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px;max-width:900px;margin:0 auto}.charge-doc h2,.contract-doc h2{margin:0}.charge-doc .doc-head,.contract-doc .doc-head{display:flex;justify-content:space-between;gap:18px;border-bottom:2px solid var(--teal);padding-bottom:14px;margin-bottom:16px}
+.charge-doc .doc-grid,.contract-doc .doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;background:var(--grey-soft);border-radius:10px;padding:12px;margin:12px 0}
+.charge-doc .amount{font:800 26px 'Space Grotesk';text-align:right;margin:16px 0}.charge-doc .warning{padding:11px;border-radius:10px;background:#fff8dc;border:1px solid #eadb95;font-size:11.5px}
+.contract-doc p,.contract-doc li{font-size:11.5px;line-height:1.6}.contract-doc h3{margin:18px 0 6px;font-size:13px}.contract-doc ol{padding-left:18px}
+@media(max-width:900px){.charge-form{grid-template-columns:1fr 1fr}.charge-row{grid-template-columns:1fr 1fr}.charge-row.head{display:none}.charge-row .actions{grid-column:1/-1}}
+@media(max-width:560px){.charge-form{grid-template-columns:1fr}.charge-form .span-2,.charge-form .span-4{grid-column:auto}}
+@media print{
+  body *{visibility:hidden!important}.charge-doc,.charge-doc *,.contract-doc,.contract-doc *{visibility:visible!important}
+  .charge-doc,.contract-doc{position:absolute;left:0;top:0;width:100%;max-width:none;border:0;padding:16mm;box-shadow:none}
+  .charge-toolbar{display:none!important}.sidebar,.topbar,.tabs{display:none!important}
+  @page{size:A4;margin:0}
+}
+
 </style>
 </head>
 <body>
@@ -1093,7 +1116,7 @@ var state = {
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
   stockSearch:'', stockCategory:'Todas', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas', quotePreview:false, budgetPatientId:null, budgetTooth:null, budgetProcedure:'avaliacao', budgetMessage:'', budgetQuotePreview:false,
-  pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
+  pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'', chargeMessage:'', chargeFilter:'abertas', chargePreviewId:null, chargeContractPlanId:null,
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
   marketingEvents:[], marketingLoading:false, marketingRange:30,
@@ -1618,7 +1641,10 @@ function seedStore(){
     crmContacts: [],
     treatmentPlans: [],
     labCases: [],
-    taskLog: []
+    taskLog: [],
+    chargePlans: [],
+    charges: [],
+    chargeConfig: defaultChargeConfig()
   };
 }
 
@@ -1686,6 +1712,9 @@ function normalizeStore(value){
   base.treatmentPlans = Array.isArray(value.treatmentPlans) ? value.treatmentPlans : [];
   base.labCases = Array.isArray(value.labCases) ? value.labCases : [];
   base.taskLog = Array.isArray(value.taskLog) ? value.taskLog : [];
+  base.chargePlans = Array.isArray(value.chargePlans) ? value.chargePlans : [];
+  base.charges = Array.isArray(value.charges) ? value.charges : [];
+  base.chargeConfig = mergeChargeConfig(value.chargeConfig);
   applyFinalProcedurePrices(base.procedurePricing);
   return base;
 }
@@ -1922,7 +1951,7 @@ function render(){
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.10.1 · laboratório etapas persistentes · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.11.0 · cobranças e carnê interno · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2369,9 +2398,9 @@ function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepca
 function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
 function allowedStaffTabs(){
   var role=currentStaffRole();
-  if(role==='recepcao') return ['recepcao','agenda','pacientes','orcamentos','confirmacoes','estoque','laboratorio','tarefas','crm'];
-  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','orcamentos','confirmacoes','estoque','laboratorio','tarefas','crm','relatorios'];
-  return ['visao','recepcao','agenda','pacientes','orcamentos','tarefas','pendencias','financeiro','laboratorio','crm','estoque','confirmacoes','sac','preconsultas','marketing','relatorios','administracao','auditoria'];
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','orcamentos','confirmacoes','cobrancas','estoque','laboratorio','tarefas','crm'];
+  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','orcamentos','confirmacoes','cobrancas','estoque','laboratorio','tarefas','crm','relatorios'];
+  return ['visao','recepcao','agenda','pacientes','orcamentos','tarefas','pendencias','financeiro','cobrancas','laboratorio','crm','estoque','confirmacoes','sac','preconsultas','marketing','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -2540,6 +2569,7 @@ function renderStaff(){
     ['tarefas','Central de tarefas'],
     ['pendencias','Pendências'],
     ['financeiro','Financeiro'],
+    ['cobrancas','Cobranças'],
     ['laboratorio','Laboratório & Prótese'],
     ['crm','Reativação'],
     ['estoque','Estoque'],
@@ -2565,6 +2595,7 @@ function renderStaff(){
   else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
+  else if(state.staffTab==='cobrancas') out += renderCobrancas();
   else if(state.staffTab==='estoque') out += renderEstoque();
   else if(state.staffTab==='laboratorio') out += renderLaboratorio();
   else if(state.staffTab==='tarefas') out += renderTaskCenter();
@@ -3757,6 +3788,208 @@ function futureScheduledAppointments(){
     return (String(a.date)+String(a.time)).localeCompare(String(b.date)+String(b.time));
   });
 }
+
+function defaultChargeConfig(){
+  return {
+    issuerName:'Instituto Lins Rabello',
+    issuerCpf:'',
+    paymentInstructions:'Pagamento conforme combinado com a clínica. Após o pagamento, envie o comprovante pelo WhatsApp.',
+    lateFeeRate:2,
+    dailyInterestRate:0.033,
+    strategicDays:[5,15,20]
+  };
+}
+function mergeChargeConfig(v){
+  var d=defaultChargeConfig(),x=v||{};
+  d.issuerName=x.issuerName||d.issuerName;
+  d.issuerCpf=x.issuerCpf||'';
+  d.paymentInstructions=x.paymentInstructions||d.paymentInstructions;
+  d.lateFeeRate=x.lateFeeRate==null?d.lateFeeRate:n(x.lateFeeRate);
+  d.dailyInterestRate=x.dailyInterestRate==null?d.dailyInterestRate:n(x.dailyInterestRate);
+  d.strategicDays=Array.isArray(x.strategicDays)&&x.strategicDays.length?x.strategicDays:d.strategicDays;
+  return d;
+}
+function chargePlanById(id){return (store.chargePlans||[]).find(function(x){return x.id===id;})||null;}
+function chargeById(id){return (store.charges||[]).find(function(x){return x.id===id;})||null;}
+function daysBetween(a,b){return Math.floor((parseISO(b)-parseISO(a))/86400000);}
+function chargeDaysLate(c,ref){
+  if(c.status==='pago')return 0;
+  ref=ref||todayISO();
+  return Math.max(0,daysBetween(c.dueDate,ref));
+}
+function chargeAmountUpdated(c,ref){
+  var base=n(c.amount),days=chargeDaysLate(c,ref),plan=chargePlanById(c.planId),cfg=mergeChargeConfig(store.chargeConfig),
+      lateFee=plan&&plan.lateFeeRate!=null?n(plan.lateFeeRate):n(cfg.lateFeeRate),
+      daily=plan&&plan.dailyInterestRate!=null?n(plan.dailyInterestRate):n(cfg.dailyInterestRate);
+  if(days<=0)return {base:base,days:0,fee:0,interest:0,total:base};
+  var fee=base*lateFee/100,interest=base*(daily/100)*days;
+  return {base:base,days:days,fee:fee,interest:interest,total:base+fee+interest};
+}
+function chargeStatus(c){
+  if(c.status==='pago')return {label:'Pago',cls:'paid'};
+  var d=daysBetween(todayISO(),c.dueDate);
+  if(d<0)return {label:'Atrasado '+Math.abs(d)+'d',cls:'overdue'};
+  if(d===0)return {label:'Vence hoje',cls:'due'};
+  if(d<=5)return {label:'Vence em '+d+'d',cls:'due'};
+  return {label:'Aberto',cls:'open'};
+}
+function nextStrategicDate(fromIso){
+  var cfg=mergeChargeConfig(store.chargeConfig),start=parseISO(fromIso||todayISO()),best=null;
+  for(var m=0;m<3;m++){
+    cfg.strategicDays.forEach(function(day){
+      var d=new Date(start.getFullYear(),start.getMonth()+m,day);
+      if(d>=start && (!best||d<best))best=d;
+    });
+  }
+  if(!best)best=new Date(start.getFullYear(),start.getMonth()+1,5);
+  return isoOf(best.getFullYear(),best.getMonth()+1,best.getDate());
+}
+function normalizeStrategicDue(firstDue,index){
+  var d=parseISO(firstDue),day=d.getDate(),target=[5,15,20].indexOf(day)>=0?day:day;
+  var x=new Date(d.getFullYear(),d.getMonth()+index,1);
+  var max=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();
+  x.setDate(Math.min(target,max));
+  return isoOf(x.getFullYear(),x.getMonth()+1,x.getDate());
+}
+function splitInstallments(total,count){
+  total=Math.round(n(total)*100);count=Math.max(1,Math.min(60,parseInt(count||1)));
+  var base=Math.floor(total/count),rest=total-base*count,out=[];
+  for(var i=0;i<count;i++)out.push((base+(i<rest?1:0))/100);
+  return out;
+}
+function createChargePlan(){
+  function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+  var pid=v('chg-patient'),p=patientById(pid),desc=v('chg-desc'),total=n(v('chg-total')),
+      count=Math.max(1,Math.min(60,parseInt(v('chg-count')||1))),first=v('chg-first'),
+      late=n(v('chg-late')),daily=n(v('chg-daily')),issuer=v('chg-issuer'),cpf=v('chg-cpf').replace(/\D/g,''),
+      instr=v('chg-instructions');
+  if(!p){alert('Selecione um paciente.');return;}
+  if(!desc){alert('Informe a descrição da cobrança.');return;}
+  if(total<=0){alert('Informe o valor total.');return;}
+  if(!first){first=nextStrategicDate(addDays(todayISO(),2));}
+  var plan={id:'cp'+Date.now(),patientId:p.id,description:desc,total:total,installments:count,firstDue:first,
+    lateFeeRate:late,dailyInterestRate:daily,issuerName:issuer||'Instituto Lins Rabello',issuerCpf:cpf,
+    paymentInstructions:instr,createdAt:new Date().toISOString(),status:'ativo'};
+  store.chargePlans=store.chargePlans||[];store.charges=store.charges||[];
+  store.chargePlans.push(plan);
+  var values=splitInstallments(total,count);
+  values.forEach(function(amount,i){
+    store.charges.push({id:'chg'+Date.now()+'-'+i,planId:plan.id,patientId:p.id,number:i+1,totalInstallments:count,
+      amount:amount,dueDate:normalizeStrategicDue(first,i),status:'aberto',paidAt:null,createdAt:new Date().toISOString(),reminders:{}});
+  });
+  state.chargeMessage=count+' cobrança(s) criada(s) para '+(p.name||'paciente')+'.';
+  persist();
+}
+function chargeReminderMessage(c,kind){
+  var p=patientById(c.patientId),plan=chargePlanById(c.planId),z=chargeAmountUpdated(c),when=kind==='5d'?'faltam 5 dias para o vencimento':kind==='2d'?'faltam 2 dias para o vencimento':kind==='today'?'o vencimento é hoje':'a parcela está pendente';
+  return 'Olá, '+(p?p.name:'')+'! Tudo bem? 💙\n\n'+
+    'Passando para lembrar que '+when+' da parcela '+c.number+'/'+c.totalInstallments+' referente a '+(plan?plan.description:'seu tratamento')+'.\n\n'+
+    'Vencimento: '+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'\n'+
+    'Valor: '+fmtMoney(z.total)+(z.days>0?' (atualizado com encargos de atraso)':'')+'\n\n'+
+    'Se o pagamento já foi realizado, por favor desconsidere esta mensagem. Se precisar falar conosco, estamos à disposição.\n\nInstituto Lins Rabello · Odontologia Integrada';
+}
+function chargeWhatsAppLink(c,kind){
+  var p=patientById(c.patientId),phone=normalizePhone(p?p.phone:'');
+  if(phone.length<10)return '#';
+  if(phone.indexOf('55')!==0)phone='55'+phone;
+  return 'https://wa.me/'+phone+'?text='+encodeURIComponent(chargeReminderMessage(c,kind));
+}
+function markChargePaid(id){
+  var c=chargeById(id);if(!c)return;
+  c.status='pago';c.paidAt=new Date().toISOString();
+  state.chargeMessage='Parcela '+c.number+'/'+c.totalInstallments+' marcada como paga.';
+  persist();
+}
+function reopenCharge(id){
+  var c=chargeById(id);if(!c)return;
+  c.status='aberto';c.paidAt=null;persist();
+}
+function renderChargeDocument(c){
+  var p=patientById(c.patientId),plan=chargePlanById(c.planId),z=chargeAmountUpdated(c),cfg=mergeChargeConfig(store.chargeConfig),
+      issuer=plan&&plan.issuerName?plan.issuerName:cfg.issuerName,cpf=plan&&plan.issuerCpf?plan.issuerCpf:cfg.issuerCpf,
+      instr=plan&&plan.paymentInstructions?plan.paymentInstructions:cfg.paymentInstructions;
+  return '<div class="charge-toolbar row-actions" style="margin-bottom:12px"><button class="btn btn-primary" data-action="charge-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="charge-preview-close">Voltar</button></div>'+
+    '<div class="charge-doc"><div class="doc-head"><div><h2>Instituto Lins Rabello</h2><div>Odontologia Integrada</div></div><div style="text-align:right"><strong>DOCUMENTO INTERNO DE COBRANÇA</strong><br>Parcela '+c.number+'/'+c.totalInstallments+'<br>Referência: '+esc(c.id)+'</div></div>'+
+    '<div class="warning"><strong>Importante:</strong> este documento é um aviso/carnê interno de cobrança e não é boleto bancário. Ele não possui compensação bancária, linha digitável ou registro em instituição financeira.</div>'+
+    '<div class="doc-grid"><div><strong>Paciente:</strong> '+esc(p?p.name:'')+'</div><div><strong>CPF do paciente:</strong> '+esc(p&&p.cpf?p.cpf:'—')+'</div><div><strong>Emitente:</strong> '+esc(issuer)+'</div><div><strong>CPF do emitente:</strong> '+esc(cpf||'—')+'</div><div><strong>Vencimento:</strong> '+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'</div><div><strong>Situação:</strong> '+chargeStatus(c).label+'</div></div>'+
+    '<p><strong>Descrição:</strong> '+esc(plan?plan.description:'Cobrança de tratamento odontológico')+'</p>'+
+    '<div class="amount">'+fmtMoney(z.total)+'</div>'+
+    (z.days>0?'<div class="warning">Valor original: '+fmtMoney(z.base)+' · multa: '+fmtMoney(z.fee)+' · juros por '+z.days+' dia(s): '+fmtMoney(z.interest)+' · total atualizado até '+dayDisplay(todayISO())+'/'+todayISO().slice(0,4)+'.</div>':'')+
+    '<p style="font-size:11.5px;line-height:1.6"><strong>Instruções de pagamento:</strong> '+esc(instr||'Entre em contato com a clínica para combinar a forma de pagamento.')+'</p>'+
+    '<div style="margin-top:55px;display:grid;grid-template-columns:1fr 1fr;gap:50px;text-align:center;font-size:11px"><div style="border-top:1px solid #555;padding-top:6px">Paciente / responsável</div><div style="border-top:1px solid #555;padding-top:6px">'+esc(issuer)+'</div></div>'+
+    '<div class="quote-footer"><strong>Instituto Lins Rabello</strong><br>Itapecerica da Serra - SP<br>Documento gerado pelo ERP interno da clínica</div></div>';
+}
+function renderChargeContract(plan){
+  var p=patientById(plan.patientId),cfg=mergeChargeConfig(store.chargeConfig),issuer=plan.issuerName||cfg.issuerName,cpf=plan.issuerCpf||cfg.issuerCpf;
+  return '<div class="charge-toolbar row-actions" style="margin-bottom:12px"><button class="btn btn-primary" data-action="charge-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="contract-close">Voltar</button></div>'+
+  '<div class="contract-doc"><div class="doc-head"><div><h2>Instituto Lins Rabello</h2><div>Odontologia Integrada</div></div><div style="text-align:right"><strong>CONTRATO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS ODONTOLÓGICOS E PAGAMENTO</strong><br>'+dayDisplay(todayISO())+'/'+todayISO().slice(0,4)+'</div></div>'+
+  '<div class="doc-grid"><div><strong>Paciente/Contratante:</strong> '+esc(p?p.name:'')+'</div><div><strong>CPF:</strong> '+esc(p&&p.cpf?p.cpf:'—')+'</div><div><strong>Prestador/Emitente:</strong> '+esc(issuer)+'</div><div><strong>CPF:</strong> '+esc(cpf||'—')+'</div></div>'+
+  '<h3>1. Objeto</h3><p>O presente contrato tem por objeto a prestação dos serviços odontológicos descritos no plano/orçamento aceito pelo paciente, incluindo as etapas clínicas e laboratoriais que forem necessárias e previamente informadas.</p>'+
+  '<h3>2. Valor e forma de pagamento</h3><p>O valor total contratado é de <strong>'+fmtMoney(plan.total)+'</strong>, dividido em <strong>'+plan.installments+' parcela(s)</strong>, com primeiro vencimento em '+dayDisplay(plan.firstDue)+'/'+plan.firstDue.slice(0,4)+'. As demais parcelas seguem a recorrência mensal registrada no ERP.</p>'+
+  '<h3>3. Inadimplência</h3><p>O não pagamento de qualquer parcela até a data de vencimento poderá gerar os encargos configurados neste plano: multa de <strong>'+n(plan.lateFeeRate).toFixed(2).replace(".",",")+'%</strong> e juros de mora de <strong>'+n(plan.dailyInterestRate).toFixed(3).replace(".",",")+'% ao dia</strong>, calculados sobre o valor da parcela vencida enquanto permanecer em aberto. Os percentuais devem respeitar a legislação aplicável e podem ser ajustados pela clínica antes da assinatura.</p>'+
+  '<h3>4. Cobrança e lembretes</h3><p>O paciente autoriza o envio de lembretes manuais por WhatsApp ou outros meios de contato informados, inclusive cinco dias, dois dias e no dia do vencimento. Esses lembretes têm caráter de cortesia e sua ausência não altera as datas de vencimento.</p>'+
+  '<h3>5. Suspensão e continuidade</h3><p>Em caso de inadimplência relevante, etapas eletivas ainda não iniciadas poderão ser reagendadas até regularização financeira, sempre preservando atendimentos urgentes e observando critérios clínicos e éticos.</p>'+
+  '<h3>6. Alterações do plano</h3><p>Necessidades clínicas não previstas inicialmente poderão exigir novo orçamento ou aditivo, que deverá ser apresentado ao paciente antes da execução, salvo situações urgentes devidamente justificadas.</p>'+
+  '<h3>7. Ciência do paciente</h3><p>O paciente declara ter recebido explicações sobre o tratamento, valores, vencimentos e encargos, bem como oportunidade para esclarecer dúvidas antes da assinatura.</p>'+
+  '<p style="font-size:10.5px;background:var(--grey-soft);padding:10px;border-radius:9px"><strong>Nota:</strong> este é um modelo contratual administrativo e deve ser revisado por profissional jurídico/contábil antes de uso definitivo, especialmente quanto a juros, multa, cobrança e regras aplicáveis ao atendimento odontológico.</p>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:60px;text-align:center;font-size:11px"><div style="border-top:1px solid #555;padding-top:6px">'+esc(p?p.name:'Paciente / responsável')+'</div><div style="border-top:1px solid #555;padding-top:6px">'+esc(issuer)+'</div></div>'+
+  '<div class="quote-footer"><strong>Instituto Lins Rabello</strong><br>Itapecerica da Serra - SP</div></div>';
+}
+function renderCobrancas(){
+  if(state.chargePreviewId){var pc=chargeById(state.chargePreviewId);return pc?renderChargeDocument(pc):'<div class="empty-state">Cobrança não encontrada.</div>';}
+  if(state.chargeContractPlanId){var pp=chargePlanById(state.chargeContractPlanId);return pp?renderChargeContract(pp):'<div class="empty-state">Plano não encontrado.</div>';}
+
+  var cfg=mergeChargeConfig(store.chargeConfig),today=todayISO(),charges=(store.charges||[]).slice();
+  if(state.chargeFilter==='abertas')charges=charges.filter(function(c){return c.status!=='pago';});
+  else if(state.chargeFilter==='atrasadas')charges=charges.filter(function(c){return c.status!=='pago'&&c.dueDate<today;});
+  else if(state.chargeFilter==='pagas')charges=charges.filter(function(c){return c.status==='pago';});
+  charges.sort(function(a,b){
+    if(a.status==='pago'&&b.status!=='pago')return 1;if(b.status==='pago'&&a.status!=='pago')return -1;
+    return String(a.dueDate).localeCompare(String(b.dueDate));
+  });
+  var open=(store.charges||[]).filter(function(c){return c.status!=='pago';}),overdue=open.filter(function(c){return c.dueDate<today;}),
+      due7=open.filter(function(c){return c.dueDate>=today&&c.dueDate<=addDays(today,7);}),
+      receivable=open.reduce(function(s,c){return s+chargeAmountUpdated(c).total;},0);
+
+  var pts=patientRecords().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
+  var out='<div class="section-title">Cobranças <span style="font-size:12px;color:var(--ink-soft);font-weight:500">carnê interno e controle de parcelas</span></div>';
+  if(state.chargeMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.chargeMessage)+'</div>';
+  out+='<div class="card" style="margin-bottom:14px;background:var(--grey-soft)"><strong>Sistema interno, sem integração bancária.</strong><p class="mini-note" style="margin-bottom:0">As “cobranças” abaixo funcionam como carnê/aviso interno. O ERP calcula vencimentos, recorrências, lembretes e encargos, mas não cria boleto bancário, código de barras nem compensação automática.</p></div>';
+  out+='<div class="charge-grid"><div class="card charge-kpi"><div class="k">A receber</div><div class="v">'+fmtMoney(receivable)+'</div></div><div class="card charge-kpi"><div class="k">Parcelas abertas</div><div class="v">'+open.length+'</div></div><div class="card charge-kpi"><div class="k">Vencem em 7 dias</div><div class="v">'+due7.length+'</div></div><div class="card charge-kpi"><div class="k">Atrasadas</div><div class="v" style="color:var(--danger)">'+overdue.length+'</div></div></div>';
+
+  out+='<div class="card" style="margin-bottom:14px"><h3 style="margin-top:0">Criar plano de cobrança</h3><div class="charge-form">'+
+    '<div class="field span-2"><label>Paciente</label><select id="chg-patient"><option value="">Selecione</option>'+pts.map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="field span-2"><label>Descrição / tratamento</label><input id="chg-desc" placeholder="Ex.: tratamento com implantes e prótese"></div>'+
+    '<div class="field"><label>Valor total</label><input id="chg-total" type="number" min="0" step="0.01"></div>'+
+    '<div class="field"><label>Nº parcelas</label><input id="chg-count" type="number" min="1" max="60" value="1"></div>'+
+    '<div class="field"><label>1º vencimento</label><input id="chg-first" type="date" value="'+nextStrategicDate(addDays(today,2))+'"></div>'+
+    '<div class="field"><label>Datas estratégicas</label><input value="05 · 15 · 20" disabled></div>'+
+    '<div class="field"><label>Multa por atraso (%)</label><input id="chg-late" type="number" step="0.01" min="0" value="'+n(cfg.lateFeeRate)+'"></div>'+
+    '<div class="field"><label>Juros por dia (%)</label><input id="chg-daily" type="number" step="0.001" min="0" value="'+n(cfg.dailyInterestRate)+'"></div>'+
+    '<div class="field"><label>Emitente</label><input id="chg-issuer" value="'+escAttr(cfg.issuerName)+'"></div>'+
+    '<div class="field"><label>CPF do emitente</label><input id="chg-cpf" inputmode="numeric" value="'+escAttr(cfg.issuerCpf)+'" placeholder="Somente números"></div>'+
+    '<div class="field span-4"><label>Instruções de pagamento</label><textarea id="chg-instructions" style="width:100%;min-height:70px;padding:10px;border:1px solid var(--border);border-radius:9px">'+esc(cfg.paymentInstructions)+'</textarea></div>'+
+    '</div><div class="patient-actions"><span class="mini-note">O primeiro vencimento é sugerido no próximo dia 05, 15 ou 20. As parcelas seguintes repetem mensalmente o mesmo dia.</span><button class="btn btn-primary" data-action="charge-create">Criar parcelas</button></div></div>';
+
+  out+='<div class="finance-tabs">'+[['abertas','Abertas'],['atrasadas','Atrasadas'],['pagas','Pagas'],['todas','Todas']].map(function(x){return '<button class="'+(state.chargeFilter===x[0]?'active':'')+'" data-action="charge-filter" data-id="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="card"><div class="charge-row head"><div>Vencimento</div><div>Paciente / tratamento</div><div>Parcela</div><div>Valor atualizado</div><div>Status</div><div>Lembretes</div><div>Ações</div></div>';
+  if(!charges.length)out+='<div class="empty-state">Nenhuma cobrança nesta categoria.</div>';
+  charges.forEach(function(c){
+    var p=patientById(c.patientId),plan=chargePlanById(c.planId),z=chargeAmountUpdated(c),st=chargeStatus(c),d=daysBetween(today,c.dueDate),phone=normalizePhone(p?p.phone:''),
+        show5=d===5,show2=d===2,show0=d===0;
+    out+='<div class="charge-row"><div><strong>'+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'</strong></div>'+
+      '<div><strong>'+esc(p?p.name:'Paciente')+'</strong><div class="mini-note">'+esc(plan?plan.description:'')+'</div></div>'+
+      '<div>'+c.number+'/'+c.totalInstallments+'</div><div><strong>'+fmtMoney(z.total)+'</strong>'+(z.days>0?'<div class="mini-note">'+z.days+'d atraso</div>':'')+'</div>'+
+      '<div><span class="charge-status '+st.cls+'">'+st.label+'</span></div>'+
+      '<div class="charge-reminders">'+
+        (phone.length>=10?'<a class="btn btn-ghost whatsapp-btn" href="'+chargeWhatsAppLink(c,'5d')+'" target="_blank" rel="noopener" '+(show5?'style="box-shadow:0 0 0 2px #e8b44e"':'')+'>5 dias</a><a class="btn btn-ghost whatsapp-btn" href="'+chargeWhatsAppLink(c,'2d')+'" target="_blank" rel="noopener" '+(show2?'style="box-shadow:0 0 0 2px #e8b44e"':'')+'>2 dias</a><a class="btn btn-ghost whatsapp-btn" href="'+chargeWhatsAppLink(c,'today')+'" target="_blank" rel="noopener" '+(show0?'style="box-shadow:0 0 0 2px #d64550"':'')+'>Hoje</a>':'<span class="mini-note">Sem telefone</span>')+
+      '</div><div class="row-actions actions"><button class="btn btn-ghost btn-sm" data-action="charge-preview" data-id="'+c.id+'">Documento</button><button class="btn btn-ghost btn-sm" data-action="contract-preview" data-id="'+c.planId+'">Contrato</button>'+
+      (c.status==='pago'?'<button class="btn btn-ghost btn-sm" data-action="charge-reopen" data-id="'+c.id+'">Reabrir</button>':'<button class="btn btn-primary btn-sm" data-action="charge-paid" data-id="'+c.id+'">Marcar pago</button>')+'</div></div>';
+  });
+  out+='</div>';
+  return out;
+}
+
 function renderConfirmacoes(){
   var items=futureScheduledAppointments(),today=todayISO(),
       todayCount=items.filter(function(a){return a.date===today;}).length,
@@ -3946,6 +4179,15 @@ function attachEvents(){
 
     var a = t.dataset.action;
     var b = state.booking;
+    if(a==='charge-create'){createChargePlan();return;}
+    if(a==='charge-filter'){state.chargeFilter=t.dataset.id;render();return;}
+    if(a==='charge-paid'){markChargePaid(t.dataset.id);return;}
+    if(a==='charge-reopen'){reopenCharge(t.dataset.id);return;}
+    if(a==='charge-preview'){state.chargePreviewId=t.dataset.id;render();return;}
+    if(a==='charge-preview-close'){state.chargePreviewId=null;render();return;}
+    if(a==='contract-preview'){state.chargeContractPlanId=t.dataset.id;render();return;}
+    if(a==='contract-close'){state.chargeContractPlanId=null;render();return;}
+    if(a==='charge-print'){window.print();return;}
     if(a==='export-backup'){ exportBackup(); return; }
     if(a==='restore-backup'){ var rf=document.getElementById('restore-file'); if(rf) rf.click(); return; }
     if(a==='export-appointments'){ exportAppointmentsCSV(); return; }
