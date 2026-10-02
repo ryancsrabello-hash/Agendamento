@@ -806,244 +806,23 @@
 .slot.blocked{background-image:repeating-linear-gradient(45deg,var(--danger-soft),var(--danger-soft) 6px,#fff 6px,#fff 12px)!important}
 
 
-/* v2.6 CRM de Reativação + Precificação Avançada */
-.crm-kpis,.price-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:12px 0 16px}
-.crm-kpi,.price-kpi{padding:15px}.crm-kpi .k,.price-kpi .k{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);font-weight:800}.crm-kpi .v,.price-kpi .v{font-family:'Space Grotesk';font-size:22px;font-weight:800;margin-top:4px}
-.crm-tabs{display:flex;gap:7px;overflow-x:auto;margin-bottom:14px}.crm-tabs button{white-space:nowrap}
-.crm-row{display:grid;grid-template-columns:minmax(170px,1.4fr) 120px 130px 130px minmax(180px,1.2fr) auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
-.crm-row.head{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);font-weight:800}
-.crm-priority{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800}.crm-priority.alta{background:var(--danger-soft);color:var(--danger)}.crm-priority.media{background:var(--amber-soft);color:#805510}.crm-priority.baixa{background:var(--success-soft);color:var(--teal-deep)}
-.price-shell{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(0,2.2fr);gap:14px}.price-list{max-height:680px;overflow:auto}.price-proc{display:block;width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer}.price-proc.active{border-color:var(--teal);background:var(--success-soft)}.price-proc small{display:block;color:var(--ink-soft);margin-top:3px}
-.cost-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.cost-grid .field{margin:0}.cost-total{padding:13px;border-radius:12px;background:var(--grey-soft);margin-top:12px}.price-final{background:var(--success-soft);border:1px solid rgba(32,149,132,.22);padding:14px;border-radius:13px;margin-top:12px}
-.price-note{font-size:11.5px;line-height:1.5;color:var(--ink-soft);margin-top:10px}
-@media(max-width:900px){.price-shell{grid-template-columns:1fr}.price-list{max-height:260px}.cost-grid{grid-template-columns:1fr 1fr}.crm-row{grid-template-columns:1fr 1fr}.crm-row.head{display:none}}
-@media(max-width:560px){.cost-grid{grid-template-columns:1fr}.crm-row{grid-template-columns:1fr}}
-
-
-/* ===== ERP 2.7 · Fases 1–5 ===== */
-.phase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px;margin:12px 0 16px}
-.phase-card{padding:14px}.phase-card .num{font-size:10px;font-weight:850;color:var(--teal);text-transform:uppercase}.phase-card .big{font:800 21px 'Space Grotesk';margin-top:4px}
-.plan-row,.lab-row,.task-row{display:grid;grid-template-columns:1.5fr .7fr .8fr .8fr 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
-.plan-row.head,.lab-row.head,.task-row.head{font-size:10px;text-transform:uppercase;font-weight:800;color:var(--ink-soft)}
-.health-score{display:flex;align-items:center;gap:12px}.health-ring{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--teal) calc(var(--score)*1%),var(--grey-soft) 0);position:relative}.health-ring:after{content:"";position:absolute;width:48px;height:48px;border-radius:50%;background:#fff}.health-ring strong{z-index:1;font-size:16px}
-@media(max-width:800px){.plan-row,.lab-row,.task-row{grid-template-columns:1fr 1fr}.plan-row.head,.lab-row.head,.task-row.head{display:none}}
-
-
-/* ===== MENU ERP PRIORIZADO ===== */
-.tabs{
-  scroll-behavior:smooth;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
-}
-.tabs button{
-  flex:0 0 auto;
-}
+/* Navegação interna: mantém as ações e permissões existentes. */
+.staff-tabs{flex-wrap:wrap;gap:7px;overflow:visible;padding:12px;background:var(--grey-soft);border:1px solid var(--border);border-radius:14px;margin-bottom:18px}
+.staff-tabs button{border:1px solid transparent;border-radius:9px;padding:10px 13px;min-height:44px;white-space:normal}
+.staff-tabs button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.staff-tabs button:hover:not(.active){background:#fff;border-color:var(--border)}
+.staff-tabs button:focus-visible,.staff-content button:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+.staff-content{min-width:0}
+.staff-content .finance-table-wrap,.staff-content .stock-table-wrap,.staff-content .patients-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.staff-content .record-tabs,.staff-content .finance-tabs{gap:7px;padding-bottom:6px}
+.staff-content .record-tabs button,.staff-content .finance-tabs button{min-height:44px}
 @media(max-width:760px){
-  .tabs{
-    position:relative;
-    gap:6px;
-    padding-bottom:7px;
-  }
-  .tabs button{
-    border:1px solid var(--border);
-    border-bottom-width:1px;
-    border-radius:999px;
-    padding:9px 13px;
-    background:#fff;
-  }
-  .tabs button.active{
-    background:var(--ink);
-    color:#fff;
-    border-color:var(--ink);
-  }
+.staff-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;gap:6px}
+.staff-tabs button{text-align:left;font-size:13px;padding:10px;min-width:0}
+.staff-content .quick-actions{flex-wrap:wrap;gap:8px}
+.staff-content .quick-actions .btn{min-height:44px}
+.staff-content .field input,.staff-content .field select,.staff-content .field textarea{font-size:16px;max-width:100%}
 }
-
-
-/* ===== ORCAMENTO PROFISSIONAL / IMPRESSAO ===== */
-.quote-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-.quote-sheet{background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px;max-width:900px;margin:0 auto}
-.quote-head{display:flex;justify-content:space-between;gap:20px;border-bottom:2px solid var(--teal);padding-bottom:16px;margin-bottom:16px}
-.quote-brand{display:flex;gap:14px;align-items:center}.quote-brand img{width:78px;height:78px;object-fit:contain;border-radius:12px}.quote-brand h2{margin:0;color:var(--ink)}.quote-meta{text-align:right;font-size:12px}
-.quote-patient{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin:15px 0;padding:12px;background:var(--grey-soft);border-radius:10px}
-.quote-table{width:100%;border-collapse:collapse;margin:15px 0}.quote-table th,.quote-table td{padding:9px;border-bottom:1px solid var(--border);font-size:12px;text-align:left}.quote-table th{text-transform:uppercase;font-size:10px;color:var(--ink-soft)}
-.quote-total{text-align:right;font:800 19px 'Space Grotesk';margin:16px 0}.quote-footer{border-top:1px solid var(--border);margin-top:26px;padding-top:14px;text-align:center;font-size:11px;color:var(--ink-soft)}
-@media print{body *{visibility:hidden!important}.quote-sheet,.quote-sheet *{visibility:visible!important}.quote-sheet{position:absolute;left:0;top:0;width:100%;max-width:none;border:0;padding:18mm;box-shadow:none}.quote-toolbar{display:none!important}.sidebar,.topbar,.tabs{display:none!important}@page{size:A4;margin:0}}
-
-
-/* ===== ORÇAMENTOS SEPARADOS + ODONTOGRAMA COMERCIAL ===== */
-.budget-shell{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px}
-.budget-patients{max-height:720px;overflow:auto}.budget-patient-btn{display:block;width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer}.budget-patient-btn.active{border-color:var(--teal);background:var(--success-soft)}
-.budget-patient-btn small{display:block;color:var(--ink-soft);margin-top:3px}
-.budget-odonto-wrap{overflow-x:auto;padding-bottom:4px}.budget-odontogram{min-width:760px;display:grid;gap:10px}
-.budget-arch{display:grid;grid-template-columns:repeat(16,1fr);gap:5px}
-.budget-tooth{min-height:54px;border:1px solid var(--border);background:#fff;border-radius:9px;cursor:pointer;padding:5px 2px;text-align:center}.budget-tooth strong{display:block;font-size:12px}.budget-tooth small{font-size:8px;color:var(--ink-soft)}
-.budget-tooth.selected{outline:2px solid var(--ink);outline-offset:1px}.budget-tooth.proposto{background:#fff6df;border-color:#e8b44e}.budget-tooth.aceito{background:#e5f7f1;border-color:#3ca88f}.budget-tooth.realizado{background:#e7eef9;border-color:#6687bb}
-.budget-form{display:grid;grid-template-columns:1.2fr .65fr .65fr 1.4fr auto;gap:8px;align-items:end;margin:14px 0}
-.budget-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
-.budget-stat{padding:13px;border:1px solid var(--border);border-radius:12px;background:#fff}.budget-stat .k{font-size:10px;color:var(--ink-soft);font-weight:800;text-transform:uppercase}.budget-stat .v{font:800 19px 'Space Grotesk';margin-top:4px}
-@media(max-width:900px){.budget-shell{grid-template-columns:1fr}.budget-patients{max-height:230px}.budget-form{grid-template-columns:1fr 1fr}.budget-form .wide{grid-column:1/-1}.budget-summary{grid-template-columns:1fr 1fr}}
-@media(max-width:520px){.budget-form,.budget-summary{grid-template-columns:1fr}}
-
-
-/* ===== ALERTAS CLÍNICOS POR CATEGORIA ===== */
-.clinical-alert{position:relative;overflow:hidden;border-width:1px!important}
-.clinical-alert:before{content:"";width:5px;align-self:stretch;border-radius:99px;flex:0 0 5px}
-.clinical-alert .alert-icon{font-size:18px;line-height:1.1;flex:0 0 auto}
-.clinical-alert .alert-label{display:block;font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
-
-.clinical-alert.alert-allergy{background:#fde8ea!important;color:#a91f2d!important;border-color:#efadb4!important}
-.clinical-alert.alert-allergy:before{background:#d64550}.clinical-alert.alert-allergy .alert-label{color:#c62f3d}
-
-.clinical-alert.alert-anticoagulant{background:#f2e9fb!important;color:#713794!important;border-color:#d5b9e9!important}
-.clinical-alert.alert-anticoagulant:before{background:#8c4caf}.clinical-alert.alert-anticoagulant .alert-label{color:#7d419e}
-
-.clinical-alert.alert-medication{background:#e8f2fc!important;color:#235b8d!important;border-color:#b8d6f1!important}
-.clinical-alert.alert-medication:before{background:#397eb6}.clinical-alert.alert-medication .alert-label{color:#2d6fa8}
-
-.clinical-alert.alert-hypertension{background:#fff0e4!important;color:#a8541c!important;border-color:#f2c39c!important}
-.clinical-alert.alert-hypertension:before{background:#d9772c}.clinical-alert.alert-hypertension .alert-label{color:#bc6221}
-
-.clinical-alert.alert-diabetes{background:#fff7dc!important;color:#836316!important;border-color:#ead58d!important}
-.clinical-alert.alert-diabetes:before{background:#c59a24}.clinical-alert.alert-diabetes .alert-label{color:#987315}
-
-.clinical-alert.alert-pregnancy{background:#fdebf4!important;color:#9c3f70!important;border-color:#eebbd3!important}
-.clinical-alert.alert-pregnancy:before{background:#c85d91}.clinical-alert.alert-pregnancy .alert-label{color:#ac497b}
-
-.clinical-alert.alert-anamnesis{background:#fff8dc!important;color:#7e6518!important;border-color:#eadb95!important}
-.clinical-alert.alert-anamnesis:before{background:#d2ad31}.clinical-alert.alert-anamnesis .alert-label{color:#987a1e}
-
-.clinical-alert.alert-contract{background:#e9f7f5!important;color:#176d65!important;border-color:#a9ddd6!important}
-.clinical-alert.alert-contract:before{background:#249b90}.clinical-alert.alert-contract .alert-label{color:#18796f}
-
-.clinical-alert.alert-terms{background:#eef0ff!important;color:#4a56a2!important;border-color:#c6caf1!important}
-.clinical-alert.alert-terms:before{background:#6975c6}.clinical-alert.alert-terms .alert-label{color:#5561b0}
-
-.clinical-alert.alert-ok{background:#e8f7ef!important;color:#20704b!important;border-color:#b3dfc7!important}
-.clinical-alert.alert-ok:before{background:#34a671}
-
-.signature-status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}
-.signature-status{padding:11px 12px;border-radius:11px;border:1px solid var(--border);font-size:12px;font-weight:750}
-.signature-status strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
-.signature-status.pending-anamnesis{background:#fff8dc;border-color:#eadb95;color:#7e6518}
-.signature-status.pending-contract{background:#e9f7f5;border-color:#a9ddd6;color:#176d65}
-.signature-status.pending-terms{background:#eef0ff;border-color:#c6caf1;color:#4a56a2}
-.signature-status.signed{background:#e8f7ef;border-color:#b3dfc7;color:#20704b}
-@media(max-width:650px){.signature-status-grid{grid-template-columns:1fr}}
-
-
-/* ===== ETAPAS MANUAIS: ORÇAMENTO E LABORATÓRIO ===== */
-.status-select{width:100%;min-width:135px;padding:8px 9px;border-radius:9px;border:1px solid var(--border);font-weight:750;font-size:11.5px;background:#fff;cursor:pointer}
-.status-select.status-proposto,.status-select.status-enviado{background:#fff6df;border-color:#e8b44e;color:#805c13}
-.status-select.status-apresentado,.status-select.status-producao{background:#e8f2fc;border-color:#b8d6f1;color:#235b8d}
-.status-select.status-negociacao,.status-select.status-prova{background:#f2e9fb;border-color:#d5b9e9;color:#713794}
-.status-select.status-aceito,.status-select.status-recebido{background:#e9f7f5;border-color:#a9ddd6;color:#176d65}
-.status-select.status-realizado,.status-select.status-entregue{background:#e8f7ef;border-color:#b3dfc7;color:#20704b}
-
-
-/* ===== CORES INDIVIDUAIS DAS ETAPAS ===== */
-.status-select option[value="proposto"],
-.status-select option[value="enviado"]{background:#fff2c9;color:#795600}
-.status-select option[value="apresentado"]{background:#dceeff;color:#15578e}
-.status-select option[value="negociacao"]{background:#eadcf7;color:#6d328d}
-.status-select option[value="aceito"]{background:#d9f3ec;color:#116c60}
-.status-select option[value="realizado"]{background:#d8f1df;color:#17643b}
-
-.status-select option[value="em produção"]{background:#dceeff;color:#15578e}
-.status-select option[value="prova"]{background:#eadcf7;color:#6d328d}
-.status-select option[value="recebido"]{background:#d9f3ec;color:#116c60}
-.status-select option[value="entregue"]{background:#d8f1df;color:#17643b}
-
-.status-select.status-proposto{background:#fff2c9!important;border-color:#d8a51f!important;color:#795600!important}
-.status-select.status-apresentado{background:#dceeff!important;border-color:#68a9df!important;color:#15578e!important}
-.status-select.status-negociacao{background:#eadcf7!important;border-color:#ad7aca!important;color:#6d328d!important}
-.status-select.status-aceito{background:#d9f3ec!important;border-color:#54b5a6!important;color:#116c60!important}
-.status-select.status-realizado{background:#d8f1df!important;border-color:#62ad78!important;color:#17643b!important}
-
-.status-select.status-enviado{background:#fff2c9!important;border-color:#d8a51f!important;color:#795600!important}
-.status-select.status-producao{background:#dceeff!important;border-color:#68a9df!important;color:#15578e!important}
-.status-select.status-prova{background:#eadcf7!important;border-color:#ad7aca!important;color:#6d328d!important}
-.status-select.status-recebido{background:#d9f3ec!important;border-color:#54b5a6!important;color:#116c60!important}
-.status-select.status-entregue{background:#d8f1df!important;border-color:#62ad78!important;color:#17643b!important}
-
-
-/* ===== LEMBRETES MANUAIS DE CONSULTA ===== */
-.reminder-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0 16px}
-.reminder-kpi{padding:14px}.reminder-kpi .k{font-size:10px;text-transform:uppercase;font-weight:850;color:var(--ink-soft)}.reminder-kpi .v{font:800 21px 'Space Grotesk';margin-top:4px}
-.reminder-list{display:grid;gap:9px}.reminder-appt{display:grid;grid-template-columns:115px minmax(170px,1.3fr) minmax(170px,1fr) 125px auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff}
-.reminder-appt.today{border-color:#e8b44e;background:#fffaf0}.reminder-appt .date strong{display:block;font-size:14px}.reminder-appt .date small,.reminder-appt .meta{font-size:11.5px;color:var(--ink-soft)}
-.whatsapp-btn{background:#e6f7ef!important;border-color:#7bc9a2!important;color:#176b46!important;font-weight:800!important}
-.whatsapp-btn:hover{background:#d6f1e3!important}
-@media(max-width:800px){.reminder-appt{grid-template-columns:1fr 1fr}.reminder-appt .wa-action{grid-column:1/-1}.whatsapp-btn{width:100%}}
-
-
-/* ===== ALERTAS INTELIGENTES DE ESTOQUE ===== */
-.stock-warning-panel{display:grid;gap:9px;margin:12px 0 16px}
-.stock-warning{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 14px;border-radius:12px;border:1px solid var(--border);font-size:12.5px}
-.stock-warning .icon{font-size:19px}.stock-warning .title{font-weight:800}.stock-warning .meta{font-size:11.5px;margin-top:2px}
-.stock-warning.critical{background:#fde8ea;border-color:#efadb4;color:#a91f2d}
-.stock-warning.urgent{background:#fff0e4;border-color:#f2c39c;color:#a8541c}
-.stock-warning.low{background:#fff8dc;border-color:#eadb95;color:#7e6518}
-.stock-warning.expiry{background:#eef0ff;border-color:#c6caf1;color:#4a56a2}
-.stock-kpi.critical-kpi{border-color:#efadb4;background:#fff7f8}
-.stock-kpi.warning-kpi{border-color:#eadb95;background:#fffdf4}
-.stock-alert.zero{background:#fde8ea!important;color:#a91f2d!important}
-.stock-alert.critical{background:#fff0e4!important;color:#a8541c!important}
-.stock-alert.low{background:#fff8dc!important;color:#7e6518!important}
-
-
-/* ===== FORMAÇÃO DE PREÇO: VALOR REAL x PERCENTUAL ===== */
-.cost-mode-row{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:7px;align-items:end}
-.cost-mode{padding:8px 7px;border-radius:8px;border:1px solid var(--border);font-size:10.5px;font-weight:800;background:#fff}
-.cost-mode.mode-fixed{background:#e9f7f5;border-color:#a9ddd6;color:#176d65}
-.cost-mode.mode-percent{background:#eef0ff;border-color:#c6caf1;color:#4a56a2}
-.cost-origin{display:inline-flex;margin-left:5px;padding:2px 6px;border-radius:999px;font-size:9px;font-weight:900;vertical-align:middle}
-.cost-origin.fixed{background:#e9f7f5;color:#176d65}.cost-origin.percent{background:#eef0ff;color:#4a56a2}
-.price-breakdown{margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.price-breakdown .summary-line{padding:9px 12px;background:#fff}
-.price-breakdown .summary-line:nth-child(even){background:var(--grey-soft)}
-.mode-help{padding:12px 14px;border-radius:11px;background:#f7f9fb;border:1px solid var(--border);font-size:11.5px;color:var(--ink-soft);line-height:1.55;margin-bottom:13px}
-
-
-/* ===== LABORATÓRIO & PRÓTESE · ETAPAS VISUAIS E PERSISTENTES ===== */
-.lab-stage-group{display:flex;flex-wrap:wrap;gap:5px;min-width:250px}
-.lab-stage-btn{
-  border:1px solid var(--border);border-radius:999px;padding:6px 9px;
-  font-size:10px;font-weight:850;cursor:pointer;opacity:.72;transition:.15s;
-}
-.lab-stage-btn:hover{opacity:1;transform:translateY(-1px)}
-.lab-stage-btn.active{opacity:1;box-shadow:0 0 0 2px #fff,0 0 0 4px currentColor}
-.lab-stage-btn.stage-enviado{background:#fff2c9;border-color:#d8a51f;color:#795600}
-.lab-stage-btn.stage-producao{background:#dceeff;border-color:#68a9df;color:#15578e}
-.lab-stage-btn.stage-prova{background:#eadcf7;border-color:#ad7aca;color:#6d328d}
-.lab-stage-btn.stage-recebido{background:#d9f3ec;border-color:#54b5a6;color:#116c60}
-.lab-stage-btn.stage-entregue{background:#d8f1df;border-color:#62ad78;color:#17643b}
-.lab-current-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;margin-bottom:7px}
-.lab-current-status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-@media(max-width:800px){.lab-stage-group{min-width:0}.lab-stage-btn{flex:1 1 44%;text-align:center}}
-
-
-/* ===== COBRANÇAS / CARNÊ INTERNO ===== */
-.charge-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0 16px}
-.charge-kpi{padding:14px}.charge-kpi .k{font-size:10px;text-transform:uppercase;color:var(--ink-soft);font-weight:850}.charge-kpi .v{font:800 22px 'Space Grotesk';margin-top:4px}
-.charge-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.charge-form .span-2{grid-column:span 2}.charge-form .span-4{grid-column:1/-1}
-.charge-row{display:grid;grid-template-columns:110px minmax(170px,1.2fr) 120px 120px 135px minmax(170px,1fr) auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
-.charge-row.head{font-size:10px;text-transform:uppercase;font-weight:850;color:var(--ink-soft)}
-.charge-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:850}
-.charge-status.open{background:#fff8dc;color:#7e6518}.charge-status.due{background:#fff0e4;color:#a8541c}.charge-status.overdue{background:#fde8ea;color:#a91f2d}.charge-status.paid{background:#e8f7ef;color:#20704b}
-.charge-reminders{display:flex;gap:5px;flex-wrap:wrap}.charge-reminders a,.charge-reminders button{padding:6px 8px!important;font-size:10px!important}
-.charge-doc,.contract-doc{background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px;max-width:900px;margin:0 auto}.charge-doc h2,.contract-doc h2{margin:0}.charge-doc .doc-head,.contract-doc .doc-head{display:flex;justify-content:space-between;gap:18px;border-bottom:2px solid var(--teal);padding-bottom:14px;margin-bottom:16px}
-.charge-doc .doc-grid,.contract-doc .doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;background:var(--grey-soft);border-radius:10px;padding:12px;margin:12px 0}
-.charge-doc .amount{font:800 26px 'Space Grotesk';text-align:right;margin:16px 0}.charge-doc .warning{padding:11px;border-radius:10px;background:#fff8dc;border:1px solid #eadb95;font-size:11.5px}
-.contract-doc p,.contract-doc li{font-size:11.5px;line-height:1.6}.contract-doc h3{margin:18px 0 6px;font-size:13px}.contract-doc ol{padding-left:18px}
-@media(max-width:900px){.charge-form{grid-template-columns:1fr 1fr}.charge-row{grid-template-columns:1fr 1fr}.charge-row.head{display:none}.charge-row .actions{grid-column:1/-1}}
-@media(max-width:560px){.charge-form{grid-template-columns:1fr}.charge-form .span-2,.charge-form .span-4{grid-column:auto}}
-@media print{
-  body *{visibility:hidden!important}.charge-doc,.charge-doc *,.contract-doc,.contract-doc *{visibility:visible!important}
-  .charge-doc,.contract-doc{position:absolute;left:0;top:0;width:100%;max-width:none;border:0;padding:16mm;box-shadow:none}
-  .charge-toolbar{display:none!important}.sidebar,.topbar,.tabs{display:none!important}
-  @page{size:A4;margin:0}
-}
-
 </style>
 </head>
 <body>
@@ -1096,7 +875,7 @@ var state = {
   gateLoading: false,
   staffUser: null,
   staffEmail: null,
-  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', preConcern:'', preSince:'', prePrevious:'', preGoal:'', done:false, error:null },
+  booking: { step: 1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', done:false, error:null },
   lookupPhone: '',
   lookupResults: [],
   lookupLoading: false,
@@ -1115,8 +894,8 @@ var state = {
   staffProfile:{role:'admin',display_name:''}, auditLogs:[], auditLoading:false, teamProfiles:[], teamLoading:false, teamMessage:'',
   evolutionDraft:{data_atendimento:'',procedimento:'',descricao:'',conduta:'',observacoes:''}, draftStatus:'',
   finTab:'resumo', financeMonth:todayISO().slice(0,7), financeDraft:null, financeMessage:'', receptionDate:todayISO(), waitlistDraft:{name:'',phone:'',procedure:'',preference:'',notes:''},
-  stockSearch:'', stockCategory:'Todas', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia', priceProcedure:'avaliacao', crmTab:'inativos', crmMessage:'', planMessage:'', labMessage:'', taskFilter:'abertas', quotePreview:false, budgetPatientId:null, budgetTooth:null, budgetProcedure:'avaliacao', budgetMessage:'', budgetQuotePreview:false,
-  pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'', chargeMessage:'', chargeFilter:'abertas', chargePreviewId:null, chargeContractPlanId:null,
+  stockSearch:'', stockEditingId:null, stockMessage:'', stockTab:'itens', recipeProcedure:'exodontia',
+  pendingItems:[], pendingLoading:false, pendingError:'', pendingFilter:'todos', pendingEditing:false, pendingMessage:'',
   sacItems:[], sacLoading:false, sacMessage:'', sacPublic:[], sacPublicLoading:false,
   preConsultOpen:false, preConsultMessage:'', preConsultItems:[], preConsultLoading:false,
   marketingEvents:[], marketingLoading:false, marketingRange:30,
@@ -1299,172 +1078,14 @@ function timeToMinutes(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt
 /* ---------------- storage (Supabase + cache local) ---------------- */
 function defaultInventoryItems(){
   return [
-    {id:'mat-anestesico',name:'Tubete anestésico',category:'Anestesia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-agulha-curta',name:'Agulha gengival curta',category:'Anestesia',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-agulha-longa',name:'Agulha gengival longa',category:'Anestesia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-anestesico-topico',name:'Anestésico tópico',category:'Anestesia',unit:'pote',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-luva',name:'Luva de procedimento',category:'EPI',unit:'cx',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-luva-esteril',name:'Luva cirúrgica estéril',category:'EPI',unit:'par',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-mascara',name:'Máscara cirúrgica',category:'EPI',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-touca',name:'Touca descartável',category:'EPI',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-prope',name:'Propé descartável',category:'EPI',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-oculos-desc',name:'Óculos de proteção descartável / visitante',category:'EPI',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-avental-desc',name:'Avental descartável',category:'EPI',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-campo-desc',name:'Campo descartável',category:'EPI',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-sugador',name:'Sugador descartável',category:'Descartáveis',unit:'pct',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-sugador-cirurgico',name:'Sugador cirúrgico',category:'Descartáveis',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-gaze',name:'Gaze estéril',category:'Descartáveis',unit:'pct',qty:0,minQty:8,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-algodao-rolete',name:'Rolete de algodão',category:'Descartáveis',unit:'pct',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-algodao-bola',name:'Algodão em bolas',category:'Descartáveis',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-copo',name:'Copo descartável',category:'Descartáveis',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-guardanapo',name:'Guardanapo / babador odontológico',category:'Descartáveis',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-protetor-refletor',name:'Protetor descartável para refletor',category:'Barreiras',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-filme-pvc',name:'Filme PVC para barreira',category:'Barreiras',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-barreira',name:'Barreira plástica / capa protetora',category:'Barreiras',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-capa-seringa',name:'Capa para seringa tríplice',category:'Barreiras',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-capa-cadeira',name:'Capa protetora para cadeira',category:'Barreiras',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-pasta-profilatica',name:'Pasta profilática',category:'Prevenção',unit:'bis',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-pedra-pomes',name:'Pedra-pomes',category:'Prevenção',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-escova-robinson',name:'Escova de Robinson',category:'Prevenção',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-taca-borracha',name:'Taça de borracha',category:'Prevenção',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-fio-dental',name:'Fio dental',category:'Prevenção',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-fluor-gel',name:'Flúor gel',category:'Prevenção',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-verniz-fluor',name:'Verniz fluoretado',category:'Prevenção',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-resina',name:'Resina composta universal',category:'Dentística',unit:'ser',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-resina-flow',name:'Resina flow',category:'Dentística',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-resina-opaca',name:'Resina opaca / dentina',category:'Dentística',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-acido-fosforico',name:'Ácido fosfórico 37%',category:'Dentística',unit:'ser',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-adesivo',name:'Sistema adesivo',category:'Dentística',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-silano',name:'Silano',category:'Dentística',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-primer-ceramica',name:'Primer para cerâmica / zircônia',category:'Dentística',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-microbrush',name:'Microbrush',category:'Dentística',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-aplicador',name:'Aplicador descartável',category:'Dentística',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-tira-poliester',name:'Tira de poliéster',category:'Dentística',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-matriz-aco',name:'Matriz de aço',category:'Dentística',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-matriz-seccional',name:'Matriz seccional',category:'Dentística',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cunha-madeira',name:'Cunha de madeira',category:'Dentística',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cunha-plastica',name:'Cunha plástica',category:'Dentística',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-papel-carbono',name:'Papel carbono articular',category:'Dentística',unit:'bl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lixa-resina',name:'Tira de lixa para resina',category:'Dentística',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-disco-lixa',name:'Discos de acabamento e polimento',category:'Dentística',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-borracha-polimento',name:'Borrachas para polimento',category:'Dentística',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-pasta-polimento',name:'Pasta de polimento',category:'Dentística',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-ionomero-rest',name:'Cimento de ionômero de vidro restaurador',category:'Dentística',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-ionomero-forro',name:'Ionômero de vidro para forramento',category:'Dentística',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-hidroxido-calcio',name:'Hidróxido de cálcio',category:'Dentística',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-mta',name:'MTA / biocerâmico reparador',category:'Dentística',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cimento-temp',name:'Cimento provisório sem eugenol',category:'Cimentos',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cimento-fosfato',name:'Cimento de fosfato de zinco',category:'Cimentos',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cimento-ionomero',name:'Cimento de ionômero de vidro para cimentação',category:'Cimentos',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cimento-resinoso-dual',name:'Cimento resinoso dual',category:'Cimentos',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cimento-resinoso-foto',name:'Cimento resinoso fotoativado',category:'Cimentos',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cimento-auto',name:'Cimento resinoso autoadesivo',category:'Cimentos',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-eugenol',name:'Óxido de zinco e eugenol',category:'Cimentos',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-provisorio-bisacrilica',name:'Resina bisacrílica para provisórios',category:'Prótese',unit:'cart',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-acrilico-po',name:'Resina acrílica pó',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-acrilico-liq',name:'Resina acrílica líquido',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-isolante-acrilico',name:'Isolante para resina acrílica',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-fio-retrator',name:'Fio retrator gengival',category:'Prótese',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-hemostatico',name:'Agente hemostático gengival',category:'Prótese',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-silicone-adicao-pesado',name:'Silicone de adição pesado',category:'Moldagem',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-silicone-adicao-leve',name:'Silicone de adição leve',category:'Moldagem',unit:'cart',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-silicone-condensacao',name:'Silicone de condensação',category:'Moldagem',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-alginato',name:'Alginato',category:'Moldagem',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-gesso-tipo-iv',name:'Gesso tipo IV',category:'Moldagem',unit:'kg',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-gesso-pedra',name:'Gesso pedra',category:'Moldagem',unit:'kg',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cera-7',name:'Cera 7',category:'Prótese',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cera-utilidade',name:'Cera utilidade',category:'Prótese',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-pasta-zinco-enolica',name:'Pasta zinco-enólica',category:'Prótese',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-adesivo-moldeira',name:'Adesivo para moldeira',category:'Moldagem',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-moldeira-desc',name:'Moldeira descartável',category:'Moldagem',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lenco-borracha',name:'Lençol de borracha',category:'Endodontia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-arco-isolamento',name:'Arco para isolamento absoluto',category:'Endodontia',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-fio-dental-endo',name:'Fio dental para amarração',category:'Endodontia',unit:'rl',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lima-k',name:'Lima manual tipo K',category:'Endodontia',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lima-h',name:'Lima Hedström',category:'Endodontia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lima-rotatoria',name:'Limas rotatórias / reciprocantes',category:'Endodontia',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cone-guta',name:'Cones de guta-percha',category:'Endodontia',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cone-papel',name:'Cones de papel absorvente',category:'Endodontia',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cimento-endo',name:'Cimento endodôntico',category:'Endodontia',unit:'kit',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-hipoclorito',name:'Hipoclorito de sódio',category:'Endodontia',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-edta',name:'EDTA',category:'Endodontia',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-clorexidina',name:'Clorexidina solução',category:'Endodontia',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-seringa-irrigacao',name:'Seringa para irrigação',category:'Endodontia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-agulha-irrigacao',name:'Agulha para irrigação endodôntica',category:'Endodontia',unit:'cx',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lubrificante-endo',name:'Gel lubrificante endodôntico',category:'Endodontia',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-curativo-endo',name:'Medicação intracanal / hidróxido de cálcio',category:'Endodontia',unit:'ser',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-obturador-temp',name:'Material restaurador provisório',category:'Endodontia',unit:'pote',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lamina',name:'Lâmina de bisturi',category:'Cirurgia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-sutura',name:'Fio de sutura',category:'Cirurgia',unit:'un',qty:0,minQty:15,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-soro',name:'Soro fisiológico estéril',category:'Cirurgia',unit:'fr',qty:0,minQty:6,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-seringa-20',name:'Seringa 20 ml',category:'Cirurgia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-seringa-10',name:'Seringa 10 ml',category:'Cirurgia',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-agulha-hipo',name:'Agulha hipodérmica',category:'Cirurgia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-hemostatico-cir',name:'Esponja hemostática absorvível',category:'Cirurgia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-colageno',name:'Membrana / esponja de colágeno',category:'Cirurgia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-campo-cirurgico',name:'Campo cirúrgico estéril',category:'Cirurgia',unit:'kit',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-kit-aspiracao-cir',name:'Kit de aspiração cirúrgica',category:'Cirurgia',unit:'un',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-curetagem-alveolo',name:'Material hemostático alveolar',category:'Cirurgia',unit:'un',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-implante',name:'Implante dentário',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-tampa-implante',name:'Tampa de cobertura',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cicatrizador',name:'Cicatrizador',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-transfer',name:'Transfer de moldagem',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-analogo',name:'Análogo de implante',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-pilar',name:'Pilar / munhão protético',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-parafuso-prot',name:'Parafuso protético',category:'Implantodontia',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-biomaterial',name:'Biomaterial / substituto ósseo',category:'Implantodontia',unit:'un',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-membrana',name:'Membrana para regeneração óssea',category:'Implantodontia',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-clareador-consultorio',name:'Gel clareador de consultório',category:'Clareamento',unit:'kit',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-clareador-caseiro',name:'Gel clareador caseiro',category:'Clareamento',unit:'ser',qty:0,minQty:6,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-barreira-gengival',name:'Barreira gengival fotopolimerizável',category:'Clareamento',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-dessensibilizante',name:'Dessensibilizante',category:'Clareamento',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-placa-vacuo',name:'Placa para moldeira de clareamento',category:'Clareamento',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-broca-diamantada',name:'Brocas diamantadas variadas',category:'Brocas',unit:'un',qty:0,minQty:20,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-broca-carbide',name:'Brocas carbide variadas',category:'Brocas',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-broca-cirurgica',name:'Brocas cirúrgicas',category:'Brocas',unit:'un',qty:0,minQty:6,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-broca-endo',name:'Brocas Endo-Z / acesso',category:'Brocas',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-fresa-acrilico',name:'Fresas para acrílico',category:'Brocas',unit:'un',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-disco-carborundum',name:'Disco de carborundum',category:'Brocas',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-filme-rx',name:'Filme radiográfico intraoral',category:'Radiologia',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-envelope-rx',name:'Envelope / barreira para sensor radiográfico',category:'Radiologia',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-posicionador-rx',name:'Posicionador radiográfico descartável / bite block',category:'Radiologia',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-envelope-autoclave',name:'Envelope grau cirúrgico',category:'Esterilização',unit:'rl',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-envelope-autoclave-p',name:'Envelope grau cirúrgico pequeno',category:'Esterilização',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-envelope-autoclave-m',name:'Envelope grau cirúrgico médio',category:'Esterilização',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-indicador-quimico',name:'Indicador químico para autoclave',category:'Esterilização',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-integrador',name:'Integrador químico classe 5',category:'Esterilização',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-teste-biologico',name:'Indicador biológico',category:'Esterilização',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-fita-autoclave',name:'Fita indicadora para autoclave',category:'Esterilização',unit:'rl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-detergente-enzimatico',name:'Detergente enzimático',category:'Esterilização',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-lubrificante-instrumental',name:'Lubrificante para instrumentais',category:'Esterilização',unit:'fr',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-desinfetante-superficie',name:'Desinfetante de superfícies',category:'Biossegurança',unit:'fr',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-alcool-70',name:'Álcool 70%',category:'Biossegurança',unit:'fr',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-sabao-antisseptico',name:'Sabonete antisséptico',category:'Biossegurança',unit:'fr',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-papel-toalha',name:'Papel toalha',category:'Limpeza',unit:'pct',qty:0,minQty:4,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-saco-lixo',name:'Saco para lixo comum',category:'Limpeza',unit:'pct',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-saco-infectante',name:'Saco branco leitoso infectante',category:'RSS',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-coletor-perfuro',name:'Coletor de perfurocortantes',category:'RSS',unit:'un',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-saco-esterilizacao',name:'Saco para transporte de material contaminado',category:'RSS',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-vaselina',name:'Vaselina sólida',category:'Materiais gerais',unit:'pote',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-bicarbonato',name:'Bicarbonato para profilaxia',category:'Prevenção',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-agua-destilada',name:'Água destilada para autoclave',category:'Esterilização',unit:'gl',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-papel-mistura',name:'Bloco de papel para manipulação',category:'Materiais gerais',unit:'bl',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-dappen-desc',name:'Pote Dappen descartável',category:'Descartáveis',unit:'pct',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-ponta-aplicadora',name:'Pontas aplicadoras descartáveis',category:'Descartáveis',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-ponta-mistura',name:'Pontas de automistura',category:'Prótese',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-ponta-intraoral',name:'Pontas intraorais para material de moldagem',category:'Prótese',unit:'pct',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-fio-seda',name:'Fio de seda / afastamento',category:'Materiais gerais',unit:'rl',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''},
-    {id:'mat-cotonete',name:'Hastes flexíveis',category:'Descartáveis',unit:'cx',qty:0,minQty:1,cost:0,supplier:'',lot:'',expiry:''}
+    {id:'mat-anestesico',name:'Tubete anestésico',category:'Anestesia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-gaze',name:'Gaze estéril',category:'Descartáveis',unit:'pct',qty:0,minQty:5,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-luva',name:'Luva de procedimento',category:'EPI',unit:'cx',qty:0,minQty:3,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-lamina',name:'Lâmina de bisturi',category:'Cirurgia',unit:'un',qty:0,minQty:10,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-sutura',name:'Fio de sutura',category:'Cirurgia',unit:'un',qty:0,minQty:8,cost:0,supplier:'',lot:'',expiry:''},
+    {id:'mat-resina',name:'Resina composta',category:'Dentística',unit:'ser',qty:0,minQty:2,cost:0,supplier:'',lot:'',expiry:''}
   ];
 }
-
-function mergeInventoryCatalog(existing){
-  var catalog=defaultInventoryItems(), current=Array.isArray(existing)?existing.slice():[], byId={};
-  current.forEach(function(i){if(i&&i.id)byId[i.id]=i;});
-  catalog.forEach(function(def){if(!byId[def.id])current.push(def);});
-  return current;
-}
-
 function defaultProcedureRecipes(){
   return {
     limpeza:[{itemId:'mat-luva',qty:.04},{itemId:'mat-gaze',qty:.05}],
@@ -1473,157 +1094,6 @@ function defaultProcedureRecipes(){
     canal:[{itemId:'mat-anestesico',qty:2},{itemId:'mat-luva',qty:.04},{itemId:'mat-gaze',qty:.05}]
   };
 }
-
-function pricingLibrary(){
-  return [
-    ['avaliacao','Avaliação inicial','Clínico Geral',90,18,0,0,22,8,12,8,10,4,6,5,180],
-    ['urgencia','Urgência odontológica','Clínico Geral',60,35,0,0,28,10,15,10,12,5,8,7,250],
-    ['limpeza','Limpeza / profilaxia','Prevenção',60,28,0,0,26,10,14,9,10,5,7,6,220],
-    ['raspagem','Raspagem periodontal por sessão','Periodontia',60,42,0,0,30,12,16,10,12,6,8,7,280],
-    ['restauracao','Restauração em resina','Dentística',60,48,0,0,30,12,16,10,12,6,8,8,320],
-    ['restauracao_complexa','Restauração complexa / reconstrução','Dentística',90,85,0,0,42,16,20,13,16,8,10,10,480],
-    ['clareamento_consultorio','Clareamento de consultório','Estética',90,145,0,0,45,18,22,15,18,9,12,12,850],
-    ['clareamento_caseiro','Clareamento caseiro com moldeiras','Estética',60,115,85,0,35,14,18,12,15,8,10,10,650],
-    ['faceta_resina','Faceta direta em resina - por dente','Estética',90,110,0,0,50,18,24,15,20,10,12,12,650],
-    ['lente_porcelana','Lente / faceta cerâmica - por dente','Prótese',90,65,520,0,55,20,28,18,22,12,15,14,1800],
-    ['coroa_ceramica','Coroa cerâmica','Prótese',90,55,650,0,55,20,28,18,22,12,15,14,2200],
-    ['provisorio','Coroa / elemento provisório','Prótese',60,55,90,0,35,14,18,12,15,8,10,10,450],
-    ['protese_total','Prótese total','Prótese',120,95,950,0,75,25,35,22,30,15,18,16,3200],
-    ['ppr','Prótese parcial removível','Prótese',120,90,1050,0,75,25,35,22,30,15,18,16,3500],
-    ['canal','Tratamento endodôntico','Endodontia',90,135,0,0,55,20,26,16,20,10,14,12,1100],
-    ['retratamento_canal','Retratamento endodôntico','Endodontia',120,190,0,0,70,24,30,18,24,12,16,15,1600],
-    ['exodontia','Exodontia simples','Cirurgia',60,75,0,0,40,16,20,13,16,8,10,10,450],
-    ['exodontia_complexa','Exodontia complexa','Cirurgia',90,145,0,0,60,20,28,17,22,11,14,13,850],
-    ['siso','Terceiro molar / siso','Cirurgia',90,180,0,0,70,24,32,20,25,12,16,15,1100],
-    ['implante','Implante dentário - fase cirúrgica','Implante',90,185,0,850,75,25,35,22,30,15,18,16,2200],
-    ['coroa_implante','Coroa sobre implante','Implante',90,55,650,380,60,22,30,18,25,12,16,14,2200],
-    ['enxerto_osseo','Enxerto ósseo','Implante',120,220,0,650,85,28,40,25,35,18,22,18,2400],
-    ['protocolo','Prótese protocolo sobre implantes','Implante',240,480,3500,3200,180,55,75,45,60,30,40,25,12000],
-    ['overdenture','Overdenture','Implante',180,260,2200,1500,130,40,55,35,45,24,30,22,7500],
-    ['placa_bruxismo','Placa miorrelaxante','Prótese',60,45,280,0,35,14,18,12,15,8,10,10,850],
-    ['gengivoplastia','Gengivoplastia','Periodontia',90,95,0,0,50,18,24,15,20,10,12,12,750]
-  ];
-}
-
-function pricingCostKeys(){
-  return ['materials','lab','components','clinicalTime','sterilization','structure','admin','maintenance','waste','marketing','risk'];
-}
-function defaultCostModes(){
-  return {
-    materials:'fixed',
-    lab:'fixed',
-    components:'fixed',
-    clinicalTime:'fixed',
-    sterilization:'fixed',
-    structure:'percent',
-    admin:'percent',
-    maintenance:'percent',
-    waste:'percent',
-    marketing:'percent',
-    risk:'percent'
-  };
-}
-function convertLegacyIndirectToPercent(p,referencePrice){
-  var ref=Math.max(1,n(referencePrice||p.suggested||p.finalPrice||1)), modes=defaultCostModes();
-  ['structure','admin','maintenance','waste','marketing','risk'].forEach(function(k){
-    if(modes[k]==='percent')p[k]=Math.round((n(p[k])/ref*100)*100)/100;
-  });
-  p.costModes=modes;
-  p.pricingModelVersion=2;
-  return p;
-}
-function defaultProcedurePricing(){
-  var out={};
-  pricingLibrary().forEach(function(x){
-    var p={id:x[0],name:x[1],specialty:x[2],minutes:x[3],
-      materials:x[4],lab:x[5],components:x[6],clinicalTime:x[7],sterilization:x[8],
-      structure:x[9],admin:x[10],maintenance:x[11],waste:x[12],marketing:x[13],risk:x[14],
-      taxRate:12,financialRate:4.5,profitRate:25,suggested:x[15],finalPrice:x[15]};
-    out[x[0]]=convertLegacyIndirectToPercent(p,x[15]);
-  });
-  return out;
-}
-function normalizePricingRecord(base,incoming){
-  var p=Object.assign({},base||{},incoming||{});
-  if(!incoming || !incoming.costModes){
-    // Dados antigos eram todos registrados como R$. Mantemos esses dados como valores reais
-    // para não reinterpretar silenciosamente custos já salvos pelo usuário.
-    p.costModes={};
-    pricingCostKeys().forEach(function(k){p.costModes[k]='fixed';});
-    p.pricingModelVersion=2;
-  }else{
-    p.costModes=Object.assign({},defaultCostModes(),incoming.costModes||{});
-    p.pricingModelVersion=2;
-  }
-  return p;
-}
-function mergeProcedurePricing(v){
-  var d=defaultProcedurePricing(),x=v||{};
-  Object.keys(x).forEach(function(k){d[k]=normalizePricingRecord(d[k]||{},x[k]||{});});
-  return d;
-}
-function pricingNumbers(p){
-  p=p||{};
-  var modes=Object.assign({},defaultCostModes(),p.costModes||{}),
-      fixed=0,percentRate=0,details={fixed:[],percent:[]};
-
-  pricingCostKeys().forEach(function(k){
-    var val=Math.max(0,n(p[k]));
-    if(modes[k]==='percent'){
-      percentRate+=val;
-      details.percent.push({key:k,rate:val});
-    }else{
-      fixed+=val;
-      details.fixed.push({key:k,value:val});
-    }
-  });
-
-  var taxRate=Math.max(0,n(p.taxRate)),
-      financialRate=Math.max(0,n(p.financialRate)),
-      profitRate=Math.max(0,Math.min(80,n(p.profitRate))),
-      variableRate=percentRate+taxRate+financialRate,
-      minDen=1-variableRate/100,
-      suggestedDen=1-(variableRate+profitRate)/100;
-
-  var minimum=minDen<=0?0:fixed/minDen;
-  var suggested=suggestedDen<=0?0:fixed/suggestedDen;
-  var finalPrice=Math.max(0,n(p.finalPrice));
-  var basis=finalPrice>0?finalPrice:suggested;
-
-  return {
-    base:fixed,
-    fixedCost:fixed,
-    percentCostRate:percentRate,
-    taxRate:taxRate,
-    financialRate:financialRate,
-    variableRate:variableRate,
-    profitRate:profitRate,
-    minimum:minimum,
-    suggested:suggested,
-    finalPrice:finalPrice,
-    percentCostValue:basis*percentRate/100,
-    taxValue:basis*taxRate/100,
-    financialValue:basis*financialRate/100,
-    profitValue:basis*profitRate/100,
-    totalCostAtFinal:fixed+basis*(percentRate+taxRate+financialRate)/100,
-    marginAtFinal:basis-(fixed+basis*(percentRate+taxRate+financialRate)/100),
-    details:details,
-    basis:basis
-  };
-}
-
-function applyFinalProcedurePrices(pricing){
-  if(!pricing)return;
-  PROCEDURES.forEach(function(proc){
-    var p=pricing[proc.id];
-    if(p && n(p.finalPrice)>0) proc.price=n(p.finalPrice);
-  });
-}
-function allPricingProcedures(){
-  var map=mergeProcedurePricing(store&&store.procedurePricing);
-  return Object.keys(map).map(function(k){return map[k];});
-}
-
 function seedStore(){
   return {
     appointments: [],
@@ -1636,15 +1106,7 @@ function seedStore(){
     waitlist: [],
     inventory: defaultInventoryItems(),
     inventoryMovements: [],
-    procedureRecipes: defaultProcedureRecipes(),
-    procedurePricing: defaultProcedurePricing(),
-    crmContacts: [],
-    treatmentPlans: [],
-    labCases: [],
-    taskLog: [],
-    chargePlans: [],
-    charges: [],
-    chargeConfig: defaultChargeConfig()
+    procedureRecipes: defaultProcedureRecipes()
   };
 }
 
@@ -1704,18 +1166,9 @@ function normalizeStore(value){
   base.logs = Array.isArray(value.logs) ? value.logs : [];
   base.blocks = cleanScheduleBlocks(Array.isArray(value.blocks) ? value.blocks : []);
   base.waitlist = Array.isArray(value.waitlist) ? value.waitlist : [];
-  base.inventory = mergeInventoryCatalog(Array.isArray(value.inventory) ? value.inventory : []);
+  base.inventory = Array.isArray(value.inventory) ? value.inventory : defaultInventoryItems();
   base.inventoryMovements = Array.isArray(value.inventoryMovements) ? value.inventoryMovements : [];
   base.procedureRecipes = value.procedureRecipes && typeof value.procedureRecipes==='object' ? value.procedureRecipes : defaultProcedureRecipes();
-  base.procedurePricing = mergeProcedurePricing(value.procedurePricing);
-  base.crmContacts = Array.isArray(value.crmContacts) ? value.crmContacts : [];
-  base.treatmentPlans = Array.isArray(value.treatmentPlans) ? value.treatmentPlans : [];
-  base.labCases = Array.isArray(value.labCases) ? value.labCases : [];
-  base.taskLog = Array.isArray(value.taskLog) ? value.taskLog : [];
-  base.chargePlans = Array.isArray(value.chargePlans) ? value.chargePlans : [];
-  base.charges = Array.isArray(value.charges) ? value.charges : [];
-  base.chargeConfig = mergeChargeConfig(value.chargeConfig);
-  applyFinalProcedurePrices(base.procedurePricing);
   return base;
 }
 
@@ -1752,21 +1205,10 @@ function waitForSupabase(timeoutMs){
   });
 }
 
-var syncWriteCount=0;
-function cloneStoreSnapshot(value){
-  try{return normalizeStore(JSON.parse(JSON.stringify(value)));}
-  catch(e){console.warn('Falha ao criar snapshot de sincronização.',e);return normalizeStore(value);}
-}
 function startRealtime(api){
   if(realtimeStarted || !api || typeof api.subscribeStore !== 'function') return;
   realtimeStarted = true;
   realtimeChannel = api.subscribeStore(function(remoteStore){
-    // Não deixa uma leitura remota antiga desfazer uma escolha feita enquanto
-    // o salvamento local ainda está sendo enviado ao Supabase.
-    if(syncWriteCount>0){
-      console.info('Atualização realtime adiada: há salvamento local em andamento.');
-      return;
-    }
     store = normalizeStore(remoteStore);
     writeLocalStore(store);
     render();
@@ -1788,6 +1230,7 @@ function loadStore(cb){
       if(remoteStore){
         store = normalizeStore(remoteStore);
       }else{
+        // Primeira execução: preserva e envia ao Supabase os dados já existentes no navegador.
         store = localCopy || seedStore();
         return api.saveStore(store);
       }
@@ -1806,23 +1249,16 @@ function loadStore(cb){
 
 function persist(cb){
   store = normalizeStore(store);
-  var snapshot=cloneStoreSnapshot(store);
-  writeLocalStore(snapshot);
+  writeLocalStore(store);
   if(cb) cb();
   render();
 
-  syncWriteCount++;
   waitForSupabase(3000).then(function(api){
-    if(!api)return null;
+    if(!api) return;
     startRealtime(api);
-    return api.saveStore(snapshot);
-  }).then(function(){
-    // O snapshot enviado é a fonte desta gravação. Mantemos o estado local atual,
-    // que pode inclusive já conter uma alteração posterior.
+    return api.saveStore(store);
   }).catch(function(error){
     console.error('Os dados ficaram salvos localmente, mas não foi possível sincronizar com o Supabase.', error);
-  }).finally(function(){
-    syncWriteCount=Math.max(0,syncWriteCount-1);
   });
 }
 
@@ -1945,13 +1381,12 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function escAttr(s){ return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function render(){
-  if(store&&store.procedurePricing)applyFinalProcedurePrices(store.procedurePricing);
   var root = document.getElementById('root');
   var html = renderHeader();
   if(state.role==='patient') html += renderPatient();
   else if(state.role==='gate') html += renderGate();
   else html += renderStaff();
-  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.11.1 · carnê com tratamento aprovado · clínica, estoque, financeiro premium e gestão.</footer>';
+  html += '<footer class="note">Instituto Lins Rabello ERP · versão 2.5.0 · clínica, estoque, financeiro premium e gestão.</footer>';
   root.innerHTML = html;
   attachEvents();
 logMarketingEvent('page_view',{referrer:document.referrer||'direct'});
@@ -2013,41 +1448,16 @@ function renderTestimonials(){
 }
 function renderPreConsult(){
   var procs=PROCEDURES.map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('');
-  return '<section class="public-section"><div class="card preconsult-card"><div class="public-section-head" style="text-align:left"><h2>Conte para nós o que você deseja transformar</h2><p>Esta pré-consulta nos ajuda a entender suas expectativas antes mesmo de você chegar ao Instituto. Assim, nossa equipe consegue preparar uma conversa mais personalizada e direcionada ao que realmente importa para você.</p></div>'+
+  return '<section class="public-section"><div class="card preconsult-card"><div class="public-section-head" style="text-align:left"><h2>Pré-consulta</h2><p>Quer adiantar sua chegada? Envie informações básicas para a equipe antes do atendimento. Isso não substitui anamnese nem avaliação clínica.</p></div>'+
     (state.preConsultMessage?'<div class="alert-card" style="margin-bottom:12px">'+esc(state.preConsultMessage)+'</div>':'')+
-    '<div class="preconsult-grid">'+
-      '<div class="field"><label>Nome completo</label><input id="pc-name" placeholder="Seu nome"></div>'+
-      '<div class="field"><label>Telefone</label><input id="pc-phone" inputmode="numeric" maxlength="11" placeholder="11999998888"></div>'+
-      '<div class="field"><label>Procedimento de interesse</label><select id="pc-proc"><option value="">Ainda não sei / quero avaliação</option>'+procs+'</select></div>'+
-      '<div class="field"><label>Data já agendada (opcional)</label><input id="pc-date" type="date"></div>'+
-      '<div class="field full"><label>O que mais incomoda você no seu sorriso ou na sua saúde bucal hoje?</label><textarea id="pc-concern" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Conte com suas palavras o que gostaria de mudar ou resolver"></textarea></div>'+
-      '<div class="field"><label>Há quanto tempo isso incomoda você?</label><select id="pc-since"><option value="">Selecione</option><option>Menos de 1 mês</option><option>1 a 6 meses</option><option>6 meses a 1 ano</option><option>Mais de 1 ano</option><option>Há vários anos</option></select></div>'+
-      '<div class="field"><label>Já procurou tratamento anteriormente?</label><select id="pc-previous"><option value="">Selecione</option><option>Não</option><option>Sim, mas não iniciei</option><option>Sim, iniciei e não concluí</option><option>Sim, já realizei tratamento</option></select></div>'+
-      '<div class="field full"><label>Qual resultado você gostaria de alcançar?</label><textarea id="pc-goal" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Como você gostaria de se sentir ou o que gostaria de conseguir após o tratamento?"></textarea></div>'+
-      '<div class="field full"><label>Existe alguma dúvida ou receio que gostaria de compartilhar? <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label><textarea id="pc-reason" style="width:100%;min-height:72px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: medo de dentista, experiências anteriores, dúvidas sobre o tratamento"></textarea></div>'+
-    '</div><div class="patient-actions"><span class="mini-note">Essas informações servem para personalizar o atendimento e não substituem anamnese ou avaliação clínica.</span><button class="btn btn-primary" data-action="preconsult-submit">Enviar pré-consulta</button></div></div></section>';
+    '<div class="preconsult-grid"><div class="field"><label>Nome completo</label><input id="pc-name" placeholder="Seu nome"></div><div class="field"><label>Telefone</label><input id="pc-phone" inputmode="numeric" maxlength="11" placeholder="11999998888"></div><div class="field"><label>Procedimento de interesse</label><select id="pc-proc"><option value="">Selecione</option>'+procs+'</select></div><div class="field"><label>Data já agendada (opcional)</label><input id="pc-date" type="date"></div><div class="field full"><label>Motivo da consulta / principal dúvida</label><textarea id="pc-reason" style="width:100%;min-height:86px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Conte brevemente o que você gostaria de avaliar"></textarea></div></div><div class="patient-actions"><span class="mini-note">Não envie exames ou dados médicos sensíveis por este formulário.</span><button class="btn btn-primary" data-action="preconsult-submit">Enviar pré-consulta</button></div></div></section>';
 }
 function submitPreConsult(){
   function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
-  var name=v('pc-name'),phone=v('pc-phone').replace(/\D/g,''),proc=v('pc-proc'),date=v('pc-date'),
-      concern=v('pc-concern'),since=v('pc-since'),previous=v('pc-previous'),goal=v('pc-goal'),reason=v('pc-reason');
-  if(name.length<3){alert('Informe seu nome completo.');return;}
-  if(phone.length!==11){alert('Informe telefone com DDD e 11 números.');return;}
-  if(!concern){alert('Conte o que mais incomoda você hoje.');return;}
-  if(!goal){alert('Conte qual resultado gostaria de alcançar.');return;}
-  var brief=[
-    'O QUE MAIS INCOMODA: '+concern,
-    'HÁ QUANTO TEMPO: '+(since||'Não informado'),
-    'JÁ PROCUROU TRATAMENTO: '+(previous||'Não informado'),
-    'RESULTADO QUE DESEJA: '+goal,
-    'DÚVIDAS / RECEIOS / OUTRAS INFORMAÇÕES: '+(reason||'Não informado')
-  ].join('\n\n');
-  var c=marketingClient();if(!c){alert('Serviço temporariamente indisponível.');return;}
-  c.rpc('public_submit_preconsulta',{p_name:name,p_phone:phone,p_procedure:proc||null,p_appointment_date:date||null,p_reason:brief}).then(function(r){
-    if(r.error)throw r.error;
-    state.preConsultMessage='Obrigado! Suas respostas foram enviadas para nossa equipe preparar um atendimento mais personalizado.';
-    logMarketingEvent('preconsulta_submit',{procedure:proc||'',commercial_discovery:true});render();
-  }).catch(function(e){console.error(e);alert('Não foi possível enviar a pré-consulta. Verifique a atualização do Supabase.');});
+  var name=v('pc-name'), phone=v('pc-phone').replace(/\D/g,''), proc=v('pc-proc'), date=v('pc-date'), reason=v('pc-reason');
+  if(name.length<3){alert('Informe seu nome completo.');return;} if(phone.length!==11){alert('Informe telefone com DDD e 11 números.');return;} if(!reason){alert('Conte brevemente o motivo da consulta.');return;}
+  var c=marketingClient(); if(!c){alert('Serviço temporariamente indisponível.');return;}
+  c.rpc('public_submit_preconsulta',{p_name:name,p_phone:phone,p_procedure:proc||null,p_appointment_date:date||null,p_reason:reason}).then(function(r){if(r.error)throw r.error;state.preConsultMessage='Pré-consulta enviada. Nossa equipe poderá visualizar essas informações antes do atendimento.';logMarketingEvent('preconsulta_submit',{procedure:proc||''});render();}).catch(function(e){console.error(e);alert('Não foi possível enviar a pré-consulta. Verifique a atualização do Supabase.');});
 }
 function loadPreConsultas(){
   var c=marketingClient();if(!c)return;state.preConsultLoading=true;render();
@@ -2057,7 +1467,7 @@ function renderPreConsultasAdmin(){
   var out='<div class="section-title">Pré-consultas <button class="btn btn-ghost btn-sm" data-action="preconsult-refresh">Atualizar</button></div>';
   if(state.preConsultLoading)return out+'<div class="loading">Carregando…</div>';
   var items=state.preConsultItems||[]; if(!items.length)return out+'<div class="empty-note">Nenhuma pré-consulta recebida.</div>';
-  items.forEach(function(x){out+='<div class="preconsult-admin-item"><h3>'+esc(x.patient_name||'Paciente')+'</h3><div class="meta"><span>'+esc(x.phone||'')+'</span>'+(x.procedure_id?'<span>'+esc(procById(x.procedure_id).name)+'</span>':'')+(x.appointment_date?'<span>Consulta: '+dayDisplay(x.appointment_date)+'</span>':'')+'<span>Recebido: '+new Date(x.created_at).toLocaleString('pt-BR')+'</span></div><div style="white-space:pre-line;line-height:1.65;background:var(--grey-soft);padding:12px;border-radius:10px;margin-top:10px">'+esc(x.reason||'')+'</div><div class="row-actions" style="margin-top:10px">'+(x.status!=='revisado'?'<button class="btn btn-primary btn-sm" data-action="preconsult-reviewed" data-id="'+escAttr(x.id)+'">Marcar revisado</button>':'<span class="pill realizado">Revisado</span>')+'</div></div>';});return out;
+  items.forEach(function(x){out+='<div class="preconsult-admin-item"><h3>'+esc(x.patient_name||'Paciente')+'</h3><div class="meta"><span>'+esc(x.phone||'')+'</span>'+(x.procedure_id?'<span>'+esc(procById(x.procedure_id).name)+'</span>':'')+(x.appointment_date?'<span>Consulta: '+dayDisplay(x.appointment_date)+'</span>':'')+'<span>Recebido: '+new Date(x.created_at).toLocaleString('pt-BR')+'</span></div><div>'+esc(x.reason||'')+'</div><div class="row-actions" style="margin-top:10px">'+(x.status!=='revisado'?'<button class="btn btn-primary btn-sm" data-action="preconsult-reviewed" data-id="'+escAttr(x.id)+'">Marcar revisado</button>':'<span class="pill realizado">Revisado</span>')+'</div></div>';});return out;
 }
 function markPreConsultReviewed(id){var c=marketingClient();if(!c)return;c.from('pre_consultas').update({status:'revisado',reviewed_at:new Date().toISOString()}).eq('id',id).then(function(r){if(r.error)throw r.error;loadPreConsultas();}).catch(function(){alert('Não foi possível atualizar.');});}
 function loadMarketing(){
@@ -2308,15 +1718,7 @@ function renderPatient(){
 
   else if(b.step===6){
     var proc3 = procById(b.procedureId), prof3 = profById(b.professionalId);
-    out += '<h3 style="margin-top:0;">6. Pré-consulta personalizada</h3>'+
-      '<p style="color:var(--ink-soft);font-size:13px;line-height:1.6">Queremos entender não apenas o procedimento, mas o que realmente trouxe você até nós. Suas respostas ajudam os doutores a preparar uma consulta mais personalizada e focada no resultado que você deseja.</p>';
-    out += '<div class="preconsult-grid">'+
-      '<div class="field full"><label>O que mais incomoda você no seu sorriso ou na sua saúde bucal hoje?</label><textarea id="booking-pre-concern" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: um dente ausente, aparência dos dentes, dor, dificuldade para mastigar...">'+esc(b.preConcern||'')+'</textarea></div>'+
-      '<div class="field"><label>Há quanto tempo isso incomoda você?</label><select id="booking-pre-since"><option value="">Selecione</option><option '+(b.preSince==='Menos de 1 mês'?'selected':'')+'>Menos de 1 mês</option><option '+(b.preSince==='1 a 6 meses'?'selected':'')+'>1 a 6 meses</option><option '+(b.preSince==='6 meses a 1 ano'?'selected':'')+'>6 meses a 1 ano</option><option '+(b.preSince==='Mais de 1 ano'?'selected':'')+'>Mais de 1 ano</option><option '+(b.preSince==='Há vários anos'?'selected':'')+'>Há vários anos</option></select></div>'+
-      '<div class="field"><label>Já procurou tratamento anteriormente?</label><select id="booking-pre-previous"><option value="">Selecione</option><option '+(b.prePrevious==='Não'?'selected':'')+'>Não</option><option '+(b.prePrevious==='Sim, mas não iniciei'?'selected':'')+'>Sim, mas não iniciei</option><option '+(b.prePrevious==='Sim, iniciei e não concluí'?'selected':'')+'>Sim, iniciei e não concluí</option><option '+(b.prePrevious==='Sim, já realizei tratamento'?'selected':'')+'>Sim, já realizei tratamento</option></select></div>'+
-      '<div class="field full"><label>Qual resultado você gostaria de alcançar?</label><textarea id="booking-pre-goal" style="width:100%;min-height:82px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: voltar a sorrir sem vergonha, mastigar melhor, eliminar a dor, deixar os dentes mais alinhados e naturais...">'+esc(b.preGoal||'')+'</textarea></div>'+
-      '<div class="field full"><label>Existe alguma dúvida, receio ou informação que gostaria que a equipe soubesse antes da consulta? <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label><textarea id="booking-pre-reason" style="width:100%;min-height:76px;padding:11px 13px;border-radius:10px;border:1px solid var(--border);font-family:inherit" placeholder="Ex.: medo de dentista, dúvida sobre etapas do tratamento, experiência anterior...">'+esc(b.preReason||'')+'</textarea></div>'+
-    '</div>';
+    out += '<h3 style="margin-top:0;">6. Confirme seu agendamento</h3><p style="color:var(--ink-soft);font-size:13px">Confira os dados abaixo e clique em Confirmar agendamento.</p>';
     out += '<div class="card" style="background:var(--grey-soft);border:none;margin-top:16px;"><div class="summary-line"><span>Procedimento</span><strong>'+proc3.name+'</strong></div><div class="summary-line"><span>Profissional</span><strong>'+prof3.name+'</strong></div><div class="summary-line"><span>Data e hora</span><strong>'+fullDisplay(b.date)+' às '+b.time+'</strong></div><div class="summary-line"><span>Paciente</span><strong>'+esc(b.name)+'</strong></div></div>';
   }
 
@@ -2398,9 +1800,9 @@ function roleLabel(r){ return {admin:'Administrador',dentista:'Dentista',recepca
 function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffRole()==='dentista'; }
 function allowedStaffTabs(){
   var role=currentStaffRole();
-  if(role==='recepcao') return ['recepcao','agenda','pacientes','orcamentos','confirmacoes','cobrancas','estoque','laboratorio','tarefas','crm'];
-  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','orcamentos','confirmacoes','cobrancas','estoque','laboratorio','tarefas','crm','relatorios'];
-  return ['visao','recepcao','agenda','pacientes','orcamentos','tarefas','pendencias','financeiro','cobrancas','laboratorio','crm','estoque','confirmacoes','sac','preconsultas','marketing','relatorios','administracao','auditoria'];
+  if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
+  if(role==='dentista') return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
+  return ['visao','pendencias','sac','preconsultas','marketing','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -2409,29 +1811,23 @@ function clinicalAlerts(){
   var r=state.recordData.prontuario||{}, alerts=[];
   var patient=state.recordPatientId?patientById(state.recordPatientId):null;
   var sig=patient&&patient.signatures?patient.signatures:{anamnesis:false,contract:false,terms:false};
-
-  if(r.alergias&&r.alergias.trim()) alerts.push({label:'ALERGIA',text:'Alergias: '+r.alergias,kind:'allergy',icon:'⚠'});
-  if(r.anticoagulante) alerts.push({label:'ANTICOAGULANTE',text:'Paciente em uso de anticoagulante.',kind:'anticoagulant',icon:'🩸'});
-  if(r.medicamentos&&r.medicamentos.trim()) alerts.push({label:'MEDICAÇÃO',text:'Medicamentos em uso: '+r.medicamentos,kind:'medication',icon:'💊'});
-  if(r.hipertensao) alerts.push({label:'HIPERTENSÃO',text:'Hipertensão relatada.',kind:'hypertension',icon:'♥'});
-  if(r.diabetes) alerts.push({label:'DIABETES',text:'Diabetes relatado.',kind:'diabetes',icon:'●'});
-  if(r.gestante) alerts.push({label:'GESTAÇÃO',text:'Paciente gestante.',kind:'pregnancy',icon:'✦'});
-
+  if(r.alergias&&r.alergias.trim()) alerts.push({text:'Alergias: '+r.alergias,kind:'danger'});
+  if(r.anticoagulante) alerts.push({text:'Paciente em uso de anticoagulante.',kind:'danger'});
+  if(r.hipertensao) alerts.push({text:'Hipertensão relatada.',kind:'warning'});
+  if(r.diabetes) alerts.push({text:'Diabetes relatado.',kind:'warning'});
+  if(r.gestante) alerts.push({text:'Paciente gestante.',kind:'warning'});
+  if(r.medicamentos&&r.medicamentos.trim()) alerts.push({text:'Medicamentos em uso: '+r.medicamentos,kind:'warning'});
   if(patient){
-    if(!sig.anamnesis) alerts.push({label:'ASSINATURA · ANAMNESE',text:'Anamnese ainda sem confirmação de assinatura.',kind:'anamnesis',icon:'✎'});
-    if(!sig.contract) alerts.push({label:'ASSINATURA · CONTRATO',text:'Contrato ainda sem confirmação de assinatura.',kind:'contract',icon:'▣'});
-    if(!sig.terms) alerts.push({label:'ASSINATURA · TERMOS',text:'Termos / consentimentos ainda sem confirmação de assinatura.',kind:'terms',icon:'✓'});
+    if(!sig.anamnesis) alerts.push({text:'Anamnese ainda sem confirmação de assinatura.',kind:'warning'});
+    if(!sig.contract) alerts.push({text:'Contrato ainda sem confirmação de assinatura.',kind:'warning'});
+    if(!sig.terms) alerts.push({text:'Termos / consentimentos ainda sem confirmação de assinatura.',kind:'warning'});
   }
   return alerts;
 }
 function renderClinicalAlerts(){
   var a=clinicalAlerts();
-  if(!a.length){
-    return '<div class="clinical-alerts"><div class="clinical-alert alert-ok"><span class="alert-icon">✓</span><span><span class="alert-label">SEM PENDÊNCIAS</span><strong>Alertas clínicos:</strong> nenhum alerta ou documento pendente registrado para este paciente.</span></div></div>';
-  }
-  return '<div class="clinical-alerts">'+a.map(function(x){
-    return '<div class="clinical-alert alert-'+x.kind+'"><span class="alert-icon">'+x.icon+'</span><span><span class="alert-label">'+esc(x.label)+'</span>'+esc(x.text)+'</span></div>';
-  }).join('')+'</div>';
+  if(!a.length) return '<div class="clinical-alerts"><div class="clinical-alert" style="background:var(--success-soft);color:var(--teal-deep);border-color:rgba(32,149,132,.18);"><span>✓</span><span><strong>Alertas clínicos:</strong> nenhum alerta registrado para este paciente.</span></div></div>';
+  return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':'')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
 }
 
 
@@ -2560,33 +1956,14 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [
-    ['visao','Visão geral'],
-    ['recepcao','Recepção'],
-    ['agenda','Agenda'],
-    ['pacientes','Pacientes'],
-    ['orcamentos','Orçamentos'],
-    ['tarefas','Central de tarefas'],
-    ['pendencias','Pendências'],
-    ['financeiro','Financeiro'],
-    ['cobrancas','Cobranças'],
-    ['laboratorio','Laboratório & Prótese'],
-    ['crm','Reativação'],
-    ['estoque','Estoque'],
-    ['confirmacoes','Lembretes'],
-    ['sac','SAC'],
-    ['preconsultas','Pré-consultas'],
-    ['marketing','Marketing'],
-    ['relatorios','Relatórios'],
-    ['administracao','Administração'],
-    ['auditoria','Auditoria']
-  ];
+  var allTabs = [['visao','Visão geral'],['agenda','Agenda'],['recepcao','Recepção'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['pendencias','Pendências'],['financeiro','Financeiro'],['estoque','Estoque'],['relatorios','Relatórios'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
-  out += '<div class="tabs">';
-  allTabs.filter(function(t){return allowed.indexOf(t[0])>=0;}).forEach(function(t){ out += '<button data-stafftab="'+t[0]+'" class="'+(state.staffTab===t[0]?'active':'')+'">'+t[1]+'</button>'; });
+  out += '<div class="tabs staff-tabs" role="navigation" aria-label="Módulos internos">';
+  allTabs.filter(function(t){return allowed.indexOf(t[0])>=0;}).forEach(function(t){ out += '<button data-stafftab="'+t[0]+'" class="'+(state.staffTab===t[0]?'active':'')+'" aria-current="'+(state.staffTab===t[0]?'page':'false')+'">'+t[1]+'</button>'; });
   out += '</div>';
 
+  out += '<div class="staff-content">';
   if(state.staffTab==='visao') out += renderVisaoGeral();
   else if(state.staffTab==='pendencias') out += renderPendencias();
   else if(state.staffTab==='sac') out += renderSacAdmin();
@@ -2595,18 +1972,13 @@ function renderStaff(){
   else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
   else if(state.staffTab==='financeiro') out += renderFinanceiro();
-  else if(state.staffTab==='cobrancas') out += renderCobrancas();
   else if(state.staffTab==='estoque') out += renderEstoque();
-  else if(state.staffTab==='laboratorio') out += renderLaboratorio();
-  else if(state.staffTab==='tarefas') out += renderTaskCenter();
-  else if(state.staffTab==='crm') out += renderCRM();
-  else if(state.staffTab==='orcamentos') out += renderOrcamentos();
   else if(state.staffTab==='pacientes') out += renderPacientes();
   else if(state.staffTab==='confirmacoes') out += renderConfirmacoes();
   else if(state.staffTab==='relatorios') out += renderRelatorios();
   else if(state.staffTab==='administracao') out += renderAdministracao();
   else if(state.staffTab==='auditoria') out += renderAudit();
-  return out;
+  return out+'</div>';
 }
 
 
@@ -2662,7 +2034,7 @@ function estimateIR2026(base,dependents){
   if(b<=2428.80)tax=0; else if(b<=2826.65)tax=b*.075-182.16; else if(b<=3751.05)tax=b*.15-394.16; else if(b<=4664.68)tax=b*.225-675.49; else tax=b*.275-908.73;
   tax=Math.max(0,tax); var reduction=0; if(b<=5000)reduction=Math.min(tax,312.89); else if(b<=7350)reduction=Math.max(0,978.62-.133145*b); return Math.max(0,tax-reduction);
 }
-function financeTabs(){var tabs=[['resumo','Resumo'],['fluxo','Fluxo de caixa'],['dre','DRE'],['rentabilidade','Rentabilidade'],['precificacao','Formação de preço'],['recebimentos','Recebimentos'],['despesas','Despesas'],['doutores','Doutores'],['impostos','Impostos'],['config','Configurações']];return '<div class="finance-tabs">'+tabs.map(function(t){return '<button class="'+(state.finTab===t[0]?'active':'')+'" data-action="finance-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';}
+function financeTabs(){var tabs=[['resumo','Resumo'],['fluxo','Fluxo de caixa'],['dre','DRE'],['rentabilidade','Rentabilidade'],['recebimentos','Recebimentos'],['despesas','Despesas'],['doutores','Doutores'],['impostos','Impostos'],['config','Configurações']];return '<div class="finance-tabs">'+tabs.map(function(t){return '<button class="'+(state.finTab===t[0]?'active':'')+'" data-action="finance-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';}
 function monthPicker(){return '<div style="display:flex;gap:8px;align-items:end;margin-bottom:14px;"><div class="field" style="margin:0;max-width:190px;"><label>Mês de referência</label><input type="month" id="finance-month" value="'+monthRef()+'"></div><button class="btn btn-ghost" data-action="finance-month">Atualizar</button></div>';}
 function financeKpi(label,value,sub,cls){return '<div class="card finance-kpi"><div class="k-label">'+label+'</div><div class="k-value" '+(cls?'style="color:'+cls+'"':'')+'>'+value+'</div><div class="k-sub">'+sub+'</div></div>';}
 
@@ -2703,7 +2075,7 @@ function renderVisaoGeral(){
   out+=dashboardCard('Despesas no mês',fmtMoney(fs.expenses),fmtMoney(fs.unpaidExp)+' em aberto',fs.unpaidExp>0?'negative':'');
   out+=dashboardCard('Resultado estimado',fmtMoney(fs.result),'após custos e provisões',fs.result>=0?'positive':'negative');
   out+='</div>';
-  out+='<div class="quick-actions"><button class="btn btn-primary" data-stafftab="agenda">Abrir agenda</button><button class="btn btn-ghost" data-stafftab="pacientes">Buscar paciente</button><button class="btn btn-ghost" data-stafftab="financeiro">Abrir financeiro</button><button class="btn btn-ghost" data-stafftab="orcamentos">Orçamentos</button><button class="btn btn-ghost" data-stafftab="laboratorio">Laboratório & Prótese</button><button class="btn btn-ghost" data-stafftab="estoque">Estoque</button><button class="btn btn-ghost" data-stafftab="relatorios">Relatórios e backup</button></div>';
+  out+='<div class="quick-actions"><button class="btn btn-primary" data-stafftab="agenda">Abrir agenda</button><button class="btn btn-ghost" data-stafftab="pacientes">Buscar paciente</button><button class="btn btn-ghost" data-stafftab="financeiro">Abrir financeiro</button><button class="btn btn-ghost" data-stafftab="estoque">Estoque</button><button class="btn btn-ghost" data-stafftab="relatorios">Relatórios e backup</button></div>';
   var alerts=[];
   if(d.todayItems.length===0) alerts.push('Nenhuma consulta marcada para hoje.');
   if(fs.pending>0) alerts.push('Existem '+fmtMoney(fs.pending)+' em recebimentos pendentes.');
@@ -2907,104 +2279,6 @@ function renderProfitabilityPremium(ref,f){var rows=procedureProfitability(ref),
   out+='<div class="card"><h3 style="margin-top:0;">Rentabilidade por procedimento</h3><div class="finance-table-wrap">';if(!rows.length)return out+'<div class="empty-state">Finalize atendimentos para calcular a rentabilidade.</div></div></div>';
   out+='<table><thead><tr><th>Procedimento</th><th>Atendimentos</th><th>Receita</th><th>Custos diretos estimados</th><th>Resultado</th><th>Margem</th></tr></thead><tbody>';rows.forEach(function(g){out+='<tr><td>'+esc(g.name)+'</td><td>'+g.count+'</td><td>'+fmtMoney(g.revenue)+'</td><td>'+fmtMoney(g.cost)+'</td><td class="'+(g.profit>=0?'trend-up':'trend-down')+'"><strong>'+fmtMoney(g.profit)+'</strong></td><td>'+g.margin.toFixed(1)+'%</td></tr>';});return out+'</tbody></table></div><p class="mini-note">Custos diretos estimados consideram taxas do recebimento, materiais configurados no estoque, custo/hora, comissão e rateio dos tributos estimados.</p></div>';}
 
-
-function renderFinancePricing(){
-  var pricing=mergeProcedurePricing(store.procedurePricing),
-      selected=pricing[state.priceProcedure]||pricing.avaliacao,
-      nums=pricingNumbers(selected),
-      plist=Object.keys(pricing).map(function(k){return pricing[k];}),
-      modes=Object.assign({},defaultCostModes(),selected.costModes||{}),
-      out='';
-
-  var labels={
-    materials:'Materiais / insumos',
-    lab:'Laboratório / protético',
-    components:'Componentes / implante',
-    clinicalTime:'Hora clínica / equipe',
-    sterilization:'EPI + esterilização',
-    structure:'Estrutura / aluguel / utilidades',
-    admin:'Administrativo / software / contabilidade',
-    maintenance:'Manutenção + equipamentos',
-    waste:'RSS / limpeza / descarte',
-    marketing:'Marketing / aquisição',
-    risk:'Perdas / retrabalho / garantia'
-  };
-
-  out+='<div class="section-title">Formação de preço <span style="font-size:12px;color:var(--ink-soft);font-weight:500;">valor real x percentual sobre faturamento</span></div>';
-
-  out+='<div class="price-kpis">'+
-    '<div class="card price-kpi"><div class="k">Custos em valor real</div><div class="v">'+fmtMoney(nums.fixedCost)+'</div><div class="mini-note">Valores fixos em R$ por procedimento</div></div>'+
-    '<div class="card price-kpi"><div class="k">Custos percentuais</div><div class="v">'+nums.percentCostRate.toFixed(2).replace(".",",")+'%</div><div class="mini-note">Além de tributos e taxas financeiras</div></div>'+
-    '<div class="card price-kpi"><div class="k">Preço mínimo sustentável</div><div class="v">'+fmtMoney(nums.minimum)+'</div><div class="mini-note">Cobre custos + percentuais + taxas</div></div>'+
-    '<div class="card price-kpi"><div class="k">Preço sugerido</div><div class="v">'+fmtMoney(nums.suggested)+'</div><div class="mini-note">Inclui margem alvo de '+nums.profitRate.toFixed(1).replace(".",",")+'%</div></div>'+
-    '<div class="card price-kpi"><div class="k">Valor final praticado</div><div class="v">'+fmtMoney(n(selected.finalPrice))+'</div><div class="mini-note">Valor reconhecido pelo ERP</div></div>'+
-  '</div>';
-
-  out+='<div class="price-shell"><div class="card price-list">'+
-    '<h3 style="margin-top:0;">Procedimentos</h3>'+
-    '<p class="mini-note">Selecione um procedimento para revisar a composição financeira.</p>'+
-    plist.map(function(p){
-      var z=pricingNumbers(p);
-      return '<button class="price-proc '+(p.id===selected.id?'active':'')+'" data-action="price-select" data-id="'+p.id+'">'+
-        '<strong>'+esc(p.name)+'</strong>'+
-        '<small>'+esc(p.specialty)+' · '+p.minutes+' min · mínimo '+fmtMoney(z.minimum)+' · final '+fmtMoney(n(p.finalPrice))+'</small>'+
-      '</button>';
-    }).join('')+
-  '</div>';
-
-  out+='<div class="card"><h3 style="margin-top:0;">'+esc(selected.name)+'</h3>'+
-    '<div class="mode-help"><strong>Como ler:</strong> <span class="cost-origin fixed">R$ REAL</span> significa um custo previamente definido em reais para executar o procedimento. <span class="cost-origin percent">% DO PREÇO</span> significa que o custo acompanha o valor cobrado do paciente. O cálculo não soma percentuais como se fossem reais: eles entram na fórmula sobre o faturamento.</div>'+
-    '<h4 style="margin:0 0 10px;">Custos diretos e indiretos</h4><div class="cost-grid">';
-
-  pricingCostKeys().forEach(function(k){
-    var mode=modes[k]||'fixed',suffix=mode==='percent'?'%':'R$';
-    out+='<div class="field"><label>'+labels[k]+' <span class="cost-origin '+(mode==='percent'?'percent':'fixed')+'">'+(mode==='percent'?'% DO PREÇO':'R$ REAL')+'</span></label>'+
-      '<div class="cost-mode-row">'+
-        '<input class="price-field" data-key="'+k+'" type="number" step="0.01" min="0" value="'+n(selected[k])+'" placeholder="'+suffix+'">'+
-        '<select class="cost-mode '+(mode==='percent'?'mode-percent':'mode-fixed')+'" data-mode-key="'+k+'">'+
-          '<option value="fixed" '+(mode==='fixed'?'selected':'')+'>R$ REAL</option>'+
-          '<option value="percent" '+(mode==='percent'?'selected':'')+'>% DO PREÇO</option>'+
-        '</select>'+
-      '</div></div>';
-  });
-
-  out+='</div><h4>Taxas, provisões e margem</h4><div class="cost-grid">'+
-    '<div class="field"><label>Tributos / provisão <span class="cost-origin percent">% DO PREÇO</span></label><input class="price-field" data-key="taxRate" type="number" step="0.1" min="0" value="'+n(selected.taxRate)+'"></div>'+
-    '<div class="field"><label>Taxas financeiras médias <span class="cost-origin percent">% DO PREÇO</span></label><input class="price-field" data-key="financialRate" type="number" step="0.1" min="0" value="'+n(selected.financialRate)+'"></div>'+
-    '<div class="field"><label>Margem alvo <span class="cost-origin percent">% DO PREÇO</span></label><input class="price-field" data-key="profitRate" type="number" step="0.1" min="0" max="80" value="'+n(selected.profitRate)+'"></div>'+
-  '</div>';
-
-  out+='<div class="price-breakdown">';
-  pricingCostKeys().forEach(function(k){
-    var mode=modes[k]||'fixed',val=n(selected[k]),effective=mode==='percent'?nums.basis*val/100:val;
-    out+='<div class="summary-line"><span>'+labels[k]+' <span class="cost-origin '+(mode==='percent'?'percent':'fixed')+'">'+(mode==='percent'?val.toFixed(2).replace(".",",")+'%':'R$')+'</span></span><strong>'+fmtMoney(effective)+'</strong></div>';
-  });
-  out+='<div class="summary-line"><span>Tributos ('+nums.taxRate.toFixed(2).replace(".",",")+'%)</span><strong>'+fmtMoney(nums.taxValue)+'</strong></div>'+
-    '<div class="summary-line"><span>Taxas financeiras ('+nums.financialRate.toFixed(2).replace(".",",")+'%)</span><strong>'+fmtMoney(nums.financialValue)+'</strong></div>'+
-    '<div class="summary-line"><span><strong>Total de custos estimado no valor final</strong></span><strong>'+fmtMoney(nums.totalCostAtFinal)+'</strong></div>'+
-    '<div class="summary-line"><span>Resultado antes de outras variações</span><strong>'+fmtMoney(nums.marginAtFinal)+'</strong></div>'+
-  '</div>';
-
-  out+='<div class="cost-total">'+
-    '<div class="summary-line"><span>Custos fixos / reais</span><strong>'+fmtMoney(nums.fixedCost)+'</strong></div>'+
-    '<div class="summary-line"><span>Custos variáveis do procedimento</span><strong>'+nums.percentCostRate.toFixed(2).replace(".",",")+'%</strong></div>'+
-    '<div class="summary-line"><span>Tributos + taxas financeiras</span><strong>'+(nums.taxRate+nums.financialRate).toFixed(2).replace(".",",")+'%</strong></div>'+
-    '<div class="summary-line"><span>Percentual total antes da margem</span><strong>'+nums.variableRate.toFixed(2).replace(".",",")+'%</strong></div>'+
-    '<div class="summary-line"><span>Preço mínimo sustentável</span><strong>'+fmtMoney(nums.minimum)+'</strong></div>'+
-    '<div class="summary-line"><span>Preço sugerido com margem alvo</span><strong>'+fmtMoney(nums.suggested)+'</strong></div>'+
-  '</div>';
-
-  out+='<div class="price-final">'+
-    '<div class="field"><label><strong>VALOR FINAL PRATICADO</strong> <span class="cost-origin fixed">R$ DEFINIDO</span> — valor usado pelo ERP e pelo agendamento</label>'+
-      '<input id="price-final" type="number" step="0.01" min="0" value="'+n(selected.finalPrice)+'">'+
-    '</div>'+
-    '<div class="row-actions"><button class="btn btn-primary" data-action="price-save">Salvar e recalcular</button></div>'+
-  '</div>'+
-  '<p class="price-note">Fórmula: custos em R$ são somados diretamente. Custos marcados como percentual, tributos e taxas financeiras são tratados como parcelas do preço cobrado. O preço sugerido considera também a margem alvo como percentual da receita, evitando misturar R$ e % no mesmo somatório.</p>'+
-  '</div></div>';
-
-  return out;
-}
 function renderFinanceiro(){
   var ref=monthRef(), f=financeSummary(ref), out='<div class="section-title">Financeiro inteligente</div>'+monthPicker()+financeTabs();
   if(state.financeMessage) out+='<div class="good-card" style="margin-bottom:14px;">'+esc(state.financeMessage)+'</div>';
@@ -3020,8 +2294,6 @@ function renderFinanceiro(){
     out+=renderDREPremium(ref,f);
   }else if(state.finTab==='rentabilidade'){
     out+=renderProfitabilityPremium(ref,f);
-  }else if(state.finTab==='precificacao'){
-    out+=renderFinancePricing();
   }else if(state.finTab==='recebimentos'){
     var appts=f.realized.slice().sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?1:-1;});
     out+='<div class="card"><h3 style="margin-top:0;">Atendimentos realizados</h3><div class="finance-table-wrap">';
@@ -3109,79 +2381,20 @@ function renderPatientForm(p){
 }
 
 function daysUntil(iso){if(!iso)return 99999;return Math.ceil((parseISO(iso)-parseISO(todayISO()))/86400000);}
-function stockStatus(i){
-  var qty=n(i.qty),min=n(i.minQty),exp=daysUntil(i.expiry);
-  if(qty<=0)return {label:'ZERADO',cls:'zero',level:4};
-  if(min>0 && qty<=Math.max(1,min*0.35))return {label:'CRÍTICO',cls:'critical',level:3};
-  if(min>0 && qty<=min)return {label:'ABAIXO DO MÍNIMO',cls:'low',level:2};
-  if(exp<0)return {label:'VENCIDO',cls:'exp',level:3};
-  if(exp<=30)return {label:'VALIDADE PRÓXIMA',cls:'exp',level:1};
-  return {label:'OK',cls:'ok',level:0};
-}
-function stockAlerts(){
-  return (store.inventory||[]).map(function(i){return {item:i,status:stockStatus(i)};})
-    .filter(function(x){return x.status.level>0;})
-    .sort(function(a,b){return b.status.level-a.status.level || n(a.item.qty)-n(b.item.qty);});
-}
+function stockStatus(i){var exp=daysUntil(i.expiry);if(n(i.qty)<=n(i.minQty))return {label:'REPOR',cls:'low'};if(exp<=30)return {label:exp<0?'VENCIDO':'VALIDADE',cls:'exp'};return {label:'OK',cls:'ok'};}
 function stockValue(){return (store.inventory||[]).reduce(function(a,i){return a+n(i.qty)*n(i.cost);},0);}
 function procedureMaterialCost(procId){var rec=(store.procedureRecipes||{})[procId]||[];return rec.reduce(function(sum,r){var item=(store.inventory||[]).find(function(i){return i.id===r.itemId;});return sum+(item?n(item.cost)*n(r.qty):0);},0);}
-
-function saveProcedurePricing(){
-  var id=state.priceProcedure,pricing=mergeProcedurePricing(store.procedurePricing),p=Object.assign({},pricing[id]||{});
-  p.costModes=Object.assign({},defaultCostModes(),p.costModes||{});
-  document.querySelectorAll('.price-field').forEach(function(el){p[el.dataset.key]=n(el.value);});
-  document.querySelectorAll('[data-mode-key]').forEach(function(el){
-    p.costModes[el.dataset.modeKey]=el.value==='percent'?'percent':'fixed';
-  });
-  var final=document.getElementById('price-final');
-  p.finalPrice=final?n(final.value):n(p.finalPrice);
-  p.pricingModelVersion=2;
-  pricing[id]=p;
-  store.procedurePricing=pricing;
-  applyFinalProcedurePrices(pricing);
-  var z=pricingNumbers(p);
-  state.financeMessage='Precificação de '+(p.name||id)+' salva. Preço mínimo: '+fmtMoney(z.minimum)+' · sugerido: '+fmtMoney(z.suggested)+' · final praticado: '+fmtMoney(p.finalPrice)+'.';
-  persist();
-}
-
 function renderEstoque(){
-  if(['procedimentos','precificacao'].indexOf(state.stockTab)>=0) state.stockTab='itens';
   var items=(store.inventory||[]).slice(), q=(state.stockSearch||'').toLowerCase();
   if(q)items=items.filter(function(i){return [i.name,i.category,i.supplier,i.lot].join(' ').toLowerCase().indexOf(q)>=0;});
-  if(state.stockCategory&&state.stockCategory!=='Todas')items=items.filter(function(i){return i.category===state.stockCategory;});
-  items.sort(function(a,b){var c=String(a.category||'').localeCompare(String(b.category||''),'pt-BR');return c||String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
-  var alerts=stockAlerts(),
-      zero=alerts.filter(function(x){return x.status.cls==='zero';}).length,
-      critical=alerts.filter(function(x){return x.status.cls==='critical';}).length,
-      low=alerts.filter(function(x){return x.status.cls==='low';}).length,
-      exp=alerts.filter(function(x){return x.status.cls==='exp';}).length;
+  var low=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty);}).length;
+  var exp=(store.inventory||[]).filter(function(i){return i.expiry&&daysUntil(i.expiry)<=30;}).length;
   var out='<div class="section-title">Estoque inteligente</div>';
   if(state.stockMessage)out+='<div class="good-card" style="margin-bottom:12px;">'+esc(state.stockMessage)+'</div>';
-  out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
-  out+='<div class="stock-grid">'+
-    '<div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div>'+
-    '<div class="card stock-kpi critical-kpi"><div class="k">Zerados</div><div class="v" style="color:var(--danger)">'+zero+'</div></div>'+
-    '<div class="card stock-kpi critical-kpi"><div class="k">Estoque crítico</div><div class="v" style="color:#a8541c">'+critical+'</div></div>'+
-    '<div class="card stock-kpi warning-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:#7e6518">'+low+'</div></div>'+
-    '<div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div>'+
-    '<div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div>'+
-  '</div>';
-  if(alerts.length){
-    out+='<div class="stock-warning-panel">';
-    alerts.slice(0,12).forEach(function(x){
-      var i=x.item,s=x.status,cls=s.cls==='zero'?'critical':s.cls==='critical'?'urgent':s.cls==='low'?'low':'expiry',
-          icon=s.cls==='zero'?'⛔':s.cls==='critical'?'⚠':s.cls==='low'?'!':'◷',
-          recommended=Math.max(0,n(i.minQty)-n(i.qty));
-      out+='<div class="stock-warning '+cls+'"><div class="icon">'+icon+'</div><div><div class="title">'+esc(i.name)+' · '+esc(s.label)+'</div><div class="meta">Atual: '+n(i.qty).toLocaleString('pt-BR')+' '+esc(i.unit||'')+' · mínimo: '+n(i.minQty).toLocaleString('pt-BR')+(recommended>0?' · sugerido repor pelo menos '+recommended.toLocaleString('pt-BR')+' '+esc(i.unit||''):'')+'</div></div><button class="btn btn-ghost btn-sm" data-action="stock-edit" data-id="'+escAttr(i.id)+'">Atualizar</button></div>';
-    });
-    if(alerts.length>12)out+='<div class="mini-note">Há mais '+(alerts.length-12)+' item(ns) com alerta. Consulte “Itens para comprar” para a lista completa.</div>';
-    out+='</div>';
-  }else{
-    out+='<div class="good-card" style="margin-bottom:14px">✓ Nenhum item abaixo do mínimo, crítico ou zerado neste momento.</div>';
-  }
+  out+='<div class="finance-tabs">'+[['itens','Materiais'],['movimentos','Movimentações'],['procedimentos','Custos por procedimento'],['compras','Itens para comprar']].map(function(t){return '<button class="'+(state.stockTab===t[0]?'active':'')+'" data-action="stock-tab" data-id="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="stock-grid"><div class="card stock-kpi"><div class="k">Itens cadastrados</div><div class="v">'+(store.inventory||[]).length+'</div></div><div class="card stock-kpi"><div class="k">Abaixo do mínimo</div><div class="v" style="color:var(--danger)">'+low+'</div></div><div class="card stock-kpi"><div class="k">Validade ≤ 30 dias</div><div class="v" style="color:var(--amber)">'+exp+'</div></div><div class="card stock-kpi"><div class="k">Valor em estoque</div><div class="v">'+fmtMoney(stockValue())+'</div></div></div>';
   if(state.stockTab==='itens'){
-    var stockCats=['Todas'].concat(Array.from(new Set((store.inventory||[]).map(function(i){return i.category||'Outros';}))).sort(function(a,b){return a.localeCompare(b,'pt-BR');}));
-    out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><div class="field"><label>Categoria</label><select id="stock-category">'+stockCats.map(function(c){return '<option '+(state.stockCategory===c?'selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="stock-search">Aplicar filtros</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
+    out+='<div class="stock-toolbar"><div class="field"><label>Buscar material</label><input id="stock-search" value="'+escAttr(state.stockSearch)+'" placeholder="nome, categoria, fornecedor"></div><button class="btn btn-ghost" data-action="stock-search">Buscar</button><button class="btn btn-primary" data-action="stock-new">+ Novo material</button></div>';
     if(state.stockEditingId){var d=state.stockEditingId==='new'?{id:'',name:'',category:'Materiais',unit:'un',qty:0,minQty:0,cost:0,supplier:'',lot:'',expiry:''}:(store.inventory||[]).find(function(i){return i.id===state.stockEditingId;})||{};out+='<div class="card"><h3 style="margin-top:0;">'+(d.id?'Editar material':'Novo material')+'</h3><div class="stock-form"><div class="field span-2"><label>Material</label><input id="st-name" value="'+escAttr(d.name||'')+'"></div><div class="field"><label>Categoria</label><input id="st-cat" value="'+escAttr(d.category||'')+'"></div><div class="field"><label>Unidade</label><input id="st-unit" value="'+escAttr(d.unit||'un')+'" placeholder="un, cx, pct, ml"></div><div class="field"><label>Quantidade atual</label><input id="st-qty" type="number" step="0.01" value="'+n(d.qty)+'"></div><div class="field"><label>Estoque mínimo</label><input id="st-min" type="number" step="0.01" value="'+n(d.minQty)+'"></div><div class="field"><label>Custo unitário</label><input id="st-cost" type="number" step="0.01" value="'+n(d.cost)+'"></div><div class="field"><label>Validade</label><input id="st-expiry" type="date" value="'+escAttr(d.expiry||'')+'"></div><div class="field span-2"><label>Fornecedor</label><input id="st-supplier" value="'+escAttr(d.supplier||'')+'"></div><div class="field span-2"><label>Lote</label><input id="st-lot" value="'+escAttr(d.lot||'')+'"></div></div><div class="patient-actions"><button class="btn btn-ghost" data-action="stock-cancel">Cancelar</button><button class="btn btn-primary" data-action="stock-save" data-id="'+escAttr(d.id||'')+'">Salvar material</button></div></div>';}
     out+='<div class="card stock-table-wrap"><table><thead><tr><th>Material</th><th>Categoria</th><th>Estoque</th><th>Mínimo</th><th>Custo un.</th><th>Lote / validade</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
     if(!items.length)out+='<tr><td colspan="8">Nenhum material encontrado.</td></tr>';
@@ -3189,261 +2402,12 @@ function renderEstoque(){
     out+='</tbody></table></div>';
   } else if(state.stockTab==='movimentos'){
     var mov=(store.inventoryMovements||[]).slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));}).slice(0,150);out+='<div class="card stock-table-wrap"><table><thead><tr><th>Data</th><th>Material</th><th>Tipo</th><th>Quantidade</th><th>Motivo</th></tr></thead><tbody>';if(!mov.length)out+='<tr><td colspan="5">Nenhuma movimentação registrada.</td></tr>';mov.forEach(function(m){var it=(store.inventory||[]).find(function(i){return i.id===m.itemId;});out+='<tr><td>'+new Date(m.createdAt).toLocaleString('pt-BR')+'</td><td>'+esc(it?it.name:m.itemName||'Item removido')+'</td><td>'+esc(m.type)+'</td><td>'+n(m.qty).toLocaleString('pt-BR')+'</td><td>'+esc(m.reason||'—')+'</td></tr>';});out+='</tbody></table></div>';
+  } else if(state.stockTab==='procedimentos'){
+    var pid=state.recipeProcedure||PROCEDURES[0].id, recipe=(store.procedureRecipes||{})[pid]||[], pc=procById(pid), cost=procedureMaterialCost(pid);out+='<div class="card"><div class="stock-toolbar"><div class="field"><label>Procedimento</label><select id="recipe-proc">'+PROCEDURES.map(function(p){return '<option value="'+p.id+'" '+(pid===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="recipe-load">Carregar</button></div><h3>Materiais consumidos por atendimento</h3><div id="recipe-list">';recipe.forEach(function(r,idx){var it=(store.inventory||[]).find(function(i){return i.id===r.itemId;});out+='<div class="recipe-row"><select id="recipe-item-'+idx+'">'+(store.inventory||[]).map(function(x){return '<option value="'+x.id+'" '+(r.itemId===x.id?'selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select><input id="recipe-qty-'+idx+'" type="number" step="0.01" min="0" value="'+n(r.qty)+'"><button class="btn btn-ghost btn-sm" data-action="recipe-remove" data-id="'+idx+'">Remover</button></div>';});out+='</div><div class="row-actions"><button class="btn btn-ghost" data-action="recipe-add">+ Material</button><button class="btn btn-primary" data-action="recipe-save">Salvar consumo padrão</button></div><div class="alert-card" style="margin-top:14px;">Custo estimado de materiais: <strong>'+fmtMoney(cost)+'</strong> · Preço cadastrado: <strong>'+fmtMoney(n(pc.price))+'</strong> · Margem antes de outros custos: <strong>'+fmtMoney(n(pc.price)-cost)+'</strong>.</div><p class="mini-note">Ao marcar uma consulta como Finalizada, o ERP dá baixa nesses materiais uma única vez e registra a movimentação.</p></div>';
   } else if(state.stockTab==='compras'){
     var buy=(store.inventory||[]).filter(function(i){return n(i.qty)<=n(i.minQty)|| (i.expiry&&daysUntil(i.expiry)<=30);});out+='<div class="card"><h3 style="margin-top:0;">Lista inteligente de reposição</h3>';if(!buy.length)out+='<div class="good-card">Nenhum item exige atenção neste momento.</div>';else{out+='<div class="stock-table-wrap"><table><thead><tr><th>Material</th><th>Atual</th><th>Mínimo</th><th>Sugestão de compra</th><th>Fornecedor</th><th>Motivo</th></tr></thead><tbody>';buy.forEach(function(i){var sug=Math.max(0,n(i.minQty)*2-n(i.qty)),reason=[];if(n(i.qty)<=n(i.minQty))reason.push('estoque baixo');if(i.expiry&&daysUntil(i.expiry)<=30)reason.push(daysUntil(i.expiry)<0?'vencido':'validade próxima');out+='<tr><td>'+esc(i.name)+'</td><td>'+n(i.qty)+' '+esc(i.unit)+'</td><td>'+n(i.minQty)+'</td><td><strong>'+sug.toLocaleString('pt-BR')+' '+esc(i.unit)+'</strong></td><td>'+esc(i.supplier||'—')+'</td><td>'+esc(reason.join(' e '))+'</td></tr>';});out+='</tbody></table></div>';}out+='</div>';
   }
   return out;
-}
-
-
-function crmContact(patientId){
-  return (store.crmContacts||[]).filter(function(c){return c.patientId===patientId;}).sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));})[0]||null;
-}
-function crmPatientRows(){
-  var today=todayISO();
-  return patientRecords().map(function(p){
-    var hist=patientHistory(p).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
-    var last=hist[0]||null, future=hist.some(function(a){return a.date>=today && a.status!=='cancelado'&&a.status!=='falta';});
-    var days=last?Math.max(0,Math.floor((parseISO(today)-parseISO(last.date))/86400000)):9999;
-    var pend=(store.payments||[]).filter(function(x){
-      var ap=(store.appointments||[]).find(function(a){return a.id===x.appointmentId;});
-      return ap&&normalizePhone(ap.phone)===normalizePhone(p.phone)&&String(x.status||'').toLowerCase()!=='pago';
-    }).reduce(function(s,x){return s+n(x.gross)-n(x.discount);},0);
-    var contact=crmContact(p.id);
-    var score=(future?0:30)+(days>365?30:days>180?20:days>90?10:0)+(pend>0?20:0)+(hist.length?10:0);
-    return {p:p,last:last,days:days,future:future,pending:pend,contact:contact,score:score,priority:score>=60?'alta':score>=35?'media':'baixa'};
-  });
-}
-function renderCRM(){
-  var rows=crmPatientRows(), tab=state.crmTab||'inativos', today=todayISO();
-  if(tab==='inativos') rows=rows.filter(function(r){return !r.future&&r.days>=180;});
-  else if(tab==='oportunidades') rows=rows.filter(function(r){return !r.future&&(r.pending>0||r.score>=50);});
-  else if(tab==='feedback') rows=rows.filter(function(r){return !!r.last;});
-  else if(tab==='contatados') rows=rows.filter(function(r){return !!r.contact;});
-  rows.sort(function(a,b){return b.score-a.score;});
-  var inactive=crmPatientRows().filter(function(r){return !r.future&&r.days>=180;}).length;
-  var high=crmPatientRows().filter(function(r){return !r.future&&r.priority==='alta';}).length;
-  var contacted=(store.crmContacts||[]).length;
-  var returned=(store.crmContacts||[]).filter(function(c){return c.result==='agendou'||c.result==='retornou';}).length;
-  var out='<div class="section-title">Relacionamento e Reativação</div>';
-  if(state.crmMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.crmMessage)+'</div>';
-  out+='<div class="crm-kpis">'+
-    '<div class="card crm-kpi"><div class="k">Pacientes inativos</div><div class="v">'+inactive+'</div></div>'+
-    '<div class="card crm-kpi"><div class="k">Prioridade alta</div><div class="v">'+high+'</div></div>'+
-    '<div class="card crm-kpi"><div class="k">Contatos registrados</div><div class="v">'+contacted+'</div></div>'+
-    '<div class="card crm-kpi"><div class="k">Retornos / agendamentos</div><div class="v">'+returned+'</div></div></div>';
-  out+='<div class="crm-tabs">'+[['inativos','Inativos'],['oportunidades','Oportunidades'],['feedback','Pesquisa de experiência'],['contatados','Histórico de contatos']].map(function(x){return '<button class="btn '+(tab===x[0]?'btn-primary':'btn-ghost')+'" data-action="crm-tab" data-id="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
-  out+='<div class="card"><div class="crm-row head"><div>Paciente</div><div>Última visita</div><div>Tempo sem retorno</div><div>Prioridade</div><div>Último contato</div><div>Ações</div></div>';
-  if(!rows.length)out+='<div class="empty-state">Nenhum paciente nesta categoria.</div>';
-  rows.forEach(function(r){
-    var c=r.contact, phone=normalizePhone(r.p.phone);
-    var feedbackMsg='Olá, '+(r.p.name||'')+'! Tudo bem? 💙\n\nAqui é da equipe do Instituto Lins Rabello. Estamos fazendo um acompanhamento com nossos pacientes e gostaríamos muito de ouvir você.\n\nComo foi sua experiência conosco? Queremos saber sua impressão sobre o atendimento, acolhimento, organização, conforto e também se existe algo que poderíamos melhorar. Sua opinião é muito importante para continuarmos evoluindo e oferecendo uma experiência cada vez melhor.\n\nSe puder, responda esta mensagem contando como foi seu atendimento — pode ser um elogio, sugestão, crítica ou qualquer ponto que considere importante. 😊';
-    if(!r.future && r.days>=180){
-      feedbackMsg+='\n\nPercebemos também que já faz algum tempo desde sua última visita. Se desejar, podemos verificar os próximos horários disponíveis para uma nova avaliação e ajudar você a manter seus cuidados em dia. Será um prazer receber você novamente. 💙';
-    }
-    feedbackMsg+='\n\nInstituto Lins Rabello — cuidado, tecnologia e atenção em cada sorriso.';
-    var wa=phone?('https://wa.me/55'+phone+'?text='+encodeURIComponent(feedbackMsg)):'#';
-    out+='<div class="crm-row"><div><strong>'+esc(r.p.name||'Paciente')+'</strong><br><span class="mini-note">'+esc(r.p.phone||'Sem telefone')+(r.pending>0?' · pendência '+fmtMoney(r.pending):'')+'</span></div>'+
-      '<div>'+(r.last?dayDisplay(r.last.date):'Sem histórico')+'</div><div>'+(r.days===9999?'—':r.days+' dias')+'</div><div><span class="crm-priority '+r.priority+'">'+r.priority.toUpperCase()+'</span></div>'+
-      '<div>'+(c?esc(c.date)+' · '+esc(c.result||'contato'):'Nunca contatado')+'</div><div class="row-actions">'+
-      (phone?'<a class="btn btn-primary btn-sm" href="'+wa+'" target="_blank" rel="noopener">WhatsApp</a>':'')+
-      '<button class="btn btn-ghost btn-sm" data-action="crm-contact" data-id="'+escAttr(r.p.id)+'">Registrar contato</button>'+
-      '<button class="btn btn-ghost btn-sm" data-action="crm-feedback" data-id="'+escAttr(r.p.id)+'">Registrar impressão</button></div></div>';
-  });
-  out+='</div><p class="mini-note">A Pesquisa de experiência pode ser enviada a qualquer paciente com atendimento anterior. Para pacientes inativos, a mensagem acrescenta automaticamente um convite para remarcar uma avaliação. Respeite pedidos de não contato e registre consentimento/opt-out quando aplicável.</p>';
-  return out;
-}
-function crmRegisterContact(patientId,feedbackOnly){
-  var p=patientById(patientId); if(!p)return;
-  var result=prompt(feedbackOnly?'Qual foi a impressão do paciente? (excelente, positiva, neutra, negativa, crítica, sugestão, sem resposta)':'Resultado do contato? (sem resposta, interessado, agendou, não tem interesse, não contatar)','sem resposta');
-  if(result===null)return;
-  var note=prompt('Observação do contato (opcional):','')||'';
-  store.crmContacts=store.crmContacts||[];
-  store.crmContacts.push({id:'crm'+Date.now(),patientId:patientId,date:todayISO(),result:String(result).toLowerCase(),note:note,feedback:!!feedbackOnly});
-  state.crmMessage='Contato registrado para '+(p.name||'paciente')+'.';
-  persist();
-}
-
-
-
-function budgetStatusClass(s){
-  s=String(s||'proposto').toLowerCase();
-  return s==='apresentado'?'status-apresentado':s==='negociacao'?'status-negociacao':s==='aceito'?'status-aceito':s==='realizado'?'status-realizado':'status-proposto';
-}
-function budgetStatusSelect(x){
-  var opts=[['proposto','Proposto'],['apresentado','Apresentado'],['negociacao','Em negociação'],['aceito','Aceito'],['realizado','Realizado']];
-  return '<select class="status-select '+budgetStatusClass(x.status)+'" data-change="budget-status" data-id="'+x.id+'">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(x.status===o[0]?'selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';
-}
-function labStatusClass(s){
-  s=String(s||'enviado').toLowerCase();
-  return s==='em produção'?'status-producao':s==='prova'?'status-prova':s==='recebido'?'status-recebido':s==='entregue'?'status-entregue':'status-enviado';
-}
-function labStatusMeta(s){
-  s=String(s||'enviado').toLowerCase();
-  var map={
-    'enviado':{label:'Enviado ao laboratório',cls:'enviado'},
-    'em produção':{label:'Em produção',cls:'producao'},
-    'prova':{label:'Em prova',cls:'prova'},
-    'recebido':{label:'Recebido na clínica',cls:'recebido'},
-    'entregue':{label:'Entregue ao paciente',cls:'entregue'}
-  };
-  return map[s]||map.enviado;
-}
-function labStatusSelect(x){
-  var opts=[
-    ['enviado','Enviado'],
-    ['em produção','Em produção'],
-    ['prova','Em prova'],
-    ['recebido','Recebido'],
-    ['entregue','Entregue']
-  ], meta=labStatusMeta(x.status);
-  return '<div><span class="lab-current-status stage-'+meta.cls+'">'+meta.label+'</span>'+
-    '<div class="lab-stage-group">'+opts.map(function(o){
-      var m=labStatusMeta(o[0]);
-      return '<button type="button" class="lab-stage-btn stage-'+m.cls+' '+(x.status===o[0]?'active':'')+'" data-action="lab-set-status" data-id="'+x.id+'" data-status="'+o[0]+'">'+o[1]+'</button>';
-    }).join('')+'</div></div>';
-}
-function setBudgetStatus(id,status){
-  var x=(store.treatmentPlans||[]).find(function(v){return v.id===id;});
-  if(!x)return;
-  var allowed=['proposto','apresentado','negociacao','aceito','realizado'];
-  if(allowed.indexOf(status)<0)return;
-  x.status=status;persist();
-}
-function setLabStatus(id,status){
-  var x=(store.labCases||[]).find(function(v){return v.id===id;});
-  if(!x)return;
-  var allowed=['enviado','em produção','prova','recebido','entregue'];
-  if(allowed.indexOf(status)<0)return;
-  x.status=status;
-  x.statusUpdatedAt=new Date().toISOString();
-  state.labMessage='Etapa atualizada para: '+labStatusMeta(status).label+'.';
-  persist();
-}
-
-function renderLaboratorio(){
-  var cases=(store.labCases||[]).slice().sort(function(a,b){return String(b.dueDate||'').localeCompare(String(a.dueDate||''));});
-  var open=cases.filter(function(x){return x.status!=='entregue';}), cost=cases.reduce(function(s,x){return s+n(x.cost);},0);
-  var out='<div class="section-title">Laboratório e prótese</div><div class="phase-grid"><div class="card phase-card"><div class="num">Casos em andamento</div><div class="big">'+open.length+'</div></div><div class="card phase-card"><div class="num">Custo laboratorial registrado</div><div class="big">'+fmtMoney(cost)+'</div></div><div class="card phase-card"><div class="num">Atrasados</div><div class="big">'+open.filter(function(x){return x.dueDate&&x.dueDate<todayISO();}).length+'</div></div></div>';
-  if(state.labMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.labMessage)+'</div>';
-  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Casos laboratoriais</h3><div class="mini-note">Laboratório, trabalho, elemento, cor, prazo, custo e entrega.</div></div><button class="btn btn-primary" data-action="lab-add">+ Novo caso</button></div><div class="lab-row head"><div>Paciente / trabalho</div><div>Laboratório</div><div>Prazo</div><div>Custo</div><div>Status</div><div>Ações</div></div>';
-  if(!cases.length)out+='<div class="empty-state">Nenhum caso laboratorial cadastrado.</div>';
-  cases.forEach(function(x){var p=patientById(x.patientId);out+='<div class="lab-row"><div><strong>'+esc(p?p.name:'Paciente')+'</strong><br><span class="mini-note">'+esc(x.work||'')+' '+esc(x.tooth||'')+'</span></div><div>'+esc(x.lab||'—')+'</div><div>'+(x.dueDate?dayDisplay(x.dueDate):'—')+'</div><div>'+fmtMoney(n(x.cost))+'</div><div>'+labStatusSelect(x)+(x.statusUpdatedAt?'<div class="mini-note" style="margin-top:6px">Atualizado: '+new Date(x.statusUpdatedAt).toLocaleString('pt-BR')+'</div>':'')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="lab-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
-  out+='</div>';return out;
-}
-function addLabCase(){
-  var pts=patientRecords();if(!pts.length){alert('Cadastre um paciente primeiro.');return;}
-  var name=prompt('Nome do paciente:','');if(!name)return;var p=pts.find(function(x){return String(x.name||'').toLowerCase().indexOf(name.toLowerCase())>=0;});if(!p){alert('Paciente não encontrado.');return;}
-  var work=prompt('Trabalho solicitado (coroa, lente, prótese, guia etc.):','Coroa cerâmica');if(!work)return;
-  var tooth=prompt('Dente/região/cor (opcional):','')||'', lab=prompt('Laboratório / protético:','')||'', due=prompt('Previsão de entrega (AAAA-MM-DD):',addDays(todayISO(),10))||'', cost=prompt('Custo do laboratório:', '0');
-  store.labCases.push({id:'lab'+Date.now(),patientId:p.id,work:work,tooth:tooth,lab:lab,dueDate:due,cost:n(cost),status:'enviado',createdAt:new Date().toISOString()});state.labMessage='Caso laboratorial cadastrado.';persist();
-}
-function cycleLab(id){var x=(store.labCases||[]).find(function(v){return v.id===id;});if(!x)return;var s=['enviado','em produção','prova','recebido','entregue'],i=s.indexOf(x.status);x.status=s[Math.min(s.length-1,i+1)];persist();}
-
-
-function budgetToothNumbers(){
-  return ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
-          '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
-}
-function budgetPlansForTooth(patientId,tooth){
-  return patientTreatmentPlans(patientId).filter(function(x){return String(x.tooth||'')===String(tooth||'');});
-}
-function budgetToothStatus(patientId,tooth){
-  var xs=budgetPlansForTooth(patientId,tooth);
-  if(xs.some(function(x){return x.status==='realizado';}))return 'realizado';
-  if(xs.some(function(x){return x.status==='aceito';}))return 'aceito';
-  if(xs.length)return 'proposto';
-  return '';
-}
-function budgetPatientTotals(patientId){
-  var xs=patientTreatmentPlans(patientId), proposed=0,accepted=0,done=0;
-  xs.forEach(function(x){
-    if(x.status!=='realizado')proposed+=n(x.price);
-    if(x.status==='aceito')accepted+=n(x.price);
-    if(x.status==='realizado')done+=n(x.price);
-  });
-  return {count:xs.length,proposed:proposed,accepted:accepted,done:done};
-}
-function renderBudgetOdontogram(patientId){
-  var teeth=budgetToothNumbers(), top=teeth.slice(0,16), bottom=teeth.slice(16);
-  function tooth(t){
-    var status=budgetToothStatus(patientId,t), xs=budgetPlansForTooth(patientId,t);
-    return '<button type="button" class="budget-tooth '+status+' '+(state.budgetTooth===t?'selected':'')+'" data-action="budget-tooth" data-id="'+t+'"><strong>'+t+'</strong><small>'+(xs.length?xs.length+' item(ns)':'livre')+'</small></button>';
-  }
-  return '<div class="budget-odonto-wrap"><div class="budget-odontogram"><div class="mini-note"><strong>ODONTOGRAMA DO ORÇAMENTO</strong> · amarelo = proposto · verde = aceito · azul = realizado</div><div class="budget-arch">'+top.map(tooth).join('')+'</div><div style="height:8px;border-top:1px dashed var(--border)"></div><div class="budget-arch">'+bottom.map(tooth).join('')+'</div></div></div>';
-}
-function renderBudgetPatientList(){
-  var pts=patientRecords().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
-  if(!pts.length)return '<div class="empty-state">Nenhum paciente cadastrado.</div>';
-  return pts.map(function(p){
-    var t=budgetPatientTotals(p.id);
-    return '<button class="budget-patient-btn '+(state.budgetPatientId===p.id?'active':'')+'" data-action="budget-patient" data-id="'+escAttr(p.id)+'"><strong>'+esc(p.name||'Paciente')+'</strong><small>'+esc(p.phone||'Sem telefone')+' · '+t.count+' item(ns) · '+fmtMoney(t.proposed)+'</small></button>';
-  }).join('');
-}
-function renderOrcamentos(){
-  if(state.budgetQuotePreview){
-    var qp=patientById(state.budgetPatientId);
-    if(!qp){
-      state.budgetQuotePreview=false;
-      return '<div class="section-title">Orçamentos</div><div class="alert-card">Selecione um paciente antes de gerar o orçamento.</div>';
-    }
-    try{
-      return '<div class="section-title">Orçamentos</div>'+renderQuoteDocument(qp);
-    }catch(e){
-      console.error('Erro ao gerar orçamento:',e);
-      state.budgetQuotePreview=false;
-      return '<div class="section-title">Orçamentos</div><div class="alert-card"><strong>Não foi possível montar a visualização do orçamento.</strong><br>'+esc(e&&e.message?e.message:'Erro inesperado')+'<div style="margin-top:10px"><button class="btn btn-ghost" data-action="budget-return">Voltar aos orçamentos</button></div></div>';
-    }
-  }
-
-  var p=state.budgetPatientId?patientById(state.budgetPatientId):null;
-  if(!p){
-    var first=patientRecords()[0];
-    if(first){state.budgetPatientId=first.id;p=first;}
-  }
-  var out='<div class="section-title">Orçamentos <span style="font-size:12px;color:var(--ink-soft);font-weight:500">planejamento dente a dente</span></div>';
-  if(state.budgetMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.budgetMessage)+'</div>';
-  out+='<div class="budget-shell"><div class="card budget-patients"><h3 style="margin-top:0">Pacientes</h3>'+renderBudgetPatientList()+'</div><div>';
-  if(!p)return out+'<div class="card empty-state">Cadastre um paciente para criar um orçamento.</div></div></div>';
-
-  var totals=budgetPatientTotals(p.id), plans=patientTreatmentPlans(p.id);
-  out+='<div class="budget-summary">'+
-    '<div class="budget-stat"><div class="k">Paciente</div><div class="v" style="font-size:16px">'+esc(p.name||'')+'</div></div>'+
-    '<div class="budget-stat"><div class="k">Itens planejados</div><div class="v">'+totals.count+'</div></div>'+
-    '<div class="budget-stat"><div class="k">Em orçamento</div><div class="v">'+fmtMoney(totals.proposed)+'</div></div>'+
-    '<div class="budget-stat"><div class="k">Realizado</div><div class="v">'+fmtMoney(totals.done)+'</div></div></div>';
-
-  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Odontograma do orçamento</h3><div class="mini-note">Selecione o dente e registre o procedimento, valor e observação. O documento final sairá discriminado dente a dente.</div></div><div class="row-actions"><button class="btn btn-ghost" data-action="budget-quote">Gerar orçamento / PDF</button></div></div>';
-  out+=renderBudgetOdontogram(p.id);
-
-  var pricing=allPricingProcedures(), selectedProc=pricing.find(function(x){return x.id===state.budgetProcedure;})||pricing[0]||null;
-  out+='<div class="budget-form">'+
-    '<div class="field"><label>Procedimento</label><select id="budget-procedure">'+pricing.map(function(x){return '<option value="'+escAttr(x.id)+'" '+(selectedProc&&x.id===selectedProc.id?'selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select></div>'+
-    '<div class="field"><label>Dente / região</label><input id="budget-tooth-input" value="'+escAttr(state.budgetTooth||'')+'" placeholder="Selecione acima"></div>'+
-    '<div class="field"><label>Valor</label><input id="budget-price" type="number" min="0" step="0.01" value="'+n(selectedProc?selectedProc.finalPrice:0)+'"></div>'+
-    '<div class="field wide"><label>Observação clínica / condição</label><input id="budget-note" placeholder="Ex.: face distal, cor, material, etapa, condição comercial"></div>'+
-    '<button class="btn btn-primary" data-action="budget-add">Adicionar</button>'+
-  '</div>';
-
-  out+='<h3>Itens deste orçamento</h3><div class="plan-row head"><div>Procedimento</div><div>Dente/região</div><div>Valor</div><div>Status</div><div>Observação</div><div>Ações</div></div>';
-  if(!plans.length)out+='<div class="empty-state">Nenhum procedimento registrado neste orçamento.</div>';
-  plans.forEach(function(x){
-    out+='<div class="plan-row"><div><strong>'+esc(x.name)+'</strong></div><div><strong>'+esc(x.tooth||'Geral')+'</strong></div><div>'+fmtMoney(n(x.price))+'</div><div>'+budgetStatusSelect(x)+'</div><div>'+esc(x.note||'—')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="budget-delete" data-id="'+x.id+'">Excluir</button></div></div>';
-  });
-  out+='</div></div></div>';
-  return out;
-}
-function addBudgetItem(){
-  var p=patientById(state.budgetPatientId);if(!p)return;
-  var procEl=document.getElementById('budget-procedure'),toothEl=document.getElementById('budget-tooth-input'),
-      priceEl=document.getElementById('budget-price'),noteEl=document.getElementById('budget-note');
-  var pid=procEl?procEl.value:state.budgetProcedure, pr=allPricingProcedures().find(function(x){return x.id===pid;});
-  var tooth=toothEl?toothEl.value.trim():(state.budgetTooth||'');
-  if(!pr){alert('Selecione um procedimento.');return;}
-  if(!tooth){alert('Selecione um dente no odontograma ou informe uma região.');return;}
-  store.treatmentPlans=store.treatmentPlans||[];
-  store.treatmentPlans.push({id:'tp'+Date.now(),patientId:p.id,procedureId:pid,name:pr.name,tooth:tooth,price:priceEl?n(priceEl.value):n(pr.finalPrice),status:'proposto',note:noteEl?noteEl.value.trim():'',createdAt:new Date().toISOString()});
-  state.budgetProcedure=pid;state.budgetTooth=null;state.budgetMessage='Procedimento adicionado ao orçamento de '+(p.name||'paciente')+'.';persist();
 }
 
 function renderPacientes(){
@@ -3488,85 +2452,6 @@ function clinicalToothMap(){
   (state.recordData.odontograma||[]).forEach(function(x){map[String(x.dente)]=x;});
   return map;
 }
-
-
-function clinicQuoteInfo(){
-  return {name:'Instituto Lins Rabello',address:'Itapecerica da Serra - SP',logo:LOGO_ICON};
-}
-function quoteProfessionalName(){
-  try{
-    if(state.staffProfile && state.staffProfile.display_name) return state.staffProfile.display_name;
-    if(state.staffUser && state.staffUser.user_metadata){
-      var meta=state.staffUser.user_metadata;
-      if(meta.display_name) return meta.display_name;
-      if(meta.full_name) return meta.full_name;
-      if(meta.name) return meta.name;
-    }
-    var email=String(state.staffEmail||'').toLowerCase();
-    if(email.indexOf('amanda')>=0) return 'Dra. Amanda Chrislen Costa Lins';
-    if(email.indexOf('ryan')>=0) return 'Dr. Ryan Rabello';
-  }catch(e){
-    console.warn('Não foi possível identificar o profissional do orçamento.',e);
-  }
-  return 'Equipe Instituto Lins Rabello';
-}
-function renderQuoteDocument(p){
-  var plans=patientTreatmentPlans(p.id).filter(function(x){return x.status!=='realizado';});
-  var total=plans.reduce(function(s,x){return s+n(x.price);},0),c=clinicQuoteInfo(),date=todayISO(),out='';
-  out+='<div class="quote-toolbar"><button class="btn btn-primary" data-action="quote-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="quote-whatsapp">Enviar resumo no WhatsApp</button><button class="btn btn-ghost" data-action="quote-close">Voltar ao plano</button></div>';
-  out+='<div class="quote-sheet" id="quote-sheet"><div class="quote-head"><div class="quote-brand"><img src="'+escAttr(c.logo)+'" alt="Logo Instituto Lins Rabello"><div><h2>'+esc(c.name)+'</h2><div>Odontologia Integrada</div></div></div><div class="quote-meta"><strong>ORÇAMENTO ODONTOLÓGICO</strong><br>Data: '+dayDisplay(date)+'<br>Profissional: '+esc(quoteProfessionalName())+'</div></div>';
-  out+='<div class="quote-patient"><div><strong>Paciente:</strong> '+esc(p.name||'')+'</div><div><strong>Telefone:</strong> '+esc(p.phone||'—')+'</div><div><strong>CPF:</strong> '+esc(p.cpf||'—')+'</div><div><strong>Nascimento:</strong> '+esc((p.birthDate&&/^\d{4}-\d{2}-\d{2}$/.test(p.birthDate))?dayDisplay(p.birthDate):(p.birthDate||'—'))+'</div></div>';
-  out+='<table class="quote-table"><thead><tr><th>Dente / região</th><th>Procedimento</th><th>Status</th><th>Observação</th><th>Valor</th></tr></thead><tbody>';
-  plans.sort(function(a,b){return String(a.tooth||'').localeCompare(String(b.tooth||''),'pt-BR');}).forEach(function(x){out+='<tr><td><strong>'+esc(x.tooth||'Geral')+'</strong></td><td>'+esc(x.name)+'</td><td>'+esc(x.status||'proposto')+'</td><td>'+esc(x.note||'—')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';});
-  if(!plans.length)out+='<tr><td colspan="5">Nenhum procedimento pendente no orçamento.</td></tr>';
-  out+='</tbody></table><div class="quote-total">Valor total: '+fmtMoney(total)+'</div>';
-  out+='<div style="font-size:11.5px;line-height:1.55"><strong>Observações:</strong> Este documento apresenta o planejamento e os valores registrados no momento da emissão. Alterações clínicas identificadas durante o tratamento poderão exigir reavaliação e novo planejamento, sempre comunicados ao paciente.</div>';
-  out+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:55px;text-align:center;font-size:11px"><div style="border-top:1px solid #555;padding-top:6px">Paciente / responsável</div><div style="border-top:1px solid #555;padding-top:6px">'+esc(quoteProfessionalName())+'</div></div>';
-  out+='<div class="quote-footer"><strong>'+esc(c.name)+'</strong><br>'+esc(c.address)+'<br>Atendimento mediante agendamento · Documento emitido pelo ERP do Instituto Lins Rabello</div></div>';
-  return out;
-}
-function quoteWhatsApp(){
-  var p=patientById(state.budgetPatientId||state.recordPatientId);if(!p)return;
-  var plans=patientTreatmentPlans(p.id).filter(function(x){return x.status!=='realizado';}),total=plans.reduce(function(s,x){return s+n(x.price);},0);
-  var msg='Olá, '+(p.name||'')+'! Segue o resumo do seu orçamento no Instituto Lins Rabello:\\n\\n'+plans.map(function(x){return '• '+x.name+(x.tooth?' ('+x.tooth+')':'')+' — '+fmtMoney(n(x.price));}).join('\\n')+'\\n\\nTotal: '+fmtMoney(total)+'\\n\\nSe tiver qualquer dúvida sobre o planejamento, estamos à disposição.';
-  var ph=normalizePhone(p.phone);if(!ph){alert('Paciente sem telefone cadastrado.');return;}
-  window.open('https://wa.me/55'+ph+'?text='+encodeURIComponent(msg),'_blank');
-}
-
-function patientTreatmentPlans(patientId){
-  return (store.treatmentPlans||[]).filter(function(x){return x.patientId===patientId;}).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''));});
-}
-function renderTreatmentPlan(p){
-  if(state.quotePreview)return renderQuoteDocument(p);
-  var plans=patientTreatmentPlans(p.id), total=plans.reduce(function(s,x){return s+n(x.price);},0),
-      accepted=plans.filter(function(x){return ['aceito','realizado'].indexOf(x.status)>=0;}).reduce(function(s,x){return s+n(x.price);},0);
-  var out='<div class="phase-grid"><div class="card phase-card"><div class="num">Plano</div><div class="big">'+plans.length+' item(ns)</div></div><div class="card phase-card"><div class="num">Valor proposto</div><div class="big">'+fmtMoney(total)+'</div></div><div class="card phase-card"><div class="num">Aceito / realizado</div><div class="big">'+fmtMoney(accepted)+'</div></div></div>';
-  if(state.planMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.planMessage)+'</div>';
-  out+='<div class="card"><div class="patient-actions"><div><h3 style="margin:0">Plano de tratamento e orçamento</h3><div class="mini-note">Integra indicação clínica, dente/região, proposta, aceite e execução.</div></div><div class="row-actions"><button class="btn btn-ghost" data-action="quote-preview">Gerar orçamento / PDF</button><button class="btn btn-primary" data-action="plan-add">+ Adicionar procedimento</button></div></div>';
-  out+='<div class="plan-row head"><div>Procedimento</div><div>Dente/região</div><div>Valor</div><div>Status</div><div>Observação</div><div>Ações</div></div>';
-  if(!plans.length)out+='<div class="empty-state">Nenhum item no plano de tratamento.</div>';
-  plans.forEach(function(x){out+='<div class="plan-row"><div><strong>'+esc(x.name)+'</strong></div><div>'+esc(x.tooth||'—')+'</div><div>'+fmtMoney(n(x.price))+'</div><div><span class="pill '+(x.status==='realizado'?'realizado':x.status==='aceito'?'confirmado':'pendente')+'">'+esc(x.status||'proposto')+'</span></div><div>'+esc(x.note||'—')+'</div><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="plan-cycle" data-id="'+x.id+'">Avançar</button><button class="btn btn-ghost btn-sm" data-action="plan-delete" data-id="'+x.id+'">Excluir</button></div></div>';});
-  out+='</div>';
-  return out;
-}
-function addTreatmentPlan(){
-  var p=patientById(state.recordPatientId);if(!p)return;
-  var names=allPricingProcedures().map(function(x){return x.name;}).join(', ');
-  var name=prompt('Procedimento do plano:\\nExemplos: '+names,'Avaliação');if(!name)return;
-  var tooth=prompt('Dente ou região (opcional):','')||'';
-  var match=allPricingProcedures().find(function(x){return x.name.toLowerCase()===name.toLowerCase();});
-  var price=prompt('Valor proposto:',String(match?n(match.finalPrice):0));if(price===null)return;
-  var note=prompt('Observação / condição comercial (opcional):','')||'';
-  store.treatmentPlans=store.treatmentPlans||[];
-  store.treatmentPlans.push({id:'tp'+Date.now(),patientId:p.id,name:name,tooth:tooth,price:n(price),status:'proposto',note:note,createdAt:new Date().toISOString()});
-  state.planMessage='Item adicionado ao plano de tratamento.';persist();
-}
-function cycleTreatmentPlan(id){
-  var x=(store.treatmentPlans||[]).find(function(v){return v.id===id;});if(!x)return;
-  var seq=['proposto','apresentado','negociacao','aceito','realizado'],i=seq.indexOf(x.status);x.status=seq[Math.min(seq.length-1,i+1)];
-  persist();
-}
-
 function renderClinicalRecord(){
   if(!state.recordPatientId) return '';
   var p=patientById(state.recordPatientId);
@@ -3626,12 +2511,7 @@ function renderAnamnesis(){
 function patientSignatureState(p){var s=(p&&p.signatures)||{};return {anamnesis:!!s.anamnesis,contract:!!s.contract,terms:!!s.terms,notes:s.notes||'',updatedAt:s.updatedAt||''};}
 function renderPatientReminders(p){
   var s=patientSignatureState(p),missing=[];if(!s.anamnesis)missing.push('Anamnese');if(!s.contract)missing.push('Contrato');if(!s.terms)missing.push('Termos / consentimentos');
-  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px"><h3 style="margin-top:0">Lembretes de documentos e assinaturas</h3><p style="font-size:13px;color:var(--ink-soft)">Cada tipo de documento tem uma cor própria para permitir identificação imediata no prontuário.</p>'+
-    '<div class="signature-status-grid">'+
-      '<div class="signature-status '+(s.anamnesis?'signed':'pending-anamnesis')+'"><strong>Anamnese</strong>'+(s.anamnesis?'✓ Assinada':'⚠ Assinatura pendente')+'</div>'+
-      '<div class="signature-status '+(s.contract?'signed':'pending-contract')+'"><strong>Contrato</strong>'+(s.contract?'✓ Assinado':'⚠ Assinatura pendente')+'</div>'+
-      '<div class="signature-status '+(s.terms?'signed':'pending-terms')+'"><strong>Termos / consentimentos</strong>'+(s.terms?'✓ Assinados':'⚠ Assinatura pendente')+'</div>'+
-    '</div></div>';
+  var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px"><h3 style="margin-top:0">Lembretes de documentos e assinaturas</h3><p style="font-size:13px;color:var(--ink-soft)">Marque o OK somente depois que o paciente assinar presencialmente. O que estiver pendente ficará destacado no topo do prontuário.</p>'+(missing.length?'<div class="alert-card">Pendentes: <strong>'+esc(missing.join(', '))+'</strong></div>':'<div class="good-card">✓ Documentos obrigatórios confirmados como assinados.</div>')+'</div>';
   out+='<div class="card"><div class="record-checks" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><label class="record-check"><input id="sig-anamnesis" type="checkbox" '+(s.anamnesis?'checked':'')+'> Anamnese assinada</label><label class="record-check"><input id="sig-contract" type="checkbox" '+(s.contract?'checked':'')+'> Contrato assinado</label><label class="record-check"><input id="sig-terms" type="checkbox" '+(s.terms?'checked':'')+'> Termos / consentimentos assinados</label></div><div class="field" style="margin-top:14px"><label>Observações</label><textarea id="sig-notes" class="record-textarea" placeholder="Ex.: termo de implante entregue para assinatura no retorno">'+esc(s.notes)+'</textarea></div>'+(s.updatedAt?'<div class="mini-note">Última atualização: '+new Date(s.updatedAt).toLocaleString('pt-BR')+'</div>':'')+'<div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-patient-reminders">Salvar lembretes</button></div></div>';return out;
 }
 function savePatientReminders(){
@@ -3763,299 +2643,17 @@ function renderRecordHistory(p){
   return out;
 }
 
-function appointmentConfirmationMessage(a){
-  var proc=procById(a.procedureId),prof=profById(a.professionalId);
-  return 'Olá, '+(a.name||'')+'! Tudo bem? 💙\n\n'+
-    'Aqui é da equipe do Instituto Lins Rabello. Estamos entrando em contato para confirmar sua consulta:\n\n'+
-    '📅 Data: '+fullDisplay(a.date)+'\n'+
-    '🕐 Horário: '+a.time+'\n'+
-    '🦷 Atendimento: '+(proc?proc.name:'Consulta odontológica')+'\n'+
-    '👩‍⚕️👨‍⚕️ Profissional: '+(prof?prof.name:'Equipe Instituto Lins Rabello')+'\n\n'+
-    'Por favor, responda esta mensagem confirmando sua presença. Caso precise reagendar, avise-nos com antecedência para que possamos organizar o horário da melhor forma.\n\n'+
-    'Até breve! 💙\nInstituto Lins Rabello · Odontologia Integrada';
-}
-function appointmentWhatsAppLink(a){
-  var phone=normalizePhone(a.phone);
-  if(!phone)return '#';
-  var countryPhone=phone.indexOf('55')===0?phone:'55'+phone;
-  return 'https://wa.me/'+countryPhone+'?text='+encodeURIComponent(appointmentConfirmationMessage(a));
-}
-function futureScheduledAppointments(){
-  var now=todayISO();
-  return (store.appointments||[]).filter(function(a){
-    return a.date>=now && ['cancelado','falta','realizado'].indexOf(a.status)<0;
-  }).sort(function(a,b){
-    return (String(a.date)+String(a.time)).localeCompare(String(b.date)+String(b.time));
-  });
-}
-
-function defaultChargeConfig(){
-  return {
-    issuerName:'Instituto Lins Rabello',
-    issuerCpf:'',
-    paymentInstructions:'Pagamento conforme combinado com a clínica. Após o pagamento, envie o comprovante pelo WhatsApp.',
-    lateFeeRate:2,
-    dailyInterestRate:0.033,
-    strategicDays:[5,15,20]
-  };
-}
-function mergeChargeConfig(v){
-  var d=defaultChargeConfig(),x=v||{};
-  d.issuerName=x.issuerName||d.issuerName;
-  d.issuerCpf=x.issuerCpf||'';
-  d.paymentInstructions=x.paymentInstructions||d.paymentInstructions;
-  d.lateFeeRate=x.lateFeeRate==null?d.lateFeeRate:n(x.lateFeeRate);
-  d.dailyInterestRate=x.dailyInterestRate==null?d.dailyInterestRate:n(x.dailyInterestRate);
-  d.strategicDays=Array.isArray(x.strategicDays)&&x.strategicDays.length?x.strategicDays:d.strategicDays;
-  return d;
-}
-function chargePlanById(id){return (store.chargePlans||[]).find(function(x){return x.id===id;})||null;}
-function chargeById(id){return (store.charges||[]).find(function(x){return x.id===id;})||null;}
-function daysBetween(a,b){return Math.floor((parseISO(b)-parseISO(a))/86400000);}
-function chargeDaysLate(c,ref){
-  if(c.status==='pago')return 0;
-  ref=ref||todayISO();
-  return Math.max(0,daysBetween(c.dueDate,ref));
-}
-function chargeAmountUpdated(c,ref){
-  var base=n(c.amount),days=chargeDaysLate(c,ref),plan=chargePlanById(c.planId),cfg=mergeChargeConfig(store.chargeConfig),
-      lateFee=plan&&plan.lateFeeRate!=null?n(plan.lateFeeRate):n(cfg.lateFeeRate),
-      daily=plan&&plan.dailyInterestRate!=null?n(plan.dailyInterestRate):n(cfg.dailyInterestRate);
-  if(days<=0)return {base:base,days:0,fee:0,interest:0,total:base};
-  var fee=base*lateFee/100,interest=base*(daily/100)*days;
-  return {base:base,days:days,fee:fee,interest:interest,total:base+fee+interest};
-}
-function chargeStatus(c){
-  if(c.status==='pago')return {label:'Pago',cls:'paid'};
-  var d=daysBetween(todayISO(),c.dueDate);
-  if(d<0)return {label:'Atrasado '+Math.abs(d)+'d',cls:'overdue'};
-  if(d===0)return {label:'Vence hoje',cls:'due'};
-  if(d<=5)return {label:'Vence em '+d+'d',cls:'due'};
-  return {label:'Aberto',cls:'open'};
-}
-function nextStrategicDate(fromIso){
-  var cfg=mergeChargeConfig(store.chargeConfig),start=parseISO(fromIso||todayISO()),best=null;
-  for(var m=0;m<3;m++){
-    cfg.strategicDays.forEach(function(day){
-      var d=new Date(start.getFullYear(),start.getMonth()+m,day);
-      if(d>=start && (!best||d<best))best=d;
+function renderConfirmacoes(){
+  var logs = store.logs.slice().reverse();
+  var out = '<div class="section-title">Lembretes automáticos</div><div class="card">';
+  out += '<p style="color:var(--ink-soft);font-size:13px;margin-top:0;">Cada agendamento gera automaticamente um lembrete de 24h e de 2h antes da consulta, enviados ao telefone do paciente.</p>';
+  if(logs.length===0) out += '<div class="empty-state">Nenhum lembrete agendado ainda.</div>';
+  else{
+    logs.forEach(function(l){
+      out += '<div class="log-item"><div class="top"><span>'+l.at+'</span><span class="pill '+(l.status==='enviado'?'confirmado':'pendente')+'">'+(l.status==='enviado'?'Enviado':'Agendado')+'</span></div><div class="msg">'+esc(l.message)+'</div></div>';
     });
   }
-  if(!best)best=new Date(start.getFullYear(),start.getMonth()+1,5);
-  return isoOf(best.getFullYear(),best.getMonth()+1,best.getDate());
-}
-function normalizeStrategicDue(firstDue,index){
-  var d=parseISO(firstDue),day=d.getDate(),target=[5,15,20].indexOf(day)>=0?day:day;
-  var x=new Date(d.getFullYear(),d.getMonth()+index,1);
-  var max=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();
-  x.setDate(Math.min(target,max));
-  return isoOf(x.getFullYear(),x.getMonth()+1,x.getDate());
-}
-function splitInstallments(total,count){
-  total=Math.round(n(total)*100);count=Math.max(1,Math.min(60,parseInt(count||1)));
-  var base=Math.floor(total/count),rest=total-base*count,out=[];
-  for(var i=0;i<count;i++)out.push((base+(i<rest?1:0))/100);
-  return out;
-}
-
-function approvedTreatmentItems(patientId){
-  return patientTreatmentPlans(patientId).filter(function(x){
-    return ['aceito','realizado'].indexOf(String(x.status||'').toLowerCase())>=0;
-  });
-}
-function treatmentItemsTotal(items){
-  return (items||[]).reduce(function(s,x){return s+n(x.price);},0);
-}
-function treatmentItemsSnapshot(patientId){
-  return approvedTreatmentItems(patientId).map(function(x){
-    return {id:x.id,procedureId:x.procedureId||'',name:x.name||'Procedimento',tooth:x.tooth||'Geral',note:x.note||'',status:x.status||'aceito',price:n(x.price)};
-  });
-}
-function chargePlanTreatmentItems(plan){
-  if(plan&&Array.isArray(plan.approvedTreatmentItems)&&plan.approvedTreatmentItems.length)return plan.approvedTreatmentItems;
-  if(plan&&plan.patientId)return treatmentItemsSnapshot(plan.patientId);
-  return [];
-}
-function renderTreatmentDetailsTable(items){
-  if(!items||!items.length)return '<div class="warning">Nenhum procedimento aprovado estava registrado no orçamento no momento da geração deste plano de cobrança.</div>';
-  var total=treatmentItemsTotal(items);
-  return '<h3 style="margin-top:18px">Tratamento aprovado pelo paciente</h3>'+
-    '<table class="quote-table"><thead><tr><th>Dente/região</th><th>Procedimento</th><th>Status</th><th>Observação</th><th>Valor</th></tr></thead><tbody>'+
-    items.map(function(x){return '<tr><td><strong>'+esc(x.tooth||'Geral')+'</strong></td><td>'+esc(x.name||'Procedimento')+'</td><td>'+esc(x.status||'aceito')+'</td><td>'+esc(x.note||'—')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';}).join('')+
-    '</tbody></table><div class="quote-total">Total do tratamento aprovado: '+fmtMoney(total)+'</div>';
-}
-
-function createChargePlan(){
-  function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
-  var pid=v('chg-patient'),p=patientById(pid),desc=v('chg-desc'),total=n(v('chg-total')),
-      count=Math.max(1,Math.min(60,parseInt(v('chg-count')||1))),first=v('chg-first'),
-      late=n(v('chg-late')),daily=n(v('chg-daily')),issuer=v('chg-issuer'),cpf=v('chg-cpf').replace(/\D/g,''),
-      instr=v('chg-instructions'),approvedItems=treatmentItemsSnapshot(pid);
-  if(!p){alert('Selecione um paciente.');return;}
-  if(!desc){alert('Informe a descrição da cobrança.');return;}
-  if(total<=0){alert('Informe o valor total.');return;}
-  if(!first){first=nextStrategicDate(addDays(todayISO(),2));}
-  var plan={id:'cp'+Date.now(),patientId:p.id,description:desc,total:total,installments:count,firstDue:first,
-    lateFeeRate:late,dailyInterestRate:daily,issuerName:issuer||'Instituto Lins Rabello',issuerCpf:cpf,
-    paymentInstructions:instr,createdAt:new Date().toISOString(),status:'ativo',
-    approvedTreatmentItems:approvedItems,approvedTreatmentTotal:treatmentItemsTotal(approvedItems)};
-  store.chargePlans=store.chargePlans||[];store.charges=store.charges||[];
-  store.chargePlans.push(plan);
-  var values=splitInstallments(total,count);
-  values.forEach(function(amount,i){
-    store.charges.push({id:'chg'+Date.now()+'-'+i,planId:plan.id,patientId:p.id,number:i+1,totalInstallments:count,
-      amount:amount,dueDate:normalizeStrategicDue(first,i),status:'aberto',paidAt:null,createdAt:new Date().toISOString(),reminders:{}});
-  });
-  state.chargeMessage=count+' cobrança(s) criada(s) para '+(p.name||'paciente')+'.';
-  persist();
-}
-function chargeReminderMessage(c,kind){
-  var p=patientById(c.patientId),plan=chargePlanById(c.planId),z=chargeAmountUpdated(c),when=kind==='5d'?'faltam 5 dias para o vencimento':kind==='2d'?'faltam 2 dias para o vencimento':kind==='today'?'o vencimento é hoje':'a parcela está pendente';
-  return 'Olá, '+(p?p.name:'')+'! Tudo bem? 💙\n\n'+
-    'Passando para lembrar que '+when+' da parcela '+c.number+'/'+c.totalInstallments+' referente a '+(plan?plan.description:'seu tratamento')+'.\n\n'+
-    'Vencimento: '+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'\n'+
-    'Valor: '+fmtMoney(z.total)+(z.days>0?' (atualizado com encargos de atraso)':'')+'\n\n'+
-    'Se o pagamento já foi realizado, por favor desconsidere esta mensagem. Se precisar falar conosco, estamos à disposição.\n\nInstituto Lins Rabello · Odontologia Integrada';
-}
-function chargeWhatsAppLink(c,kind){
-  var p=patientById(c.patientId),phone=normalizePhone(p?p.phone:'');
-  if(phone.length<10)return '#';
-  if(phone.indexOf('55')!==0)phone='55'+phone;
-  return 'https://wa.me/'+phone+'?text='+encodeURIComponent(chargeReminderMessage(c,kind));
-}
-function markChargePaid(id){
-  var c=chargeById(id);if(!c)return;
-  c.status='pago';c.paidAt=new Date().toISOString();
-  state.chargeMessage='Parcela '+c.number+'/'+c.totalInstallments+' marcada como paga.';
-  persist();
-}
-function reopenCharge(id){
-  var c=chargeById(id);if(!c)return;
-  c.status='aberto';c.paidAt=null;persist();
-}
-function renderChargeDocument(c){
-  var p=patientById(c.patientId),plan=chargePlanById(c.planId),z=chargeAmountUpdated(c),cfg=mergeChargeConfig(store.chargeConfig),
-      issuer=plan&&plan.issuerName?plan.issuerName:cfg.issuerName,cpf=plan&&plan.issuerCpf?plan.issuerCpf:cfg.issuerCpf,
-      instr=plan&&plan.paymentInstructions?plan.paymentInstructions:cfg.paymentInstructions;
-  return '<div class="charge-toolbar row-actions" style="margin-bottom:12px"><button class="btn btn-primary" data-action="charge-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="charge-preview-close">Voltar</button></div>'+
-    '<div class="charge-doc"><div class="doc-head"><div><h2>Instituto Lins Rabello</h2><div>Odontologia Integrada</div></div><div style="text-align:right"><strong>DOCUMENTO INTERNO DE COBRANÇA</strong><br>Parcela '+c.number+'/'+c.totalInstallments+'<br>Referência: '+esc(c.id)+'</div></div>'+
-    '<div class="warning"><strong>Importante:</strong> este documento é um aviso/carnê interno de cobrança e não é boleto bancário. Ele não possui compensação bancária, linha digitável ou registro em instituição financeira.</div>'+
-    '<div class="doc-grid"><div><strong>Paciente:</strong> '+esc(p?p.name:'')+'</div><div><strong>CPF do paciente:</strong> '+esc(p&&p.cpf?p.cpf:'—')+'</div><div><strong>Emitente:</strong> '+esc(issuer)+'</div><div><strong>CPF do emitente:</strong> '+esc(cpf||'—')+'</div><div><strong>Vencimento:</strong> '+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'</div><div><strong>Situação:</strong> '+chargeStatus(c).label+'</div></div>'+
-    '<p><strong>Descrição:</strong> '+esc(plan?plan.description:'Cobrança de tratamento odontológico')+'</p>'+
-    renderTreatmentDetailsTable(chargePlanTreatmentItems(plan))+
-    '<div class="amount">'+fmtMoney(z.total)+'</div>'+
-    (z.days>0?'<div class="warning">Valor original: '+fmtMoney(z.base)+' · multa: '+fmtMoney(z.fee)+' · juros por '+z.days+' dia(s): '+fmtMoney(z.interest)+' · total atualizado até '+dayDisplay(todayISO())+'/'+todayISO().slice(0,4)+'.</div>':'')+
-    '<p style="font-size:11.5px;line-height:1.6"><strong>Instruções de pagamento:</strong> '+esc(instr||'Entre em contato com a clínica para combinar a forma de pagamento.')+'</p>'+
-    '<div style="margin-top:55px;display:grid;grid-template-columns:1fr 1fr;gap:50px;text-align:center;font-size:11px"><div style="border-top:1px solid #555;padding-top:6px">Paciente / responsável</div><div style="border-top:1px solid #555;padding-top:6px">'+esc(issuer)+'</div></div>'+
-    '<div class="quote-footer"><strong>Instituto Lins Rabello</strong><br>Itapecerica da Serra - SP<br>Documento gerado pelo ERP interno da clínica</div></div>';
-}
-function renderChargeContract(plan){
-  var p=patientById(plan.patientId),cfg=mergeChargeConfig(store.chargeConfig),issuer=plan.issuerName||cfg.issuerName,cpf=plan.issuerCpf||cfg.issuerCpf;
-  return '<div class="charge-toolbar row-actions" style="margin-bottom:12px"><button class="btn btn-primary" data-action="charge-print">Imprimir / Salvar PDF</button><button class="btn btn-ghost" data-action="contract-close">Voltar</button></div>'+
-  '<div class="contract-doc"><div class="doc-head"><div><h2>Instituto Lins Rabello</h2><div>Odontologia Integrada</div></div><div style="text-align:right"><strong>CONTRATO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS ODONTOLÓGICOS E PAGAMENTO</strong><br>'+dayDisplay(todayISO())+'/'+todayISO().slice(0,4)+'</div></div>'+
-  '<div class="doc-grid"><div><strong>Paciente/Contratante:</strong> '+esc(p?p.name:'')+'</div><div><strong>CPF:</strong> '+esc(p&&p.cpf?p.cpf:'—')+'</div><div><strong>Prestador/Emitente:</strong> '+esc(issuer)+'</div><div><strong>CPF:</strong> '+esc(cpf||'—')+'</div></div>'+
-  '<h3>1. Objeto</h3><p>O presente contrato tem por objeto a prestação dos serviços odontológicos descritos no plano/orçamento aceito pelo paciente, incluindo as etapas clínicas e laboratoriais que forem necessárias e previamente informadas.</p>'+
-  renderTreatmentDetailsTable(chargePlanTreatmentItems(plan))+
-  '<h3>2. Valor e forma de pagamento</h3><p>O valor total contratado é de <strong>'+fmtMoney(plan.total)+'</strong>, dividido em <strong>'+plan.installments+' parcela(s)</strong>, com primeiro vencimento em '+dayDisplay(plan.firstDue)+'/'+plan.firstDue.slice(0,4)+'. As demais parcelas seguem a recorrência mensal registrada no ERP.</p>'+
-  '<h3>3. Inadimplência</h3><p>O não pagamento de qualquer parcela até a data de vencimento poderá gerar os encargos configurados neste plano: multa de <strong>'+n(plan.lateFeeRate).toFixed(2).replace(".",",")+'%</strong> e juros de mora de <strong>'+n(plan.dailyInterestRate).toFixed(3).replace(".",",")+'% ao dia</strong>, calculados sobre o valor da parcela vencida enquanto permanecer em aberto. Os percentuais devem respeitar a legislação aplicável e podem ser ajustados pela clínica antes da assinatura.</p>'+
-  '<h3>4. Cobrança e lembretes</h3><p>O paciente autoriza o envio de lembretes manuais por WhatsApp ou outros meios de contato informados, inclusive cinco dias, dois dias e no dia do vencimento. Esses lembretes têm caráter de cortesia e sua ausência não altera as datas de vencimento.</p>'+
-  '<h3>5. Suspensão e continuidade</h3><p>Em caso de inadimplência relevante, etapas eletivas ainda não iniciadas poderão ser reagendadas até regularização financeira, sempre preservando atendimentos urgentes e observando critérios clínicos e éticos.</p>'+
-  '<h3>6. Alterações do plano</h3><p>Necessidades clínicas não previstas inicialmente poderão exigir novo orçamento ou aditivo, que deverá ser apresentado ao paciente antes da execução, salvo situações urgentes devidamente justificadas.</p>'+
-  '<h3>7. Ciência do paciente</h3><p>O paciente declara ter recebido explicações sobre o tratamento, valores, vencimentos e encargos, bem como oportunidade para esclarecer dúvidas antes da assinatura.</p>'+
-  '<p style="font-size:10.5px;background:var(--grey-soft);padding:10px;border-radius:9px"><strong>Nota:</strong> este é um modelo contratual administrativo e deve ser revisado por profissional jurídico/contábil antes de uso definitivo, especialmente quanto a juros, multa, cobrança e regras aplicáveis ao atendimento odontológico.</p>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:60px;text-align:center;font-size:11px"><div style="border-top:1px solid #555;padding-top:6px">'+esc(p?p.name:'Paciente / responsável')+'</div><div style="border-top:1px solid #555;padding-top:6px">'+esc(issuer)+'</div></div>'+
-  '<div class="quote-footer"><strong>Instituto Lins Rabello</strong><br>Itapecerica da Serra - SP</div></div>';
-}
-function renderCobrancas(){
-  if(state.chargePreviewId){var pc=chargeById(state.chargePreviewId);return pc?renderChargeDocument(pc):'<div class="empty-state">Cobrança não encontrada.</div>';}
-  if(state.chargeContractPlanId){var pp=chargePlanById(state.chargeContractPlanId);return pp?renderChargeContract(pp):'<div class="empty-state">Plano não encontrado.</div>';}
-
-  var cfg=mergeChargeConfig(store.chargeConfig),today=todayISO(),charges=(store.charges||[]).slice();
-  if(state.chargeFilter==='abertas')charges=charges.filter(function(c){return c.status!=='pago';});
-  else if(state.chargeFilter==='atrasadas')charges=charges.filter(function(c){return c.status!=='pago'&&c.dueDate<today;});
-  else if(state.chargeFilter==='pagas')charges=charges.filter(function(c){return c.status==='pago';});
-  charges.sort(function(a,b){
-    if(a.status==='pago'&&b.status!=='pago')return 1;if(b.status==='pago'&&a.status!=='pago')return -1;
-    return String(a.dueDate).localeCompare(String(b.dueDate));
-  });
-  var open=(store.charges||[]).filter(function(c){return c.status!=='pago';}),overdue=open.filter(function(c){return c.dueDate<today;}),
-      due7=open.filter(function(c){return c.dueDate>=today&&c.dueDate<=addDays(today,7);}),
-      receivable=open.reduce(function(s,c){return s+chargeAmountUpdated(c).total;},0);
-
-  var pts=patientRecords().slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'pt-BR');});
-  var out='<div class="section-title">Cobranças <span style="font-size:12px;color:var(--ink-soft);font-weight:500">carnê interno e controle de parcelas</span></div>';
-  if(state.chargeMessage)out+='<div class="good-card" style="margin-bottom:12px">'+esc(state.chargeMessage)+'</div>';
-  out+='<div class="card" style="margin-bottom:14px;background:var(--grey-soft)"><strong>Sistema interno, sem integração bancária.</strong><p class="mini-note" style="margin-bottom:0">As “cobranças” abaixo funcionam como carnê/aviso interno. O ERP calcula vencimentos, recorrências, lembretes e encargos, mas não cria boleto bancário, código de barras nem compensação automática.</p></div>';
-  out+='<div class="charge-grid"><div class="card charge-kpi"><div class="k">A receber</div><div class="v">'+fmtMoney(receivable)+'</div></div><div class="card charge-kpi"><div class="k">Parcelas abertas</div><div class="v">'+open.length+'</div></div><div class="card charge-kpi"><div class="k">Vencem em 7 dias</div><div class="v">'+due7.length+'</div></div><div class="card charge-kpi"><div class="k">Atrasadas</div><div class="v" style="color:var(--danger)">'+overdue.length+'</div></div></div>';
-
-  out+='<div class="card" style="margin-bottom:14px"><h3 style="margin-top:0">Criar plano de cobrança</h3><div class="charge-form">'+
-    '<div class="field span-2"><label>Paciente</label><select id="chg-patient" data-change="charge-patient"><option value="">Selecione</option>'+pts.map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('')+'</select></div>'+
-    '<div class="field span-2"><label>Descrição / tratamento</label><input id="chg-desc" placeholder="Ex.: tratamento com implantes e prótese"></div>'+
-    '<div class="field"><label>Valor total</label><input id="chg-total" type="number" min="0" step="0.01"></div>'+
-    '<div class="field"><label>Nº parcelas</label><input id="chg-count" type="number" min="1" max="60" value="1"></div>'+
-    '<div class="field"><label>1º vencimento</label><input id="chg-first" type="date" value="'+nextStrategicDate(addDays(today,2))+'"></div>'+
-    '<div class="field"><label>Datas estratégicas</label><input value="05 · 15 · 20" disabled></div>'+
-    '<div class="field"><label>Multa por atraso (%)</label><input id="chg-late" type="number" step="0.01" min="0" value="'+n(cfg.lateFeeRate)+'"></div>'+
-    '<div class="field"><label>Juros por dia (%)</label><input id="chg-daily" type="number" step="0.001" min="0" value="'+n(cfg.dailyInterestRate)+'"></div>'+
-    '<div class="field"><label>Emitente</label><input id="chg-issuer" value="'+escAttr(cfg.issuerName)+'"></div>'+
-    '<div class="field"><label>CPF do emitente</label><input id="chg-cpf" inputmode="numeric" value="'+escAttr(cfg.issuerCpf)+'" placeholder="Somente números"></div>'+
-    '<div class="field span-4"><label>Instruções de pagamento</label><textarea id="chg-instructions" style="width:100%;min-height:70px;padding:10px;border:1px solid var(--border);border-radius:9px">'+esc(cfg.paymentInstructions)+'</textarea></div>'+
-    '<div class="span-4" id="charge-treatment-preview"><div class="mini-note">Selecione o paciente para visualizar os procedimentos do orçamento que já foram <strong>aceitos</strong> ou <strong>realizados</strong>.</div></div>'+
-    '</div><div class="patient-actions"><span class="mini-note">O primeiro vencimento é sugerido no próximo dia 05, 15 ou 20. As parcelas seguintes repetem mensalmente o mesmo dia.</span><button class="btn btn-primary" data-action="charge-create">Criar parcelas</button></div></div>';
-
-  out+='<div class="finance-tabs">'+[['abertas','Abertas'],['atrasadas','Atrasadas'],['pagas','Pagas'],['todas','Todas']].map(function(x){return '<button class="'+(state.chargeFilter===x[0]?'active':'')+'" data-action="charge-filter" data-id="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
-  out+='<div class="card"><div class="charge-row head"><div>Vencimento</div><div>Paciente / tratamento</div><div>Parcela</div><div>Valor atualizado</div><div>Status</div><div>Lembretes</div><div>Ações</div></div>';
-  if(!charges.length)out+='<div class="empty-state">Nenhuma cobrança nesta categoria.</div>';
-  charges.forEach(function(c){
-    var p=patientById(c.patientId),plan=chargePlanById(c.planId),z=chargeAmountUpdated(c),st=chargeStatus(c),d=daysBetween(today,c.dueDate),phone=normalizePhone(p?p.phone:''),
-        show5=d===5,show2=d===2,show0=d===0;
-    out+='<div class="charge-row"><div><strong>'+dayDisplay(c.dueDate)+'/'+c.dueDate.slice(0,4)+'</strong></div>'+
-      '<div><strong>'+esc(p?p.name:'Paciente')+'</strong><div class="mini-note">'+esc(plan?plan.description:'')+'</div><div class="mini-note">'+(chargePlanTreatmentItems(plan).length?chargePlanTreatmentItems(plan).length+' procedimento(s) aprovado(s) · '+fmtMoney(treatmentItemsTotal(chargePlanTreatmentItems(plan))):'Sem tratamento aprovado vinculado')+'</div></div>'+
-      '<div>'+c.number+'/'+c.totalInstallments+'</div><div><strong>'+fmtMoney(z.total)+'</strong>'+(z.days>0?'<div class="mini-note">'+z.days+'d atraso</div>':'')+'</div>'+
-      '<div><span class="charge-status '+st.cls+'">'+st.label+'</span></div>'+
-      '<div class="charge-reminders">'+
-        (phone.length>=10?'<a class="btn btn-ghost whatsapp-btn" href="'+chargeWhatsAppLink(c,'5d')+'" target="_blank" rel="noopener" '+(show5?'style="box-shadow:0 0 0 2px #e8b44e"':'')+'>5 dias</a><a class="btn btn-ghost whatsapp-btn" href="'+chargeWhatsAppLink(c,'2d')+'" target="_blank" rel="noopener" '+(show2?'style="box-shadow:0 0 0 2px #e8b44e"':'')+'>2 dias</a><a class="btn btn-ghost whatsapp-btn" href="'+chargeWhatsAppLink(c,'today')+'" target="_blank" rel="noopener" '+(show0?'style="box-shadow:0 0 0 2px #d64550"':'')+'>Hoje</a>':'<span class="mini-note">Sem telefone</span>')+
-      '</div><div class="row-actions actions"><button class="btn btn-ghost btn-sm" data-action="charge-preview" data-id="'+c.id+'">Documento</button><button class="btn btn-ghost btn-sm" data-action="contract-preview" data-id="'+c.planId+'">Contrato</button>'+
-      (c.status==='pago'?'<button class="btn btn-ghost btn-sm" data-action="charge-reopen" data-id="'+c.id+'">Reabrir</button>':'<button class="btn btn-primary btn-sm" data-action="charge-paid" data-id="'+c.id+'">Marcar pago</button>')+'</div></div>';
-  });
-  out+='</div>';
-  return out;
-}
-
-function renderConfirmacoes(){
-  var items=futureScheduledAppointments(),today=todayISO(),
-      todayCount=items.filter(function(a){return a.date===today;}).length,
-      next7=items.filter(function(a){return a.date>=today&&a.date<=addDays(today,7);}).length,
-      noPhone=items.filter(function(a){return normalizePhone(a.phone).length<10;}).length;
-
-  var out='<div class="section-title">Lembretes de consultas</div>'+
-    '<div class="card" style="margin-bottom:14px;background:var(--grey-soft)">'+
-      '<h3 style="margin:0 0 5px">Confirmação manual pelo WhatsApp</h3>'+
-      '<p style="margin:0;color:var(--ink-soft);font-size:13px;line-height:1.55">Todos os pacientes com consulta futura aparecem aqui. Nada é enviado automaticamente: clique em <strong>Abrir WhatsApp</strong>, revise a mensagem já preenchida e envie manualmente pelo WhatsApp Web ou aplicativo.</p>'+
-    '</div>';
-
-  out+='<div class="reminder-kpis">'+
-    '<div class="card reminder-kpi"><div class="k">Consultas futuras</div><div class="v">'+items.length+'</div></div>'+
-    '<div class="card reminder-kpi"><div class="k">Hoje</div><div class="v">'+todayCount+'</div></div>'+
-    '<div class="card reminder-kpi"><div class="k">Próximos 7 dias</div><div class="v">'+next7+'</div></div>'+
-    '<div class="card reminder-kpi"><div class="k">Sem telefone válido</div><div class="v">'+noPhone+'</div></div>'+
-  '</div>';
-
-  out+='<div class="card"><div class="reminder-list">';
-  if(!items.length)out+='<div class="empty-state">Nenhuma consulta futura aguardando acompanhamento.</div>';
-
-  items.forEach(function(a){
-    var proc=procById(a.procedureId),prof=profById(a.professionalId),phone=normalizePhone(a.phone),
-        isToday=a.date===today,link=appointmentWhatsAppLink(a);
-    out+='<div class="reminder-appt '+(isToday?'today':'')+'">'+
-      '<div class="date"><strong>'+dayDisplay(a.date)+' · '+a.time+'</strong><small>'+(isToday?'HOJE':weekdayShort(a.date))+'</small></div>'+
-      '<div><strong>'+esc(a.name||'Paciente')+'</strong><div class="meta">'+esc(a.phone||'Telefone não informado')+'</div></div>'+
-      '<div><strong>'+esc(proc?proc.name:'Consulta')+'</strong><div class="meta">'+esc(prof?prof.name:'Profissional não informado')+'</div></div>'+
-      '<div><span class="pill '+(a.status||'pendente')+'">'+esc(STATUS_LABEL[a.status]||a.status||'Agendado')+'</span></div>'+
-      '<div class="wa-action">'+(phone.length>=10?'<a class="btn btn-ghost btn-sm whatsapp-btn" href="'+link+'" target="_blank" rel="noopener">WhatsApp · confirmar</a>':'<button class="btn btn-ghost btn-sm" disabled>Sem telefone</button>')+'</div>'+
-    '</div>';
-  });
-  out+='</div></div>';
+  out += '</div>';
   return out;
 }
 
@@ -4128,49 +2726,6 @@ function loadAudit(){
   waitForSupabase(5000).then(function(api){return api.listAudit(150);}).then(function(rows){state.auditLogs=rows||[];state.auditLoading=false;render();}).catch(function(e){state.auditLoading=false;alert('Não foi possível carregar auditoria: '+e.message);render();});
 }
 
-
-function operationalMetrics(){
-  var m=monthRef(), ap=store.appointments.filter(function(a){return inMonth(a.date,m)&&a.status!=='cancelado';});
-  var done=ap.filter(function(a){return a.status==='realizado';}), faltas=ap.filter(function(a){return a.status==='falta';});
-  var soldMin=done.reduce(function(s,a){var p=procById(a.procedureId);return s+(p?p.duration:60);},0);
-  var workingDays=monthDays(m).filter(function(d){var w=parseISO(d).getDay();return w>=1&&w<=5;}).length;
-  var capacity=Math.max(1,workingDays*9*60);
-  var fs=financeSummary(m);
-  return {appointments:ap.length,done:done.length,absences:faltas.length,occupancy:Math.min(100,Math.round(soldMin/capacity*100)),revenuePerHour:soldMin?fs.received/(soldMin/60):0,ticket:done.length?fs.received/done.length:0};
-}
-function derivedTasks(){
-  var arr=[],today=todayISO();
-  patientRecords().forEach(function(p){
-    var s=patientSignatureState(p),miss=[];if(!s.anamnesis)miss.push('anamnese');if(!s.contract)miss.push('contrato');if(!s.terms)miss.push('termos');
-    if(miss.length)arr.push({id:'sig-'+p.id,type:'Documentos',patient:p.name,title:'Assinaturas pendentes: '+miss.join(', '),priority:'alta'});
-  });
-  (store.labCases||[]).forEach(function(x){if(x.status!=='entregue'&&x.dueDate&&x.dueDate<=today){var p=patientById(x.patientId);arr.push({id:'lab-'+x.id,type:'Laboratório',patient:p?p.name:'Paciente',title:'Caso '+x.work+' com prazo '+dayDisplay(x.dueDate),priority:'alta'});}});
-  crmPatientRows().filter(function(r){return !r.future&&r.priority==='alta';}).slice(0,30).forEach(function(r){arr.push({id:'crm-'+r.p.id,type:'Reativação',patient:r.p.name,title:'Paciente inativo com oportunidade de retorno',priority:'media'});});
-  (store.payments||[]).forEach(function(x){if(String(x.status||'').toLowerCase()!=='pago'&&x.dueDate&&x.dueDate<today){var a=(store.appointments||[]).find(function(v){return v.id===x.appointmentId;});arr.push({id:'pay-'+x.id,type:'Financeiro',patient:a?a.name:'Paciente',title:'Pagamento vencido '+fmtMoney(n(x.gross)-n(x.discount)),priority:'alta'});}});
-  return arr;
-}
-function renderTaskCenter(){
-  var tasks=derivedTasks(), out='<div class="section-title">Central de tarefas</div><div class="phase-grid"><div class="card phase-card"><div class="num">Pendências automáticas</div><div class="big">'+tasks.length+'</div></div><div class="card phase-card"><div class="num">Prioridade alta</div><div class="big">'+tasks.filter(function(x){return x.priority==='alta';}).length+'</div></div><div class="card phase-card"><div class="num">Objetivo</div><div class="big">Zero pendências</div></div></div><div class="card">';
-  out+='<div class="task-row head"><div>Tarefa</div><div>Tipo</div><div>Paciente</div><div>Prioridade</div><div>Próxima ação</div><div></div></div>';
-  if(!tasks.length)out+='<div class="empty-state">Nenhuma pendência automática encontrada.</div>';
-  tasks.forEach(function(x){out+='<div class="task-row"><div><strong>'+esc(x.title)+'</strong></div><div>'+esc(x.type)+'</div><div>'+esc(x.patient||'—')+'</div><div><span class="crm-priority '+x.priority+'">'+x.priority.toUpperCase()+'</span></div><div>Revisar e resolver</div><div></div></div>';});
-  out+='</div>';return out;
-}
-function renderExecutiveIntelligence(){
-  var x=operationalMetrics(), tasks=derivedTasks(), score=Math.max(0,Math.min(100,Math.round(100-(x.absences*3)-(tasks.filter(function(t){return t.priority==='alta';}).length*1.5)+(x.occupancy*.25))));
-  return '<div class="card" style="margin-top:16px"><div class="patient-actions"><div><h3 style="margin:0">Inteligência operacional</h3><div class="mini-note">Indicadores para decisão, não substituem análise contábil.</div></div><div class="health-score"><div class="health-ring" style="--score:'+score+'"><strong>'+score+'</strong></div></div></div><div class="phase-grid">'+
-  '<div class="phase-card"><div class="num">Ocupação estimada da cadeira</div><div class="big">'+x.occupancy+'%</div></div>'+
-  '<div class="phase-card"><div class="num">Receita recebida / hora clínica</div><div class="big">'+fmtMoney(x.revenuePerHour)+'</div></div>'+
-  '<div class="phase-card"><div class="num">Ticket médio realizado</div><div class="big">'+fmtMoney(x.ticket)+'</div></div>'+
-  '<div class="phase-card"><div class="num">Faltas no mês</div><div class="big">'+x.absences+'</div></div>'+
-  '<div class="phase-card"><div class="num">Pendências críticas</div><div class="big">'+tasks.filter(function(t){return t.priority==='alta';}).length+'</div></div></div></div>';
-}
-function renderSystemDiagnostics(){
-  var duplicatePatients=0, seen={};patientRecords().forEach(function(p){var k=normalizePhone(p.phone)||String(p.cpf||'').replace(/\D/g,'');if(k&&seen[k])duplicatePatients++;if(k)seen[k]=1;});
-  var orphanPayments=(store.payments||[]).filter(function(x){return x.appointmentId&&!(store.appointments||[]).some(function(a){return a.id===x.appointmentId;});}).length;
-  return '<div class="card" style="margin-top:16px"><h3 style="margin-top:0">Diagnóstico e integridade</h3><table class="metric-table"><tbody><tr><td>Pacientes potencialmente duplicados</td><td><strong>'+duplicatePatients+'</strong></td></tr><tr><td>Pagamentos sem consulta vinculada</td><td><strong>'+orphanPayments+'</strong></td></tr><tr><td>Casos laboratoriais em aberto</td><td><strong>'+(store.labCases||[]).filter(function(x){return x.status!=='entregue';}).length+'</strong></td></tr><tr><td>Itens de plano de tratamento</td><td><strong>'+(store.treatmentPlans||[]).length+'</strong></td></tr><tr><td>Backup</td><td>Use “Baixar backup completo” regularmente</td></tr></tbody></table></div>';
-}
-
 function renderRelatorios(){
   var month=monthRef(), fs=financeSummary(month), monthAppts=store.appointments.filter(function(a){return inMonth(a.date,month);});
   var total=monthAppts.filter(function(a){return a.status!=='cancelado';}).length, done=monthAppts.filter(function(a){return a.status==='realizado';}).length, abs=monthAppts.filter(function(a){return a.status==='falta';}).length;
@@ -4182,8 +2737,6 @@ function renderRelatorios(){
   var counts={},max=1;PROFESSIONALS.forEach(function(p){counts[p.id]=0;});monthAppts.forEach(function(a){if(a.status!=='cancelado'){counts[a.professionalId]=(counts[a.professionalId]||0)+1;max=Math.max(max,counts[a.professionalId]);}});PROFESSIONALS.forEach(function(p){var v=counts[p.id]||0;out+='<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+v+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max*100)+'%;background:'+p.color+';"></div></div></div>';});out+='</div>';
   out+='<div class="card"><h3 style="margin-top:0;">Procedimentos realizados</h3>';var procCounts={},max2=1;PROCEDURES.forEach(function(p){procCounts[p.id]=0;});monthAppts.forEach(function(a){if(a.status==='realizado'){procCounts[a.procedureId]=(procCounts[a.procedureId]||0)+1;max2=Math.max(max2,procCounts[a.procedureId]);}});PROCEDURES.forEach(function(p){var v=procCounts[p.id]||0;out+='<div class="bar-row"><div class="lbl"><span>'+p.name+'</span><span class="mono">'+v+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+(v/max2*100)+'%;background:var(--coral);"></div></div></div>';});out+='</div></div>';
   out+='<div class="card" style="margin-top:16px;"><h3 style="margin-top:0;">Resumo financeiro do mês</h3><table class="metric-table"><tbody><tr><td>Receita recebida</td><td>'+fmtMoney(fs.received)+'</td></tr><tr><td>A receber</td><td>'+fmtMoney(fs.pending)+'</td></tr><tr><td>Taxas de cartão</td><td>'+fmtMoney(fs.fees)+'</td></tr><tr><td>Despesas</td><td>'+fmtMoney(fs.expenses)+'</td></tr><tr><td>Provisões e impostos</td><td>'+fmtMoney(fs.taxes+fs.reserve)+'</td></tr><tr><td>Resultado estimado</td><td class="'+(fs.result>=0?'positive':'negative')+'"><strong>'+fmtMoney(fs.result)+'</strong></td></tr></tbody></table></div>';
-  out+=renderExecutiveIntelligence();
-  out+=renderSystemDiagnostics();
   out+='<p style="font-size:11.5px;color:var(--ink-soft);margin-top:14px;">Os arquivos CSV podem ser abertos no Excel. O backup JSON deve ser guardado em local seguro e contém dados pessoais e clínicos.</p>';
   return out;
 }
@@ -4191,36 +2744,6 @@ function renderRelatorios(){
 /* ---------------- events ---------------- */
 function attachEvents(){
   var root = document.getElementById('root');
-  root.onchange = function(e){
-    var modeEl=e.target.closest('[data-mode-key]');
-    if(modeEl){
-      modeEl.className='cost-mode '+(modeEl.value==='percent'?'mode-percent':'mode-fixed');
-      return;
-    }
-    var t=e.target.closest('[data-change]');
-    if(!t)return;
-    if(t.dataset.change==='budget-status'){t.className='status-select '+budgetStatusClass(t.value);setBudgetStatus(t.dataset.id,t.value);return;}
-    if(t.dataset.change==='charge-patient'){
-      var preview=document.getElementById('charge-treatment-preview'),
-          totalEl=document.getElementById('chg-total'),
-          descEl=document.getElementById('chg-desc'),
-          items=approvedTreatmentItems(t.value);
-      if(preview){
-        if(items.length){
-          preview.innerHTML='<div class="card" style="background:var(--grey-soft);margin:0"><strong>Tratamento aprovado</strong><div class="mini-note" style="margin:4px 0 8px">Itens aceitos/realizados no orçamento deste paciente.</div>'+
-            '<table class="quote-table"><thead><tr><th>Dente/região</th><th>Procedimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>'+
-            items.map(function(x){return '<tr><td>'+esc(x.tooth||'Geral')+'</td><td>'+esc(x.name||'Procedimento')+'</td><td>'+esc(x.status||'aceito')+'</td><td>'+fmtMoney(n(x.price))+'</td></tr>';}).join('')+
-            '</tbody></table><div class="quote-total">Total aprovado: '+fmtMoney(treatmentItemsTotal(items))+'</div></div>';
-          if(totalEl && (!totalEl.value || n(totalEl.value)<=0))totalEl.value=treatmentItemsTotal(items).toFixed(2);
-          if(descEl && !descEl.value)descEl.value='Plano de tratamento odontológico aprovado';
-        }else{
-          preview.innerHTML='<div class="alert-card">Este paciente ainda não possui procedimentos marcados como <strong>Aceito</strong> ou <strong>Realizado</strong> no módulo de Orçamentos.</div>';
-        }
-      }
-      return;
-    }
-    
-  };
   root.onclick = function(e){
     var t = e.target.closest('[data-action], [data-role], [data-stafftab]');
     if(!t) return;
@@ -4230,15 +2753,6 @@ function attachEvents(){
 
     var a = t.dataset.action;
     var b = state.booking;
-    if(a==='charge-create'){createChargePlan();return;}
-    if(a==='charge-filter'){state.chargeFilter=t.dataset.id;render();return;}
-    if(a==='charge-paid'){markChargePaid(t.dataset.id);return;}
-    if(a==='charge-reopen'){reopenCharge(t.dataset.id);return;}
-    if(a==='charge-preview'){state.chargePreviewId=t.dataset.id;render();return;}
-    if(a==='charge-preview-close'){state.chargePreviewId=null;render();return;}
-    if(a==='contract-preview'){state.chargeContractPlanId=t.dataset.id;render();return;}
-    if(a==='contract-close'){state.chargeContractPlanId=null;render();return;}
-    if(a==='charge-print'){window.print();return;}
     if(a==='export-backup'){ exportBackup(); return; }
     if(a==='restore-backup'){ var rf=document.getElementById('restore-file'); if(rf) rf.click(); return; }
     if(a==='export-appointments'){ exportAppointmentsCSV(); return; }
@@ -4261,7 +2775,7 @@ function attachEvents(){
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
     else if(a==='wiz-next'){ if(b.step===5){var ne=document.getElementById('inp-name'),pe=document.getElementById('inp-phone');b.name=ne?ne.value.trim():b.name;b.phone=pe?pe.value.replace(/\D/g,''):b.phone;if(b.name.length<3){b.error='Informe seu nome completo.';render();return;}if(b.phone.length!==11){b.error='Informe o telefone com DDD + 9 dígitos (11 números).';render();return;}b.error=null;} b.step = Math.min(6,b.step+1); }
     else if(a==='wiz-back'){ b.step = Math.max(1,b.step-1); }
-    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', preConcern:'', preSince:'', prePrevious:'', preGoal:'', done:false, error:null }; }
+    else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', done:false, error:null }; }
     else if(a==='wiz-confirm'){ confirmBooking(); return; }
     else if(a==='do-lookup'){ doLookup(); return; }
     else if(a==='do-gate'){ doGate(); return; }
@@ -4286,31 +2800,7 @@ function attachEvents(){
     else if(a==='add-expense'){ addExpense(); return; }
     else if(a==='del-expense'){ delExpense(t.dataset.id); return; }
     else if(a==='stock-tab'){ state.stockTab=t.dataset.id; state.stockMessage=''; render(); return; }
-    else if(a==='price-select'){state.priceProcedure=t.dataset.id;state.finTab='precificacao';render();return;}
-    else if(a==='price-save'){state.finTab='precificacao';saveProcedurePricing();return;}
-    else if(a==='crm-tab'){state.crmTab=t.dataset.id;state.crmMessage='';render();return;}
-    else if(a==='crm-contact'){crmRegisterContact(t.dataset.id,false);return;}
-    else if(a==='crm-feedback'){crmRegisterContact(t.dataset.id,true);return;}
-
-    else if(a==='budget-return'){state.budgetQuotePreview=false;render();return;}
-    else if(a==='budget-patient'){state.budgetPatientId=t.dataset.id;state.budgetTooth=null;state.budgetMessage='';render();return;}
-    else if(a==='budget-tooth'){state.budgetTooth=t.dataset.id;render();return;}
-    else if(a==='budget-add'){addBudgetItem();return;}
-    else if(a==='budget-delete'){if(confirm('Excluir este item do orçamento?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
-    else if(a==='budget-quote'){state.budgetQuotePreview=true;render();return;}
-    else if(a==='quote-close'){state.quotePreview=false;state.budgetQuotePreview=false;render();return;}
-    else if(a==='quote-preview'){state.quotePreview=true;render();return;}
-    
-    else if(a==='quote-print'){window.print();return;}
-    else if(a==='quote-whatsapp'){quoteWhatsApp();return;}
-    else if(a==='plan-add'){addTreatmentPlan();return;}
-    else if(a==='plan-cycle'){cycleTreatmentPlan(t.dataset.id);return;}
-    else if(a==='plan-delete'){if(confirm('Excluir este item do plano?')){store.treatmentPlans=(store.treatmentPlans||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
-    else if(a==='lab-set-status'){setLabStatus(t.dataset.id,t.dataset.status);return;}
-    else if(a==='lab-add'){addLabCase();return;}
-    else if(a==='lab-delete'){if(confirm('Excluir este caso laboratorial?')){store.labCases=(store.labCases||[]).filter(function(x){return x.id!==t.dataset.id;});persist();}return;}
-
-    else if(a==='stock-search'){var ss=document.getElementById('stock-search'),sc=document.getElementById('stock-category');state.stockSearch=ss?ss.value:'';state.stockCategory=sc?sc.value:'Todas';render();return;}
+    else if(a==='stock-search'){ var ss=document.getElementById('stock-search');state.stockSearch=ss?ss.value:'';render();return; }
     else if(a==='stock-new'){ state.stockEditingId='new';render();return; }
     else if(a==='stock-edit'){ state.stockEditingId=t.dataset.id;render();return; }
     else if(a==='stock-cancel'){ state.stockEditingId=null;render();return; }
@@ -4500,19 +2990,8 @@ function deletePatient(id){
 
 function confirmBooking(){
   var b = state.booking;
-  var nameEl=document.getElementById('inp-name'), phoneEl=document.getElementById('inp-phone'),
-      reasonEl=document.getElementById('booking-pre-reason'),
-      concernEl=document.getElementById('booking-pre-concern'),
-      sinceEl=document.getElementById('booking-pre-since'),
-      previousEl=document.getElementById('booking-pre-previous'),
-      goalEl=document.getElementById('booking-pre-goal');
-  if(reasonEl)b.preReason=reasonEl.value.trim();
-  if(concernEl)b.preConcern=concernEl.value.trim();
-  if(sinceEl)b.preSince=sinceEl.value;
-  if(previousEl)b.prePrevious=previousEl.value;
-  if(goalEl)b.preGoal=goalEl.value.trim();
-  if(!b.preConcern){b.error='Conte o que mais incomoda você hoje para que possamos preparar melhor sua consulta.';render();return;}
-  if(!b.preGoal){b.error='Conte qual resultado você gostaria de alcançar.';render();return;}
+  var nameEl = document.getElementById('inp-name'), phoneEl = document.getElementById('inp-phone'), reasonEl=document.getElementById('booking-pre-reason');
+  if(reasonEl) b.preReason=reasonEl.value.trim();
   b.name = nameEl ? nameEl.value : b.name;
   var rawPhone = phoneEl ? phoneEl.value : b.phone;
   var digits = rawPhone.replace(/\D/g,'');
@@ -4544,13 +3023,7 @@ function confirmBooking(){
     writeLocalStore(store);
     resolveAutoRecallsForPhone(b.phone);
     logMarketingEvent('booking_confirmed',{procedure:b.procedureId,professional:b.professionalId});
-    if(b.preConcern||b.preGoal||b.preReason){var brief=[
-      'O QUE MAIS INCOMODA: '+(b.preConcern||'Não informado'),
-      'HÁ QUANTO TEMPO: '+(b.preSince||'Não informado'),
-      'JÁ PROCUROU TRATAMENTO: '+(b.prePrevious||'Não informado'),
-      'RESULTADO QUE DESEJA: '+(b.preGoal||'Não informado'),
-      'DÚVIDAS / RECEIOS / OUTRAS INFORMAÇÕES: '+(b.preReason||'Não informado')
-    ].join('\n\n');var mc=marketingClient();if(mc){mc.rpc('public_submit_preconsulta',{p_name:b.name,p_phone:b.phone,p_procedure:b.procedureId||null,p_appointment_date:b.date||null,p_reason:brief}).then(function(r){if(r.error)console.warn('Pré-consulta não registrada',r.error);else logMarketingEvent('preconsulta_submit',{procedure:b.procedureId||'',source:'booking'});}).catch(function(e){console.warn('Pré-consulta não registrada',e);});}}
+    if(b.preReason){var mc=marketingClient();if(mc){mc.rpc('public_submit_preconsulta',{p_name:b.name,p_phone:b.phone,p_procedure:b.procedureId||null,p_appointment_date:b.date||null,p_reason:b.preReason}).then(function(r){if(r.error)console.warn('Pré-consulta não registrada',r.error);else logMarketingEvent('preconsulta_submit',{procedure:b.procedureId||'',source:'booking'});}).catch(function(e){console.warn('Pré-consulta não registrada',e);});}}
     render();
   }).catch(function(error){
     console.error('Erro ao criar agendamento:', error);
