@@ -823,6 +823,7 @@
 .staff-content .quick-actions .btn{min-height:44px}
 .staff-content .field input,.staff-content .field select,.staff-content .field textarea{font-size:16px;max-width:100%}
 }
+.clinical-alert.allergy{background:#f1e9fb;color:#6d319a;border-color:#b494d1}.clinical-alert.danger{background:var(--danger-soft);color:var(--danger);border-color:#e7a4af}
 </style>
 </head>
 <body>
@@ -1811,12 +1812,17 @@ function clinicalAlerts(){
   var r=state.recordData.prontuario||{}, alerts=[];
   var patient=state.recordPatientId?patientById(state.recordPatientId):null;
   var sig=patient&&patient.signatures?patient.signatures:{anamnesis:false,contract:false,terms:false};
-  if(r.alergias&&r.alergias.trim()&&!/^(não|nao|nenhuma|nenhum|nega|sem alergias?)([.!])?$/i.test(r.alergias.trim())) alerts.push({text:'Alergias: '+r.alergias,kind:'danger'});
+  if(r.alergias&&r.alergias.trim()&&!/^(não|nao|nenhuma|nenhum|nega|sem alergias?)([.!])?$/i.test(r.alergias.trim())) alerts.push({text:'Alergias: '+r.alergias,kind:'allergy'});
   if(r.anticoagulante) alerts.push({text:'Paciente em uso de anticoagulante.',kind:'danger'});
-  if(r.hipertensao) alerts.push({text:'Hipertensão relatada.',kind:'warning'});
-  if(r.diabetes) alerts.push({text:'Diabetes relatado.',kind:'warning'});
-  if(r.gestante) alerts.push({text:'Paciente gestante.',kind:'warning'});
-  if(r.medicamentos&&r.medicamentos.trim()) alerts.push({text:'Medicamentos em uso: '+r.medicamentos,kind:'warning'});
+  if(r.hipertensao) alerts.push({text:'Hipertensão relatada.',kind:'danger'});
+  if(r.diabetes) alerts.push({text:'Diabetes relatado.',kind:'danger'});
+  if(r.gestante) alerts.push({text:'Paciente gestante.',kind:'danger'});
+  if(r.medicamentos&&r.medicamentos.trim()) alerts.push({text:'Medicamentos em uso: '+r.medicamentos,kind:'danger'});
+  if(r.cirurgia_previa)alerts.push({text:'Cirurgia prévia relatada.',kind:'danger'});
+  if(r.historico_medico&&r.historico_medico.trim()&&!/^(não|nao|nenhuma|nenhum|nega|sem problemas)([.!])?$/i.test(r.historico_medico.trim()))alerts.push({text:'Histórico de saúde: '+r.historico_medico,kind:'danger'});
+  if(state.patientFormsPatientId===state.recordPatientId){
+    (state.patientForms||[]).forEach(function(x){if(x.status==='pendente')alerts.push({text:'Documento sem preenchimento: '+x.title,kind:'warning'});if(x.status==='enviado'&&x.answers&&Array.isArray(x.answers.respostas_desconhecidas)&&x.answers.respostas_desconhecidas.length)alerts.push({text:'Saúde a confirmar: '+x.answers.respostas_desconhecidas.join(', '),kind:'danger'});});
+  }
   if(patient){
     if(!sig.anamnesis) alerts.push({text:'Anamnese ainda sem confirmação de assinatura.',kind:'warning'});
     if(!sig.contract) alerts.push({text:'Contrato ainda sem confirmação de assinatura.',kind:'warning'});
@@ -1827,7 +1833,7 @@ function clinicalAlerts(){
 function renderClinicalAlerts(){
   var a=clinicalAlerts();
   if(!a.length) return '<div class="clinical-alerts"><div class="clinical-alert" style="background:var(--success-soft);color:var(--teal-deep);border-color:rgba(32,149,132,.18);"><span>✓</span><span><strong>Alertas clínicos:</strong> nenhum alerta registrado para este paciente.</span></div></div>';
-  return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':'')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
+  return '<div class="clinical-alerts">'+a.map(function(x){return '<div class="clinical-alert '+(x.kind==='warning'?'warning':x.kind==='allergy'?'allergy':'danger')+'"><span>⚠</span><span>'+esc(x.text)+'</span></div>';}).join('')+'</div>';
 }
 
 
@@ -2465,10 +2471,11 @@ function renderClinicalRecord(){
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
   out+=renderClinicalAlerts();
-  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['formularios','Links e respostas'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(state.recordTab==='saude') out+=renderHealthAlerts();
   else if(state.recordTab==='anamnese') out+=renderAnamnesis();
   else if(state.recordTab==='lembretes') out+=renderPatientReminders(p);
+  else if(state.recordTab==='formularios') out+=renderPatientForms(p);
   else if(state.recordTab==='odontograma') out+=renderOdontogram();
   else if(state.recordTab==='evolucoes') out+=renderEvolutions();
   else if(state.recordTab==='documentos') out+=renderClinicalDocuments(p);
@@ -2510,7 +2517,7 @@ function renderAnamnesis(){
   out+='</div></div><div class="full">'+area('rec-observacoes','Observações clínicas',r.observacoes)+'</div></div>';
   out+='<div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-anamnesis">Salvar anamnese</button></div>';
   var patient=patientById(state.recordPatientId),sig=patientSignatureState(patient);
-  out+='<div class="card" style="margin-top:14px"><h3>Termos e assinaturas</h3><p>Anamnese: '+(sig.anamnesis?'assinada':'pendente')+' · Contrato: '+(sig.contract?'assinado':'pendente')+' · Consentimentos: '+(sig.terms?'assinados':'pendentes')+'</p><p class="mini-note">Salve a anamnese antes de abrir outra aba.</p><button class="btn btn-ghost" data-action="record-tab" data-id="lembretes">Conferir assinaturas</button> <button class="btn btn-ghost" data-action="record-tab" data-id="documentos">Abrir / anexar termos</button></div>';
+  out+='<div class="card" style="margin-top:14px"><h3>Termos e assinaturas</h3><p>Anamnese: '+(sig.anamnesis?'assinada':'pendente')+' · Contrato: '+(sig.contract?'assinado':'pendente')+' · Consentimentos: '+(sig.terms?'assinados':'pendentes')+'</p><p class="mini-note">Salve a anamnese antes de abrir outra aba.</p><button class="btn btn-ghost" data-action="record-tab" data-id="lembretes">Conferir assinaturas</button> <button class="btn btn-ghost" data-action="record-tab" data-id="documentos">Abrir / anexar termos</button> <button class="btn btn-primary" data-action="record-tab" data-id="formularios">Enviar links individuais</button></div>';
   return out;
 }
 
@@ -2518,6 +2525,7 @@ function patientSignatureState(p){var s=(p&&p.signatures)||{};return {anamnesis:
 function renderPatientReminders(p){
   var s=patientSignatureState(p),missing=[];if(!s.anamnesis)missing.push('Anamnese');if(!s.contract)missing.push('Contrato');if(!s.terms)missing.push('Termos / consentimentos');
   var out='<div class="card" style="background:var(--grey-soft);margin-bottom:16px"><h3 style="margin-top:0">Lembretes de documentos e assinaturas</h3><p style="font-size:13px;color:var(--ink-soft)">Marque o OK somente depois que o paciente assinar presencialmente. O que estiver pendente ficará destacado no topo do prontuário.</p>'+(missing.length?'<div class="alert-card">Pendentes: <strong>'+esc(missing.join(', '))+'</strong></div>':'<div class="good-card">✓ Documentos obrigatórios confirmados como assinados.</div>')+'</div>';
+  out+='<p><button class="btn btn-primary" data-action="record-tab" data-id="formularios">Enviar links de preenchimento ao paciente</button></p>';
   out+='<div class="card"><div class="record-checks" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><label class="record-check"><input id="sig-anamnesis" type="checkbox" '+(s.anamnesis?'checked':'')+'> Anamnese assinada</label><label class="record-check"><input id="sig-contract" type="checkbox" '+(s.contract?'checked':'')+'> Contrato assinado</label><label class="record-check"><input id="sig-terms" type="checkbox" '+(s.terms?'checked':'')+'> Termos / consentimentos assinados</label></div><div class="field" style="margin-top:14px"><label>Observações</label><textarea id="sig-notes" class="record-textarea" placeholder="Ex.: termo de implante entregue para assinatura no retorno">'+esc(s.notes)+'</textarea></div>'+(s.updatedAt?'<div class="mini-note">Última atualização: '+new Date(s.updatedAt).toLocaleString('pt-BR')+'</div>':'')+'<div class="patient-actions"><span></span><button class="btn btn-primary" data-action="save-patient-reminders">Salvar lembretes</button></div></div>';return out;
 }
 function savePatientReminders(){
@@ -2850,6 +2858,12 @@ function attachEvents(){
     else if(a==='waitlist-book'){state.waitBookingId=t.dataset.id;render();return;}
     else if(a==='waitlist-book-cancel'){state.waitBookingId=null;render();return;}
     else if(a==='waitlist-book-save'){completeWaitlistBooking();return;}
+    else if(a==='patient-form-create'){createPatientFormLink();return;}
+    else if(a==='patient-form-copy'){copyPatientFormLink();return;}
+    else if(a==='patient-form-whatsapp'){sharePatientFormLink();return;}
+    else if(a==='patient-form-revoke'){revokePatientForm(t.dataset.id);return;}
+    else if(a==='patient-form-file'){downloadPatientFormFile(t.dataset.id);return;}
+    else if(a==='patient-form-refresh'){var id=state.recordPatientId;waitForSupabase(5000).then(function(api){return api.loadClinicalRecord(id);}).then(function(data){if(state.recordPatientId!==id)return;state.recordData=data;loadPatientForms(id);}).catch(function(e){alert('Não foi possível atualizar: '+e.message);});return;}
     else if(a==='lab-order'){printLabOrder(t.dataset.id);return;}
     else if(a==='lab-return'){labFollowup(t.dataset.id);return;}
     else if(a==='lab-photo-upload'){uploadLabPhoto(t.dataset.id);return;}
@@ -2899,7 +2913,7 @@ function attachEvents(){
     render();
   };
 
-  root.onchange=function(e){if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();if(e.target&&e.target.id==='pd-patient')pendingPatientPicked();};
+  root.onchange=function(e){if(e.target&&e.target.id==='pf-kind'){var title=document.getElementById('pf-title');if(title)title.value=formKindLabel(e.target.value)+' individual';}if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();if(e.target&&e.target.id==='pd-patient')pendingPatientPicked();};
   root.oninput=function(e){if(e.target&&['ev-date','ev-procedure','ev-description','ev-conduct','ev-notes'].indexOf(e.target.id)>=0)scheduleEvolutionDraftSave();};
   setTimeout(initSignatureCanvas,0);
 }
@@ -2924,9 +2938,9 @@ function applyEvolutionTemplate(id){
 
 function openClinicalRecord(id){
   if(String(id||'').indexOf('auto-')===0){ alert('Abra e salve o cadastro do paciente antes de criar o prontuário.'); return; }
-  state.recordPatientId=id; state.recordTab='saude'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
+  state.recordPatientId=id; state.patientForms=[];state.patientFormFiles=[];state.patientFormsPatientId=id;state.patientFormsError=''; state.recordTab='saude'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
   waitForSupabase(5000).then(function(api){ if(!api||!api.loadClinicalRecord) throw new Error('Módulo do prontuário não foi carregado. Atualize também o arquivo supabase.js.'); return api.loadClinicalRecord(id); })
-    .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};return waitForSupabase(2000).then(function(api){return api&&api.loadEvolutionDraft?api.loadEvolutionDraft(id):null;}).catch(function(){return null;});}).then(function(draft){var local=null;try{local=JSON.parse(localStorage.getItem('ilr-evolution-draft-'+id)||'null');}catch(e){} state.evolutionDraft=draft||local||{data_atendimento:todayISO(),procedimento:'',descricao:'',conduta:'',observacoes:''};state.draftStatus='Rascunho salvo automaticamente';state.recordLoading=false;render();})
+    .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};return waitForSupabase(2000).then(function(api){return api&&api.loadEvolutionDraft?api.loadEvolutionDraft(id):null;}).catch(function(){return null;});}).then(function(draft){var local=null;try{local=JSON.parse(localStorage.getItem('ilr-evolution-draft-'+id)||'null');}catch(e){} state.evolutionDraft=draft||local||{data_atendimento:todayISO(),procedimento:'',descricao:'',conduta:'',observacoes:''};state.draftStatus='Rascunho salvo automaticamente';state.recordLoading=false;render();loadPatientForms(id);})
     .catch(function(e){state.recordLoading=false;state.recordError=e.message||'Erro ao carregar prontuário.';render();});
 }
 function saveHealthAlerts(){
@@ -3309,6 +3323,37 @@ function createCobranca(){if(state.chargeSaving)return;var c=pendingClient(),p=p
 function payCobranca(id){if(state.chargePaying)return;var x=chargeItem(id),c=pendingClient();if(!x||!c)return;var remaining=chargeRemaining(x);if(!remaining)return;var raw=prompt('Valor recebido (R$). Saldo: '+fmtMoney(remaining),remaining.toFixed(2));if(raw===null)return;var amount=Math.round(Number(raw.replace(',','.'))*100)/100;if(!Number.isFinite(amount)||amount<=0||amount>remaining){alert('Informe um valor positivo até o saldo pendente.');return;}var d=Object.assign({},chargeData(x));d.paid=Math.round((Number(d.paid||0)+amount)*100)/100;d.history=(d.history||[]).concat([{at:new Date().toISOString(),amount:amount}]);var q=c.from('pending_items').update({details:JSON.stringify(d),status:d.paid>=Number(x.amount)?'resolvido':'aberto',resolved_at:d.paid>=Number(x.amount)?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq('id',id);if(x.updated_at)q=q.eq('updated_at',x.updated_at);else q=q.is('updated_at',null);state.chargePaying=true;q.select().single().then(function(r){if(r.error)throw r.error;state.chargePaying=false;auditAction('registrou baixa de cobrança','pending_item',id,{amount:amount});loadCobrancas();}).catch(function(e){state.chargePaying=false;alert('Não foi possível registrar. Atualize a lista: outro usuário pode ter alterado esta cobrança.');});}
 function printCobranca(id){var x=chargeItem(id),d=x&&chargeData(x);if(!d)return;printableSheet('Aviso de cobrança', '<div class="notice">Documento interno de cobrança. Não é boleto bancário.</div><p><strong>Paciente:</strong> '+esc(x.patient_name)+'<br><strong>Referência:</strong> '+esc(x.id)+'<br><strong>Descrição:</strong> '+esc(d.description)+'</p><table><tr><th>Valor total</th><td>'+fmtMoney(Number(x.amount))+'</td></tr><tr><th>Pagamentos registrados</th><td>'+fmtMoney(Number(d.paid||0))+'</td></tr><tr><th>Saldo pendente</th><td>'+fmtMoney(chargeRemaining(x))+'</td></tr><tr><th>Vencimento</th><td>'+esc(x.due_date)+'</td></tr></table><h3>Como pagar</h3><p>'+htmlDocText(d.instructions||'Entre em contato com a clínica para combinar o pagamento.')+'</p><p>Após o pagamento, envie o comprovante à clínica.</p>');}
 function shareCobranca(id){var x=chargeItem(id),d=x&&chargeData(x);if(!d)return;var phone=String(x.phone||'').replace(/\D/g,'');if(phone.length===10||phone.length===11)phone='55'+phone;if(!/^55\d{10,11}$/.test(phone)){alert('Confira o telefone do paciente antes de compartilhar.');return;}var text='Olá, '+x.patient_name+'! Aqui é do Instituto Lins Rabello.\nSegue seu aviso de cobrança:\nReferência: '+x.id+'\n'+d.description+'\nSaldo pendente: '+fmtMoney(chargeRemaining(x))+'\nVencimento: '+x.due_date+'\n'+(d.instructions||'Entre em contato para combinar o pagamento.')+'\nDocumento interno, não é boleto bancário. Se já pagou, envie seu comprovante para conferirmos.';window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(text),'_blank','noopener');}
+
+/* Links individualizados: respostas/anexos são gravados pelo banco na ficha. */
+function loadPatientForms(id){
+  var c=pendingClient();if(!c)return;state.patientFormsLoading=true;state.patientFormsError='';state.patientFormsPatientId=id;
+  c.from('patient_form_requests').select('id,patient_id,kind,title,status,expires_at,created_at,submitted_at,signer_name,answers').eq('patient_id',String(id)).order('created_at',{ascending:false}).then(function(r){if(r.error)throw r.error;if(state.recordPatientId!==id)return;state.patientForms=r.data||[];var ids=state.patientForms.map(function(x){return x.id;});if(!ids.length)return {data:[]};return c.from('patient_form_files').select('id,request_id,file_name,mime_type,created_at').in('request_id',ids);}).then(function(r){if(state.recordPatientId!==id||!r)return;if(r.error)throw r.error;state.patientFormFiles=r.data||[];state.patientFormsLoading=false;render();}).catch(function(e){if(state.recordPatientId!==id)return;state.patientFormsLoading=false;state.patientFormsError='Não foi possível carregar os formulários. Confira a conexão ou execute o SQL dos Formulários Individuais.';render();});
+}
+function formKindLabel(kind){return {anamnese:'Anamnese',contrato:'Contrato',documentacao:'Documentação / consentimento'}[kind]||'Documento';}
+function renderPatientForms(p){
+  var out='<h3>Links individuais para '+esc(p.name)+'</h3><p>Gere um link para cada formulário. O paciente informará os quatro últimos dígitos do telefone cadastrado. As respostas serão recebidas nesta ficha.</p><div class="card"><div class="finance-form-grid"><div class="field"><label>Formulário</label><select id="pf-kind"><option value="anamnese">Anamnese</option><option value="contrato">Contrato</option><option value="documentacao">Documentação / consentimento</option></select></div><div class="field"><label>Título</label><input id="pf-title" value="Anamnese individual" maxlength="200"></div><div class="field"><label>Validade</label><select id="pf-days"><option value="1">1 dia</option><option value="3">3 dias</option><option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option></select></div><div class="field span-4"><label>Texto do contrato, termo ou orientações</label><textarea id="pf-text" class="record-textarea" maxlength="30000" placeholder="Para contrato/documentação, cole o texto específico do paciente. Para anamnese, as perguntas já estão incluídas."></textarea></div></div><button class="btn btn-primary" data-action="patient-form-create" '+(state.patientFormCreating?'disabled':'')+'>'+(state.patientFormCreating?'Gerando…':'Gerar link individual')+'</button></div>';
+  var link=state.patientFormLink;
+  if(link&&link.patientId===p.id){out+='<div class="card" style="margin-top:14px;background:#edf7f3"><strong>Link de '+esc(formKindLabel(link.kind))+' para '+esc(p.name)+'</strong><p>Válido até '+esc(new Date(link.expiresAt).toLocaleString('pt-BR'))+'. Copie o link antes de fechar esta ficha.</p><input id="pf-generated-link" readonly value="'+escAttr(link.url)+'"><div class="row-actions" style="margin-top:12px"><button class="btn btn-primary" data-action="patient-form-copy">Copiar link</button><button class="btn btn-ghost" data-action="patient-form-whatsapp">Preparar WhatsApp</button></div></div>';}
+  out+='<div class="section-title" style="margin-top:20px">Envios e anexos <button class="btn btn-ghost btn-sm" data-action="patient-form-refresh">Atualizar ficha e respostas</button></div>';
+  if(state.patientFormsError)out+='<div class="clinical-alert warning">'+esc(state.patientFormsError)+'</div>';
+  if(state.patientFormsLoading)return out+'<div class="loading">Carregando formulários…</div>';
+  var items=state.patientFormsPatientId===p.id?(state.patientForms||[]):[];
+  if(!items.length)out+='<div class="empty-note">Nenhum formulário enviado para este paciente.</div>';
+  items.forEach(function(x){var expired=new Date(x.expires_at)<new Date(),done=x.status==='enviado',label=done?'Recebido':x.status==='revogado'?'Revogado':expired?'Expirado — sem preenchimento':'Aguardando preenchimento';out+='<div class="card" style="margin-top:12px;border-left:5px solid '+(done?'#218459':'#d6a02b')+'"><h3>'+esc(x.title)+'</h3><p><strong>'+label+'</strong> · '+esc(formKindLabel(x.kind))+'</p>'+(done?'<p>Recebido em '+esc(new Date(x.submitted_at).toLocaleString('pt-BR'))+' · Nome declarado: '+esc(x.signer_name)+'</p><details><summary>Conferir respostas recebidas</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(JSON.stringify(x.answers||{},null,2))+'</pre></details>':'<p>Validade: '+esc(new Date(x.expires_at).toLocaleString('pt-BR'))+'</p>')+(x.status==='pendente'?'<button class="btn btn-ghost btn-sm" data-action="patient-form-revoke" data-id="'+escAttr(x.id)+'">Revogar link</button>':'');
+    var files=(state.patientFormFiles||[]).filter(function(f){return f.request_id===x.id;});files.forEach(function(f){out+='<p><button class="btn btn-ghost btn-sm" data-action="patient-form-file" data-id="'+escAttr(f.id)+'">Baixar anexo: '+esc(f.file_name)+'</button></p>';});
+    out+='</div>';
+  });return out+'<p class="mini-note">As respostas também ficam em Documentos. A equipe revisa os relatos e confirma as assinaturas em Lembretes e assinaturas.</p>';
+}
+function createPatientFormLink(){
+  if(state.patientFormCreating)return;var p=patientById(state.recordPatientId),c=pendingClient();if(!p||!c)return;var kind=featureValue('pf-kind'),title=featureValue('pf-title'),text=featureValue('pf-text'),days=Number(featureValue('pf-days'));
+  if(title.length<3||(['contrato','documentacao'].indexOf(kind)>=0&&text.trim().length<20)){alert('Informe um título e, para contrato ou documentação, o texto específico a ser apresentado ao paciente.');return;}
+  state.patientFormCreating=true;var button=document.querySelector('[data-action="patient-form-create"]');if(button)button.disabled=true;
+  c.rpc('create_patient_form_link',{p_patient_id:String(p.id),p_kind:kind,p_title:title,p_form_text:text,p_days:days}).then(function(r){if(r.error)throw r.error;var url=new URL('formulario-paciente.html',location.href);url.hash='t='+r.data.token;state.patientFormLink={patientId:p.id,kind:kind,url:url.href,expiresAt:r.data.expires_at};state.patientFormCreating=false;if(state.recordPatientId===p.id)loadPatientForms(p.id);}).catch(function(e){state.patientFormCreating=false;if(button)button.disabled=false;alert('Não foi possível gerar o link: '+e.message);});
+}
+function copyPatientFormLink(){var l=state.patientFormLink;if(!l||l.patientId!==state.recordPatientId)return;if(navigator.clipboard)navigator.clipboard.writeText(l.url).then(function(){alert('Link copiado.');}).catch(function(){prompt('Copie o link individual:',l.url);});else prompt('Copie o link individual:',l.url);}
+function sharePatientFormLink(){var p=patientById(state.recordPatientId),l=state.patientFormLink;if(!p||!l||l.patientId!==p.id)return;var phone=String(p.phone||'').replace(/\D/g,'');if(phone.length===10||phone.length===11)phone='55'+phone;if(!/^55\d{10,11}$/.test(phone)){alert('Confira o telefone cadastrado antes de compartilhar.');return;}var text='Olá, '+p.name+'! Aqui é do Instituto Lins Rabello.\nPreencha seu formulário de '+formKindLabel(l.kind)+' pelo link individual abaixo:\n'+l.url+'\nPara abrir, informe os quatro últimos dígitos do telefone cadastrado.\nValidade: '+new Date(l.expiresAt).toLocaleString('pt-BR')+'.\nO envio ficará vinculado à sua ficha. Não encaminhe este link a outras pessoas.';window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(text),'_blank','noopener');}
+function revokePatientForm(id){if(!confirm('Revogar este link? O paciente não poderá mais enviar por ele.'))return;var c=pendingClient();if(!c)return;var patientId=state.recordPatientId;c.rpc('revoke_patient_form',{p_id:id}).then(function(r){if(r.error)throw r.error;if(state.recordPatientId===patientId)loadPatientForms(patientId);}).catch(function(e){alert('Não foi possível revogar: '+e.message);});}
+function downloadPatientFormFile(id){var file=(state.patientFormFiles||[]).find(function(f){return f.id===id;}),c=pendingClient();if(!file||!c)return;c.rpc('read_patient_form_file',{p_id:id}).then(function(r){if(r.error)throw r.error;var d=r.data,raw=atob(d.data.replace(/\s/g,'')),bytes=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);var url=URL.createObjectURL(new Blob([bytes],{type:d.mime})),a=document.createElement('a');a.href=url;a.download=String(d.name||'anexo').replace(/[\\/]/g,'_');document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);}).catch(function(e){alert('Não foi possível baixar o anexo: '+e.message);});}
 
 function addWaitlist(){
   function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
