@@ -105,17 +105,19 @@ async function requireTeamUser() {
 
 async function loadClinicalRecord(patientId) {
   await requireTeamUser();
-  const [recordRes, evolutionRes, toothRes, documentRes] = await Promise.all([
+  const [recordRes, evolutionRes, toothRes, documentRes, addendumRes] = await Promise.all([
     client.from('prontuarios').select('*').eq('paciente_id', patientId).order('atualizado_em', { ascending: false }).limit(1).maybeSingle(),
     client.from('evolucoes_clinicas').select('*').eq('paciente_id', patientId).order('data_atendimento', { ascending: false }).order('criado_em', { ascending: false }),
     client.from('odontograma').select('*').eq('paciente_id', patientId).order('dente'),
-    client.from('clinical_documents').select('*').eq('paciente_id', patientId).order('created_at', { ascending: false })
+    client.from('clinical_documents').select('*').eq('paciente_id', patientId).order('created_at', { ascending: false }),
+    client.from('evolution_addenda').select('*').eq('patient_id', patientId).order('created_at', { ascending: true })
   ]);
   if (recordRes.error) throw recordRes.error;
   if (evolutionRes.error) throw evolutionRes.error;
   if (toothRes.error) throw toothRes.error;
   if (documentRes.error) throw documentRes.error;
-  return { prontuario: recordRes.data || null, evolucoes: evolutionRes.data || [], odontograma: toothRes.data || [], documentos: documentRes.data || [] };
+  if(addendumRes.error)throw addendumRes.error;
+  return { prontuario: recordRes.data || null, evolucoes: evolutionRes.data || [], odontograma: toothRes.data || [], documentos: documentRes.data || [], addenda:addendumRes.data||[] };
 }
 
 async function saveAnamnesis(patientId, values) {
@@ -172,7 +174,7 @@ async function saveGeneratedClinicalDocument(patientId, values, signatureBlob) {
   const { data, error } = await client.from('clinical_documents').insert({
     paciente_id: patientId, tipo: values.tipo, titulo: values.titulo, descricao: values.descricao || null,
     document_date: values.document_date, content_text: values.content_text, signature_path,
-    professional_email: user.email || null
+    professional_email: user.email || null, issue_metadata:values.issue_metadata||null
   }).select().single();
   if (error) { if (signature_path) await client.storage.from(CLINICAL_BUCKET).remove([signature_path]); throw error; }
   return data;
@@ -183,7 +185,7 @@ async function uploadClinicalFile(patientId, values, file) {
   const { data, error } = await client.from('clinical_documents').insert({
     paciente_id: patientId, tipo: values.tipo, titulo: values.titulo || file.name, descricao: values.descricao || null,
     document_date: values.document_date, storage_path, file_name: file.name, mime_type: file.type || null,
-    size_bytes: file.size || null, professional_email: user.email || null
+    size_bytes: file.size || null, professional_email: user.email || null, clinical_tags:values.clinical_tags||{}
   }).select().single();
   if (error) { await client.storage.from(CLINICAL_BUCKET).remove([storage_path]); throw error; }
   return data;
@@ -197,6 +199,7 @@ async function signedUrl(path) {
 async function getClinicalDocumentUrl(document) { await requireTeamUser(); return signedUrl(document.storage_path || document.signature_path); }
 async function deleteClinicalDocument(document) {
   await requireTeamUser();
+  if(document.issue_metadata)throw new Error('Documento emitido deve ser cancelado, sem excluir o original.');
   const paths = [document.storage_path, document.signature_path].filter(Boolean);
   if (paths.length) { const { error: storageError } = await client.storage.from(CLINICAL_BUCKET).remove(paths); if (storageError) throw storageError; }
   const { error } = await client.from('clinical_documents').delete().eq('id', document.id);
@@ -260,10 +263,15 @@ async function adminUpdateTeamProfile(userId,changes={}){
   return data;
 }
 
+
+async function updateClinicalFileTags(id,patientId,tags){await requireTeamUser();const {data,error}=await client.from('clinical_documents').update({clinical_tags:tags}).eq('id',id).eq('paciente_id',patientId).is('issue_metadata',null).select().single();if(error)throw error;return data;}
+async function appendEvolutionAddendum(id,reason,content,request){await requireTeamUser();const {data,error}=await client.rpc('append_evolution_addendum',{p_id:String(id),p_reason:reason,p_content:content,p_request:request});if(error)throw error;return data;}
+async function voidIssuedDocument(id,reason){await requireTeamUser();const {error}=await client.rpc('void_issued_document',{p_id:String(id),p_reason:reason});if(error)throw error;return true;}
+
 window.ILRSupabase = {
   client, loadStore, saveStore, acceptStateSnapshot, subscribeStore, createPublicBooking, lookupAppointments,
   signIn, signOut, getCurrentUser, isAuthorizedTeamMember, onAuthChange,
   loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution, getTeamProfile, listTeamProfiles, adminUpdateTeamProfile, writeAudit, listAudit, loadEvolutionDraft, saveEvolutionDraft, deleteEvolutionDraft,
-  saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument
+  updateClinicalFileTags,appendEvolutionAddendum,voidIssuedDocument,saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument
 };
 window.dispatchEvent(new Event('ilr-supabase-ready'));
