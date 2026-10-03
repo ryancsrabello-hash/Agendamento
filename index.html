@@ -824,12 +824,15 @@
 .staff-content .field input,.staff-content .field select,.staff-content .field textarea{font-size:16px;max-width:100%}
 }
 .clinical-alert.allergy{background:#f1e9fb;color:#6d319a;border-color:#b494d1}.clinical-alert.danger{background:var(--danger-soft);color:var(--danger);border-color:#e7a4af}
+
+.quote-mouth{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:4px;margin:16px 0}.quote-tooth{padding:6px 2px;border:1px solid var(--border);border-radius:7px;background:#f7f8fa;color:var(--ink);min-height:58px;font-size:12px}.quote-tooth.planned{background:#f7e5b9}.quote-tooth.done{background:#d8f0e4}.quote-tooth.selected{outline:3px solid #2d6483}.tooth-shape{display:block;width:15px;height:22px;border:1px solid currentColor;border-radius:5px 5px 7px 7px;margin:0 auto 3px}.finance-table-wrap{overflow-x:auto}.quote-mouth+ p{font-size:13px}@media(max-width:760px){.quote-mouth{grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}.quote-tooth{min-height:62px}.finance-table-wrap input,.finance-table-wrap select{font-size:16px}}
 </style>
 </head>
 <body>
 <div id="root"><div class="loading">Carregando Instituto Lins Rabello…</div></div>
 
-<script type="module" src="./supabase.js?v=erp240-estoque-20260808-1"></script>
+<script src="./jspdf.umd.min.js?v=ilr20261003"></script>
+<script type="module" src="./supabase.js?v=ilr-integracoes-20261003"></script>
 
 <script>
 (function(){
@@ -854,6 +857,7 @@ var PROCEDURES = [
   {id:'implante', name:'Implante dentário', duration:60, price:0, priceDisplay:'À consultar', specialty:'Implante'},
   {id:'canal', name:'Tratamento de canal', duration:60, price:800, priceDisplay:'À consultar', specialty:'Endodontia'},
   {id:'urgencia', name:'Urgência odontológica', duration:30, price:200, specialty:'Clínico Geral'},
+  {id:'protese', name:'Prótese / prova protética', duration:60, price:0, priceDisplay:'À consultar', specialty:'Prótese'},
   {id:'retorno', name:'Retorno', duration:30, price:0, priceDisplay:'Sem custo', specialty:'Clínico Geral'}
 ];
 function priceLabel(p){ return p.priceDisplay ? p.priceDisplay : fmtMoney(p.price); }
@@ -1105,6 +1109,7 @@ function seedStore(){
     logs: [],
     blocks: [],
     waitlist: [],
+    quotes: [], followups: [], clinicInfo: defaultClinicInfo(),
     inventory: defaultInventoryItems(),
     inventoryMovements: [],
     procedureRecipes: defaultProcedureRecipes()
@@ -1167,6 +1172,7 @@ function normalizeStore(value){
   base.logs = Array.isArray(value.logs) ? value.logs : [];
   base.blocks = cleanScheduleBlocks(Array.isArray(value.blocks) ? value.blocks : []);
   base.waitlist = Array.isArray(value.waitlist) ? value.waitlist : [];
+  base.quotes=Array.isArray(value.quotes)?value.quotes:[];base.followups=Array.isArray(value.followups)?value.followups:[];base.clinicInfo=Object.assign(defaultClinicInfo(),value.clinicInfo||{});
   base.inventory = Array.isArray(value.inventory) ? value.inventory : defaultInventoryItems();
   base.inventoryMovements = Array.isArray(value.inventoryMovements) ? value.inventoryMovements : [];
   base.procedureRecipes = value.procedureRecipes && typeof value.procedureRecipes==='object' ? value.procedureRecipes : defaultProcedureRecipes();
@@ -1210,6 +1216,9 @@ function startRealtime(api){
   if(realtimeStarted || !api || typeof api.subscribeStore !== 'function') return;
   realtimeStarted = true;
   realtimeChannel = api.subscribeStore(function(remoteStore){
+    if(state.storeSaving)return;
+    var active=document.activeElement;if(active&&/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)&&state.role==='staff')return;
+    if(api.acceptStateSnapshot)api.acceptStateSnapshot(remoteStore);
     store = normalizeStore(remoteStore);
     writeLocalStore(store);
     render();
@@ -1249,18 +1258,13 @@ function loadStore(cb){
 }
 
 function persist(cb){
-  store = normalizeStore(store);
-  writeLocalStore(store);
-  if(cb) cb();
-  render();
-
-  waitForSupabase(3000).then(function(api){
-    if(!api) return;
-    startRealtime(api);
-    return api.saveStore(store);
-  }).catch(function(error){
-    console.error('Os dados ficaram salvos localmente, mas não foi possível sincronizar com o Supabase.', error);
-  });
+  store=normalizeStore(store);var proposed=JSON.parse(JSON.stringify(store));
+  var ticket=(state.storeWriteVersion||0)+1;state.storeWriteVersion=ticket;state.storeSaving=(state.storeSaving||0)+1;state.syncError='';writeLocalStore(store);render();
+  return waitForSupabase(5000).then(function(api){if(!api)throw new Error('Sem conexão: a alteração ainda não foi sincronizada.');startRealtime(api);return api.saveStore(proposed);}).then(function(saved){if(ticket===state.storeWriteVersion&&saved){store=normalizeStore(saved);writeLocalStore(store);}if(cb)cb();return true;}).catch(function(error){
+    try{localStorage.setItem('ilr-unsynced-change',JSON.stringify(proposed));}catch(e){}
+    state.syncError=error.message||'Não foi possível salvar.';
+    return waitForSupabase(1000).then(function(api){return api?api.loadStore():null;}).then(function(remote){if(ticket===state.storeWriteVersion&&remote){store=normalizeStore(remote);writeLocalStore(store);}return false;}).catch(function(){return false;});
+  }).finally(function(){state.storeSaving=Math.max(0,(state.storeSaving||1)-1);render();});
 }
 
 function resetDemo(){
@@ -1641,7 +1645,7 @@ function renderPatient(){
   }
 
   out += '<div class="card booking-anchor" id="agendamento">';
-  out += '<div class="steps-track">' + [1,2,3,4,5,6].map(function(s){ return '<div class="'+(b.step>=s?'done':'')+'"></div>'; }).join('') + '</div>';
+  out += '<div class="steps-track">' + [1,3,5].map(function(s){ return '<div class="'+(b.step>=s?'done':'')+'"></div>'; }).join('') + '</div>';
 
   if(b.step===1){
     out += '<h3 style="margin-top:0;">1. Qual procedimento você precisa?</h3><div class="grid-cards">';
@@ -1650,9 +1654,8 @@ function renderPatient(){
         '<div class="t">'+p.name+'</div><div class="d">'+p.duration+' minutos</div></button>';
     });
     out += '</div>';
-  }
-  else if(b.step===2){
-    out += '<h3 style="margin-top:0;">2. Escolha o profissional</h3><div class="grid-cards">';
+
+    out += '<h3 style="margin-top:0;">Escolha o profissional</h3><div class="grid-cards">';
     out += '<button class="opt-card '+(b.professionalId==='any'?'selected':'')+'" data-action="pick-prof" data-id="any">' +
       '<div class="t">Sem preferência</div><div class="d">Mostramos o primeiro horário livre</div></button>';
     PROFESSIONALS.forEach(function(p){
@@ -1666,7 +1669,7 @@ function renderPatient(){
     var days=monthDays(bm);
     var firstWd=parseISO(days[0]).getDay();
     var labels=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-    out += '<h3 style="margin-top:0;">3. Escolha o dia</h3>';
+    out += '<h3 style="margin-top:0;">2. Escolha o dia e o horário</h3>';
     out += '<div class="month-calendar"><div class="month-calendar-head">'+
       '<button class="month-nav-btn" data-action="booking-month-prev" type="button" '+(bm<=todayISO().slice(0,7)?'disabled':'')+'>‹</button>'+
       '<strong>'+monthLabel(bm)+'</strong>'+
@@ -1682,9 +1685,8 @@ function renderPatient(){
         '<span class="n">'+parseISO(d).getDate()+'</span><span class="w">'+note+'</span></button>';
     });
     out += '</div><div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.65)">Atendimentos de segunda a sexta. Dias indisponíveis aparecem bloqueados.</div></div>';
-  }
-  else if(b.step===4){
-    out += '<h3 style="margin-top:0;">4. Escolha o horário — '+fullDisplay(b.date)+'</h3>';
+    if(b.date){
+    out += '<h3 style="margin-top:0;">Horários disponíveis — '+fullDisplay(b.date)+'</h3>';
     var slots = availableSlots(b.professionalId, b.date, procById(b.procedureId).duration);
     if(slots.length===0){
       var reason='';
@@ -1702,10 +1704,11 @@ function renderPatient(){
       });
       out += '</div>';
     }
+    }
   }
   else if(b.step===5){
     var proc2 = procById(b.procedureId), prof2 = profById(b.professionalId);
-    out += '<h3 style="margin-top:0;">5. Seus dados</h3>';
+    out += '<h3 style="margin-top:0;">3. Seus dados e confirmação</h3>';
     out += '<div class="field"><label>Nome completo</label><input type="text" id="inp-name" value="'+esc(b.name)+'" placeholder="Como podemos te chamar"></div>';
     out += '<div class="field"><label>WhatsApp / telefone (DDD + 9 dígitos, sem espaço ou traço)</label><input type="text" inputmode="numeric" id="inp-phone" value="'+esc(b.phone)+'" placeholder="11999998888" maxlength="11"></div>';
     if(b.error) out += '<p style="color:var(--danger);font-size:13px;margin:-6px 0 10px;">'+esc(b.error)+'</p>';
@@ -1725,8 +1728,8 @@ function renderPatient(){
 
   out += '<div class="wizard-footer">';
   out += b.step>1 ? '<button class="btn btn-ghost" data-action="wiz-back">Voltar</button>' : '<span></span>';
-  if(b.step<6){
-    var canNext = (b.step===1 && b.procedureId) || (b.step===2 && b.professionalId) || (b.step===3 && b.date) || (b.step===4 && b.time) || (b.step===5);
+  if(b.step<5){
+    var canNext=(b.step===1&&b.procedureId&&b.professionalId)||(b.step===3&&b.date&&b.time);
     out += '<button class="btn btn-primary" data-action="wiz-next" '+(canNext?'':'disabled')+'>Continuar</button>';
   } else {
     out += '<button class="btn btn-primary" data-action="wiz-confirm" '+(b.saving?'disabled':'')+'>'+(b.saving?'Confirmando…':'Confirmar agendamento')+'</button>';
@@ -1802,8 +1805,8 @@ function canAccessClinical(){ return currentStaffRole()==='admin'||currentStaffR
 function allowedStaffTabs(){
   var role=currentStaffRole();
   if(role==='recepcao') return ['recepcao','agenda','pacientes','confirmacoes','estoque'];
-  if(role==='dentista') return ['visao','cobrancas','laboratorios','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
-  return ['visao','laboratorios','pendencias','sac','preconsultas','marketing','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
+  if(role==='dentista') return ['visao','orcamentos','oportunidades','retornos','cobrancas','laboratorios','pendencias','sac','preconsultas','marketing','recepcao','agenda','pacientes','confirmacoes','estoque','relatorios'];
+  return ['visao','orcamentos','oportunidades','retornos','laboratorios','pendencias','sac','preconsultas','marketing','recepcao','agenda','financeiro','estoque','pacientes','confirmacoes','relatorios','administracao','auditoria'];
 }
 function auditAction(action,entity,entityId,details){
   waitForSupabase(1500).then(function(api){if(api&&api.writeAudit)return api.writeAudit(action,entity,entityId,details||{});}).catch(function(e){console.warn('Auditoria não registrada',e);});
@@ -1841,7 +1844,7 @@ function renderClinicalAlerts(){
 function normalizePhone(v){return String(v||'').replace(/\D/g,'');}
 function patientForPhone(phone){var d=normalizePhone(phone);return (store.patients||[]).find(function(p){return normalizePhone(p.phone)===d||normalizePhone(p.sourcePhone)===d;})||null;}
 function recallDueForProcedure(procId,date){
-  if(['exodontia','canal','implante'].indexOf(procId)>=0)return addDays(date,7);
+  if(['exodontia','canal','implante','protese'].indexOf(procId)>=0)return addDays(date,7);
   if(['restauracao','limpeza','avaliacao'].indexOf(procId)>=0)return addMonths(date,6);
   return null;
 }
@@ -1859,7 +1862,7 @@ function ensureAutoRecallForAppointment(appt){
   var patient=patientForPhone(appt.phone), proc=procById(appt.procedureId), phone=normalizePhone(appt.phone);
   return c.from('pending_items').select('id,status').eq('source_appointment_id',String(appt.id)).maybeSingle().then(function(r){
     if(r.error)throw r.error;
-    var payload={patient_id:patient?patient.id:null,patient_name:appt.name||(patient&&patient.name)||'Paciente',phone:phone||null,type:'recall',title:'Recall automático — '+proc.name,details:'Gerado automaticamente porque não há retorno futuro marcado após o atendimento.',due_date:due,priority:['exodontia','canal','implante'].indexOf(appt.procedureId)>=0?'alta':'media',original_professional:profById(appt.professionalId).name,status:'aberto',source_appointment_id:String(appt.id),auto_generated:true,updated_at:new Date().toISOString()};
+    var payload={patient_id:patient?patient.id:null,patient_name:appt.name||(patient&&patient.name)||'Paciente',phone:phone||null,type:'recall',title:'Recall automático — '+proc.name,details:'Gerado automaticamente porque não há retorno futuro marcado após o atendimento.',due_date:due,priority:['exodontia','canal','implante','protese'].indexOf(appt.procedureId)>=0?'alta':'media',original_professional:profById(appt.professionalId).name,status:'aberto',source_appointment_id:String(appt.id),auto_generated:true,updated_at:new Date().toISOString()};
     if(r.data&&r.data.id)return c.from('pending_items').update(payload).eq('id',r.data.id).then(function(x){if(x.error)throw x.error;return true;});
     return c.from('pending_items').insert(payload).then(function(x){if(x.error)throw x.error;return true;});
   }).then(function(changed){if(state.role==='staff'&&state.staffTab==='pendencias')setTimeout(loadPendencias,150);return changed;}).catch(function(e){console.warn('Recall automático não criado:',e);return false;});
@@ -1962,7 +1965,10 @@ function renderStaff(){
       '<span class="profile-badge">'+roleLabel(currentStaffRole())+'</span>'+
       '<button class="btn btn-ghost btn-sm" data-action="do-logout" style="margin-left:auto;">Sair</button></div>';
   }
-  var allTabs = [['visao','Visão geral'],['agenda','Agenda'],['recepcao','Recepção'],['pacientes','Pacientes'],['confirmacoes','Confirmações'],['pendencias','Pendências'],['financeiro','Financeiro'],['cobrancas','Cobranças'],['estoque','Estoque'],['laboratorios','Laboratórios–Prótese'],['relatorios','Relatórios'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['administracao','Administração'],['auditoria','Auditoria']];
+  out+='<div class="patient-toolbar" style="margin-bottom:16px"><input id="global-patient-search" placeholder="Buscar paciente por nome, telefone ou CPF"><button class="btn btn-ghost" data-action="global-patient-search">Buscar paciente</button></div>';
+  if(state.storeSaving)out+='<div class="mini-note">Salvando alterações…</div>';
+  if(state.syncError)out+='<div class="clinical-alert warning">'+esc(state.syncError)+' <button class="btn btn-ghost btn-sm" data-action="download-unsynced">Baixar cópia da alteração</button></div>';
+  var allTabs = [['visao','Visão geral'],['agenda','Agenda'],['recepcao','Recepção'],['pacientes','Pacientes'],['orcamentos','Orçamentos'],['oportunidades','Propostas em aberto'],['retornos','Retornos'],['confirmacoes','Confirmações'],['pendencias','Pendências'],['financeiro','Financeiro'],['cobrancas','Cobranças'],['estoque','Estoque'],['laboratorios','Laboratórios–Prótese'],['relatorios','Relatórios'],['sac','SAC'],['preconsultas','Pré-consultas'],['marketing','Marketing'],['administracao','Administração'],['auditoria','Auditoria']];
   var allowed=allowedStaffTabs();
   if(allowed.indexOf(state.staffTab)<0) state.staffTab=allowed[0];
   out += '<div class="tabs staff-tabs" role="navigation" aria-label="Módulos internos">';
@@ -1976,6 +1982,9 @@ function renderStaff(){
   else if(state.staffTab==='preconsultas') out += renderPreConsultasAdmin();
   else if(state.staffTab==='laboratorios') out += renderLaboratorio();
   else if(state.staffTab==='cobrancas') out += renderCobrancas();
+  else if(state.staffTab==='orcamentos')out+=renderOrcamentos();
+  else if(state.staffTab==='oportunidades')out+=renderOportunidades();
+  else if(state.staffTab==='retornos')out+=renderRetornos();
   else if(state.staffTab==='marketing') out += renderMarketing();
   else if(state.staffTab==='recepcao') out += renderRecepcao();
   else if(state.staffTab==='agenda') out += renderAgenda();
@@ -2097,6 +2106,8 @@ function renderVisaoGeral(){
   else{out+='<table><thead><tr><th>Paciente</th><th>Procedimento</th><th>Profissional</th><th>Quando</th><th>Status</th></tr></thead><tbody>';
     upcoming.forEach(function(a){out+='<tr><td>'+esc(a.name)+'</td><td>'+procById(a.procedureId).name+'</td><td>'+profById(a.professionalId).name+'</td><td>'+dayDisplay(a.date)+' às '+a.time+'</td><td><span class="pill '+a.status+'">'+STATUS_LABEL[a.status]+'</span></td></tr>';});out+='</tbody></table>';}
   out+='</div>';
+  var due=(store.followups||[]).filter(function(f){return f.status==='aberto'&&f.dueDate<=todayISO();}).length;var opportunities=(store.quotes||[]).filter(function(q){return ['negociacao','nao_fechou','parcial'].indexOf(q.status)>=0&&(!q.contactDate||q.contactDate<=todayISO());}).length;
+  out+='<div class="section-title">Próximas ações</div><div class="quick-actions"><button class="btn btn-primary" data-stafftab="recepcao">Atendimentos de hoje</button><button class="btn btn-ghost" data-stafftab="retornos">Revisões para contatar: '+due+'</button><button class="btn btn-ghost" data-stafftab="oportunidades">Propostas para acompanhar: '+opportunities+'</button></div>';
   return out;
 }
 function kpi(label,val,sub){
@@ -2139,6 +2150,7 @@ function renderRecepcao(){
     if(st==='atendimento') out+='<button class="flow-btn primary" data-action="reception-status" data-id="'+a.id+'" data-status="realizado">Finalizar</button>';
     if(st!=='realizado'&&st!=='falta') out+='<button class="flow-btn danger" data-action="reception-status" data-id="'+a.id+'" data-status="falta">Faltou</button>';
     if(canAccessClinical()) out+='<button class="flow-btn" data-action="reception-record" data-id="'+a.id+'">Prontuário</button>';
+    if(st==='realizado'&&canAccessClinical()) out+='<button class="flow-btn" data-action="treatment-complete" data-id="'+a.id+'">Tratamento concluído</button>';
     if(st==='realizado') out+='<button class="flow-btn" data-action="reception-payment" data-id="'+a.id+'">Receber</button>';
     out+='</div></div>';
   });
@@ -2426,7 +2438,7 @@ function renderPacientes(){
   if(q){
     list=list.filter(function(p){
       var hay=[p.name,p.cpf,p.phone,p.email,p.city].join(' ').toLowerCase();
-      return hay.indexOf(q)>=0 || hay.replace(/\D/g,'').indexOf(q.replace(/\D/g,''))>=0;
+      return hay.indexOf(q)>=0 || (q.replace(/\D/g,'').length>0&&hay.replace(/\D/g,'').indexOf(q.replace(/\D/g,''))>=0);
     });
   }
   list.sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'pt-BR'); });
@@ -2471,8 +2483,12 @@ function renderClinicalRecord(){
   if(state.recordLoading){out+='<div class="loading" style="padding:30px 0;">Carregando prontuário…</div></div>';return out;}
   if(state.recordError) out+='<div class="record-status" style="background:var(--danger-soft);color:var(--danger);">'+esc(state.recordError)+'</div>';
   out+=renderClinicalAlerts();
-  out+='<div class="record-tabs">'+[['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['formularios','Links e respostas'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas']].map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
-  if(state.recordTab==='saude') out+=renderHealthAlerts();
+  out+='<div class="record-tabs">'+[['resumo','Resumo'],['saude','Saúde e alertas'],['anamnese','Anamnese'],['lembretes','Lembretes e assinaturas'],['formularios','Links e respostas'],['odontograma','Odontograma'],['evolucoes','Evolução clínica'],['documentos','Documentos'],['timeline','Linha do tempo'],['historico','Consultas'],['propostas','Orçamentos'],['laboratorio','Laboratório']].concat(currentStaffRole()==='admin'?[['cobrancas','Cobranças']]:[]).map(function(t){return '<button data-action="record-tab" data-id="'+t[0]+'" class="'+(state.recordTab===t[0]?'active':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+  if(state.recordTab==='resumo')out+=patientSummary(p);
+  else if(state.recordTab==='propostas')out+=renderPatientQuoteTab(p);
+  else if(state.recordTab==='laboratorio')out+=renderPatientLabTab(p);
+  else if(state.recordTab==='cobrancas'&&currentStaffRole()==='admin')out+=renderPatientChargesTab(p);
+  else if(state.recordTab==='saude') out+=renderHealthAlerts();
   else if(state.recordTab==='anamnese') out+=renderAnamnesis();
   else if(state.recordTab==='lembretes') out+=renderPatientReminders(p);
   else if(state.recordTab==='formularios') out+=renderPatientForms(p);
@@ -2763,7 +2779,7 @@ function attachEvents(){
     if(!t) return;
 
     if(t.dataset.role){ state.role = t.dataset.role; render(); return; }
-    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='cobrancas')loadCobrancas(); else if(state.staffTab==='laboratorios')loadLaboratorio(); else if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else if(state.staffTab==='pendencias')loadPendencias(); else if(state.staffTab==='sac')loadSacAdmin(); else if(state.staffTab==='preconsultas')loadPreConsultas(); else if(state.staffTab==='marketing')loadMarketing(); else render(); return; }
+    if(t.dataset.stafftab){ if(allowedStaffTabs().indexOf(t.dataset.stafftab)<0)return; state.staffTab = t.dataset.stafftab; if(state.staffTab==='retornos')loadPendencias(); else if(state.staffTab==='cobrancas')loadCobrancas(); else if(state.staffTab==='laboratorios')loadLaboratorio(); else if(state.staffTab==='auditoria')loadAudit(); else if(state.staffTab==='administracao')loadTeamProfiles(); else if(state.staffTab==='pendencias')loadPendencias(); else if(state.staffTab==='sac')loadSacAdmin(); else if(state.staffTab==='preconsultas')loadPreConsultas(); else if(state.staffTab==='marketing')loadMarketing(); else render(); return; }
 
     var a = t.dataset.action;
     var b = state.booking;
@@ -2773,8 +2789,8 @@ function attachEvents(){
     if(a==='export-patients'){ exportPatientsCSV(); return; }
     if(a==='export-finance'){ exportFinanceCSV(); return; }
 
-    if(a==='pick-proc'){ b.procedureId = t.dataset.id; logMarketingEvent('procedure_interest',{procedure:b.procedureId}); if(b.step===1)logMarketingEvent('booking_started',{procedure:b.procedureId}); }
-    else if(a==='pick-prof'){ b.professionalId = t.dataset.id; logMarketingEvent('professional_interest',{professional:b.professionalId}); }
+    if(a==='pick-proc'){ b.procedureId = t.dataset.id; b.time=null; logMarketingEvent('procedure_interest',{procedure:b.procedureId}); if(b.step===1)logMarketingEvent('booking_started',{procedure:b.procedureId}); }
+    else if(a==='pick-prof'){ b.professionalId = t.dataset.id; b.time=null; logMarketingEvent('professional_interest',{professional:b.professionalId}); }
     else if(a==='booking-month-prev'){
       var pv=shiftMonth(state.bookingMonth||todayISO().slice(0,7),-1);
       if(isMonthInCurrentYearRange(pv)) state.bookingMonth=pv;
@@ -2787,8 +2803,8 @@ function attachEvents(){
     }
     else if(a==='pick-date'){ b.date = t.dataset.id; b.time=null; }
     else if(a==='pick-time'){ b.time = t.dataset.id; if(b.professionalId==='any') b.professionalId = t.dataset.prof; }
-    else if(a==='wiz-next'){ if(b.step===5){var ne=document.getElementById('inp-name'),pe=document.getElementById('inp-phone');b.name=ne?ne.value.trim():b.name;b.phone=pe?pe.value.replace(/\D/g,''):b.phone;if(b.name.length<3){b.error='Informe seu nome completo.';render();return;}if(b.phone.length!==11){b.error='Informe o telefone com DDD + 9 dígitos (11 números).';render();return;}b.error=null;} b.step = Math.min(6,b.step+1); }
-    else if(a==='wiz-back'){ b.step = Math.max(1,b.step-1); }
+    else if(a==='wiz-next'){if(b.step===1&&b.procedureId&&b.professionalId)b.step=3;else if(b.step===3&&b.date&&b.time)b.step=5;}
+    else if(a==='wiz-back'){b.step=b.step===5?3:1;}
     else if(a==='new-booking'){ state.booking = { step:1, procedureId:null, professionalId:null, date:null, time:null, name:'', phone:'', preReason:'', done:false, error:null }; }
     else if(a==='wiz-confirm'){ confirmBooking(); return; }
     else if(a==='do-lookup'){ doLookup(); return; }
@@ -2833,7 +2849,7 @@ function attachEvents(){
     else if(a==='patient-search'){ var ps=document.getElementById('pt-search'); state.patientSearch=ps?ps.value:''; render(); return; }
     else if(a==='open-record'){ if(!canAccessClinical()){alert('Seu perfil não possui acesso ao prontuário clínico.');return;} openClinicalRecord(t.dataset.id); return; }
     else if(a==='close-record'){ state.recordPatientId=null; state.selectedTooth=null; render(); return; }
-    else if(a==='record-tab'){ state.recordTab=t.dataset.id; render(); return; }
+    else if(a==='record-tab'){state.recordTab=t.dataset.id;if(state.recordTab==='laboratorio')loadLaboratorio();else if(state.recordTab==='cobrancas'&&currentStaffRole()==='admin')loadCobrancas();else render();return;}
     else if(a==='select-tooth'){ state.selectedTooth=t.dataset.id; render(); return; }
     else if(a==='save-health-alerts'){ saveHealthAlerts(); return; }
     else if(a==='save-anamnesis'){ saveAnamnesis(); return; }
@@ -2864,6 +2880,29 @@ function attachEvents(){
     else if(a==='patient-form-revoke'){revokePatientForm(t.dataset.id);return;}
     else if(a==='patient-form-file'){downloadPatientFormFile(t.dataset.id);return;}
     else if(a==='patient-form-refresh'){var id=state.recordPatientId;waitForSupabase(5000).then(function(api){return api.loadClinicalRecord(id);}).then(function(data){if(state.recordPatientId!==id)return;state.recordData=data;loadPatientForms(id);}).catch(function(e){alert('Não foi possível atualizar: '+e.message);});return;}
+    else if(a==='quote-new'){openQuote();return;}
+    else if(a==='quote-new-patient'){openQuote(null,t.dataset.id);return;}
+    else if(a==='quote-edit'){openQuote(t.dataset.id);return;}
+    else if(a==='quote-tooth'){selectQuoteTooth(t.dataset.id);return;}
+    else if(a==='quote-dentition'){state.quoteDraft=readQuoteDraft();state.quoteDentition=t.dataset.id;render();return;}
+    else if(a==='quote-add-item'){addQuoteItem();return;}
+    else if(a==='quote-remove-item'){state.quoteDraft=readQuoteDraft();state.quoteDraft.items=state.quoteDraft.items.filter(function(i){return i.id!==t.dataset.id;});render();return;}
+    else if(a==='quote-save'){saveQuote();return;}
+    else if(a==='quote-close'){state.quoteDraft=null;render();return;}
+    else if(a==='quote-filter'){state.quotePatient=featureValue('q-filter');render();return;}
+    else if(a==='quote-pdf'){exportQuotePdf(t.dataset.id);return;}
+    else if(a==='quote-contact'){contactQuote(t.dataset.id);return;}
+    else if(a==='clinic-save'){if(currentStaffRole()!=='admin')return;var ci=Object.assign(defaultClinicInfo(),store.clinicInfo||{});['name','address','phone','responsible','cro'].forEach(function(k){ci[k]=featureValue('clinic-'+k);});store.clinicInfo=ci;persist();return;}
+    else if(a==='treatment-complete'){markTreatmentCompleted(t.dataset.id);return;}
+    else if(a==='recalls-refresh'){loadPendencias();return;}
+    else if(a==='recall-contact'){var f=(store.followups||[]).find(function(x){return x.id===t.dataset.id;});if(f)openPatientWhatsApp(f.phone,'Olá, '+f.patientName+'! Aqui é do Instituto Lins Rabello. Podemos agendar sua consulta de revisão?');return;}
+    else if(a==='recall-date'){var f=(store.followups||[]).find(function(x){return x.id===t.dataset.id;});if(!f)return;var date=prompt('Nova data do lembrete (AAAA-MM-DD):',f.dueDate);if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){f.dueDate=date;persist();}return;}
+    else if(a==='recall-close'){var f=(store.followups||[]).find(function(x){return x.id===t.dataset.id;});if(f){f.status='resolvido';persist();}return;}
+    else if(a==='clinical-recall-contact'){var x=(state.pendingItems||[]).find(function(x){return x.id===t.dataset.id;});if(x)openPatientWhatsApp(x.phone,'Olá, '+x.patient_name+'! Aqui é do Instituto Lins Rabello. Vamos organizar seu retorno conforme orientação do dentista?');return;}
+    else if(a==='patient-lab-manage'){state.labPatient=t.dataset.id;state.staffTab='laboratorios';loadLaboratorio();return;}
+    else if(a==='patient-charge-manage'){if(currentStaffRole()!=='admin')return;state.chargePatient=t.dataset.id;state.staffTab='cobrancas';loadCobrancas();return;}
+    else if(a==='global-patient-search'){var query=featureValue('global-patient-search').toLowerCase();state.patientSearch=query;state.staffTab='pacientes';state.patientEditingId=null;render();return;}
+    else if(a==='download-unsynced'){var raw=localStorage.getItem('ilr-unsynced-change');if(raw)downloadText('Alteracao_nao_sincronizada.json',raw,'application/json');return;}
     else if(a==='lab-order'){printLabOrder(t.dataset.id);return;}
     else if(a==='lab-return'){labFollowup(t.dataset.id);return;}
     else if(a==='lab-photo-upload'){uploadLabPhoto(t.dataset.id);return;}
@@ -2873,7 +2912,7 @@ function attachEvents(){
     else if(a==='charge-filter'){state.chargePatient=featureValue('charge-filter');render();return;}
     else if(a==='charge-print'){printCobranca(t.dataset.id);return;}
     else if(a==='charge-share'){shareCobranca(t.dataset.id);return;}
-    else if(a==='charge-pay'){payCobranca(t.dataset.id);return;}
+    else if(a==='charge-pay'){integratedChargePayment(t.dataset.id);return;}
     else if(a==='lab-refresh'){loadLaboratorio();return;}
     else if(a==='lab-new'){state.labDraft={};state.labMessage='';render();return;}
     else if(a==='lab-edit'){editLaboratorio(t.dataset.id);return;}
@@ -2913,7 +2952,7 @@ function attachEvents(){
     render();
   };
 
-  root.onchange=function(e){if(e.target&&e.target.id==='pf-kind'){var title=document.getElementById('pf-title');if(title)title.value=formKindLabel(e.target.value)+' individual';}if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();if(e.target&&e.target.id==='pd-patient')pendingPatientPicked();};
+  root.onchange=function(e){if(e.target&&e.target.id==='q-procedure'){var p=procById(e.target.value),price=document.getElementById('q-price');if(price)price.value=p.price||0;}if(e.target&&e.target.id==='lab-route'){var sel=document.getElementById('lab-stage'),route=LAB_ROUTES[e.target.value]||LAB_STAGES;if(sel)sel.innerHTML=labOptions(route,route[0]);}if(e.target&&e.target.id==='pf-kind'){var title=document.getElementById('pf-title');if(title)title.value=formKindLabel(e.target.value)+' individual';}if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();if(e.target&&e.target.id==='pd-patient')pendingPatientPicked();};
   root.oninput=function(e){if(e.target&&['ev-date','ev-procedure','ev-description','ev-conduct','ev-notes'].indexOf(e.target.id)>=0)scheduleEvolutionDraftSave();};
   setTimeout(initSignatureCanvas,0);
 }
@@ -2938,7 +2977,7 @@ function applyEvolutionTemplate(id){
 
 function openClinicalRecord(id){
   if(String(id||'').indexOf('auto-')===0){ alert('Abra e salve o cadastro do paciente antes de criar o prontuário.'); return; }
-  state.recordPatientId=id; state.patientForms=[];state.patientFormFiles=[];state.patientFormsPatientId=id;state.patientFormsError=''; state.recordTab='saude'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
+  state.recordPatientId=id; state.patientForms=[];state.patientFormFiles=[];state.patientFormsPatientId=id;state.patientFormsError=''; state.recordTab='resumo'; state.recordLoading=true; state.recordError=''; state.selectedTooth=null; render();
   waitForSupabase(5000).then(function(api){ if(!api||!api.loadClinicalRecord) throw new Error('Módulo do prontuário não foi carregado. Atualize também o arquivo supabase.js.'); return api.loadClinicalRecord(id); })
     .then(function(data){state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};return waitForSupabase(2000).then(function(api){return api&&api.loadEvolutionDraft?api.loadEvolutionDraft(id):null;}).catch(function(){return null;});}).then(function(draft){var local=null;try{local=JSON.parse(localStorage.getItem('ilr-evolution-draft-'+id)||'null');}catch(e){} state.evolutionDraft=draft||local||{data_atendimento:todayISO(),procedimento:'',descricao:'',conduta:'',observacoes:''};state.draftStatus='Rascunho salvo automaticamente';state.recordLoading=false;render();loadPatientForms(id);})
     .catch(function(e){state.recordLoading=false;state.recordError=e.message||'Erro ao carregar prontuário.';render();});
@@ -3041,7 +3080,7 @@ function confirmBooking(){
   var proc = procById(b.procedureId);
   if(!isFreeSlot(b.professionalId, b.date, b.time, proc.duration)){
     b.error = 'Esse horário acabou de ser preenchido. Escolha outro horário.';
-    b.step = 4; b.time = null; render(); return;
+    b.step = 3; b.time = null; render(); return;
   }
 
   b.phone = digits;
@@ -3068,7 +3107,7 @@ function confirmBooking(){
     console.error('Erro ao criar agendamento:', error);
     b.saving = false;
     b.error = (error && error.message) ? error.message : 'Não foi possível concluir o agendamento.';
-    if(b.error.indexOf('preenchido')>=0){ b.step=4; b.time=null; }
+    if(b.error.indexOf('preenchido')>=0){ b.step=3; b.time=null; }
     render();
   });
 }
@@ -3206,11 +3245,11 @@ function setReceptionStatus(id,status){
   if(status==='chegou') a.checkedInAt=new Date().toISOString();
   if(status==='atendimento') a.startedAt=new Date().toISOString();
   if(status==='realizado') a.finishedAt=new Date().toISOString();
-  persist();
-  if(status==='realizado') ensureAutoRecallForAppointment(a);
+  persist(function(){if(status==='realizado')ensureAutoRecallForAppointment(a);});
 }
 function openReceptionRecord(apptId){
   if(!canAccessClinical()){alert('Seu perfil não possui acesso ao prontuário clínico.');return;}
+  state.staffTab='pacientes';
   var a=(store.appointments||[]).find(function(x){return x.id===apptId;}); if(!a)return;
   var digits=(a.phone||'').replace(/\D/g,'');
   var p=(store.patients||[]).find(function(x){return (x.phone||'').replace(/\D/g,'')===digits;});
@@ -3242,8 +3281,7 @@ function completeWaitlistBooking(){
   store.appointments.push(a);store.payments=store.payments||[];
   store.payments.push({id:'pay-'+id,appointmentId:id,patient:w.name,procedureId:proc,professionalId:prof,date:date,gross:value,discount:0,method:'Pix',installments:1,status:'pendente',feeOverride:'',notes:'Encaixe concluído pela recepção.',createdAt:stamp});
   store.waitlist=store.waitlist.filter(function(x){return x.id!==w.id;});state.waitBookingId=null;state.receptionDate=date;state.agendaDate=date;
-  if(w.labCaseId)linkLabReturn(w.labCaseId,a);
-  if(status==='realizado')applyProcedureStock(a);persist();if(status==='realizado')ensureAutoRecallForAppointment(a);
+  if(status==='realizado')applyProcedureStock(a);persist(function(){if(w.labCaseId)linkLabReturn(w.labCaseId,a);if(status==='realizado')ensureAutoRecallForAppointment(a);});
   auditAction('concluiu encaixe','agendamento',id,{status:status});
 }
 
@@ -3263,7 +3301,7 @@ function renderLaboratorio(){
   if(state.labMessage)out+='<div class="good-card">'+esc(state.labMessage)+'</div>';
   out+='<button class="btn btn-primary" data-action="lab-new">Novo trabalho</button>';
   if(state.labDraft){var d=state.labDraft;
-    out+='<div class="card" style="margin-top:16px"><h3>'+ (d.id?'Editar trabalho':'Novo trabalho protético')+'</h3><div class="finance-form-grid"><div class="field"><label>Paciente cadastrado</label><select id="lab-patient"><option value="">Selecione</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'" '+(d.patientId===p.id?'selected':'')+'>'+esc(p.name)+' · '+esc(p.phone||'')+'</option>';}).join('')+'</select></div><div class="field"><label>Tratamento / peça</label><input id="lab-treatment" value="'+escAttr(d.treatment||'')+'" placeholder="Ex.: coroa do dente 16"></div><div class="field"><label>Laboratório / protético</label><input id="lab-supplier" value="'+escAttr(d.lab||'')+'"></div><div class="field"><label>Profissional responsável</label><select id="lab-prof">'+PROFESSIONALS.map(function(p){return '<option value="'+escAttr(p.id)+'" '+(d.professional===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field"><label>Etapa atual</label><select id="lab-stage">'+labOptions(d.stage&&LAB_STAGES.indexOf(d.stage)<0?LAB_STAGES.concat([d.stage]):LAB_STAGES,d.stage||LAB_STAGES[0])+'</select></div><div class="field"><label>Outra etapa (opcional)</label><input id="lab-custom" placeholder="Preencha para usar uma etapa personalizada"></div><div class="field"><label>Prazo da etapa</label><input id="lab-due" type="date" value="'+escAttr(d.due||'')+'"></div><div class="field"><label>Situação</label><select id="lab-status">'+labOptions(['Em andamento','Aguardando laboratório','Aguardando paciente','Concluído'],d.situation||'Em andamento')+'</select></div><div class="field"><label>Custo do laboratório (R$)</label><input id="lab-cost" type="number" min="0" step="0.01" value="'+Number(d.cost||0)+'"></div><div class="field"><label>Observações / cor / dentes</label><textarea id="lab-notes">'+esc(d.notes||'')+'</textarea></div></div><p class="mini-note">O custo é informativo. Para contabilizar uma despesa, use o Financeiro.</p><button class="btn btn-primary" data-action="lab-save" '+(state.labSaving?'disabled':'')+'>'+(state.labSaving?'Salvando…':'Salvar trabalho')+'</button> <button class="btn btn-ghost" data-action="lab-cancel">Cancelar</button></div>';
+    out+='<div class="card" style="margin-top:16px"><h3>'+ (d.id?'Editar trabalho':'Novo trabalho protético')+'</h3><div class="finance-form-grid"><div class="field"><label>Paciente cadastrado</label><select id="lab-patient"><option value="">Selecione</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'" '+(d.patientId===p.id?'selected':'')+'>'+esc(p.name)+' · '+esc(p.phone||'')+'</option>';}).join('')+'</select></div><div class="field"><label>Tratamento / peça</label><input id="lab-treatment" value="'+escAttr(d.treatment||'')+'" placeholder="Ex.: coroa do dente 16"></div><div class="field"><label>Laboratório / protético</label><input id="lab-supplier" value="'+escAttr(d.lab||'')+'"></div><div class="field"><label>Profissional responsável</label><select id="lab-prof">'+PROFESSIONALS.map(function(p){return '<option value="'+escAttr(p.id)+'" '+(d.professional===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field"><label>Etapa atual</label><select id="lab-stage">'+labOptions(d.stageOptions&&d.stageOptions.length?d.stageOptions:(d.stage&&LAB_STAGES.indexOf(d.stage)<0?LAB_STAGES.concat([d.stage]):LAB_STAGES),d.stage||LAB_STAGES[0])+'</select></div><div class="field"><label>Roteiro sugerido</label><select id="lab-route"><option value="">Todas as etapas</option><option value="coroa">Coroa / porcelana</option><option value="total">Prótese total</option><option value="parcial">Prótese parcial</option><option value="implante">Prótese sobre implante</option></select></div><div class="field"><label>Outra etapa (opcional)</label><input id="lab-custom" placeholder="Preencha para usar uma etapa personalizada"></div><div class="field"><label>Prazo da etapa</label><input id="lab-due" type="date" value="'+escAttr(d.due||'')+'"></div><div class="field"><label>Situação</label><select id="lab-status">'+labOptions(['Em andamento','Aguardando laboratório','Aguardando paciente','Concluído'],d.situation||'Em andamento')+'</select></div><div class="field"><label>Custo do laboratório (R$)</label><input id="lab-cost" type="number" min="0" step="0.01" value="'+Number(d.cost||0)+'"></div><div class="field"><label>Observações / cor / dentes</label><textarea id="lab-notes">'+esc(d.notes||'')+'</textarea></div></div><p class="mini-note">O custo é informativo. Para contabilizar uma despesa, use o Financeiro.</p><button class="btn btn-primary" data-action="lab-save" '+(state.labSaving?'disabled':'')+'>'+(state.labSaving?'Salvando…':'Salvar trabalho')+'</button> <button class="btn btn-ghost" data-action="lab-cancel">Cancelar</button></div>';
   }
   out+='<div class="finance-form-grid" style="margin-top:18px"><div class="field"><label>Filtrar paciente</label><select id="lab-filter"><option value="">Todos os pacientes</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'" '+(state.labPatient===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="lab-filter">Aplicar filtro</button></div>';
   if(state.labLoading)return out+'<div class="loading">Carregando trabalhos…</div>';
@@ -3280,7 +3318,7 @@ function saveLaboratorio(){
   if(!patient||!treatment||!stage||!Number.isFinite(cost)||cost<0){alert('Selecione um paciente, informe o tratamento e um custo válido.');return;}
   var situation=featureValue('lab-status'),history=(old.history||[]).slice();
   if(stage!==old.stage||situation!==old.situation)history.push({at:new Date().toISOString(),stage:stage,situation:situation});
-  var data={module:'laboratorio-v1',treatment:treatment,stage:stage,situation:situation,lab:featureValue('lab-supplier'),professional:featureValue('lab-prof'),cost:cost,notes:featureValue('lab-notes'),history:history,photos:old.photos||[],returnAppointment:old.returnAppointment||null};
+  var data={module:'laboratorio-v1',treatment:treatment,stage:stage,situation:situation,lab:featureValue('lab-supplier'),professional:featureValue('lab-prof'),cost:cost,notes:featureValue('lab-notes'),history:history,photos:old.photos||[],returnAppointment:old.returnAppointment||null,route:featureValue('lab-route')||old.route||'',stageOptions:LAB_ROUTES[featureValue('lab-route')||old.route]||LAB_STAGES};
   var payload={patient_id:patient.id,patient_name:patient.name,phone:patient.phone||null,type:'orcamento',title:'Laboratório–Prótese · '+treatment,details:JSON.stringify(data),amount:0,due_date:featureValue('lab-due')||null,priority:'media',original_professional:data.professional||null,status:situation==='Concluído'?'resolvido':'aberto',resolved_at:situation==='Concluído'?new Date().toISOString():null,updated_at:new Date().toISOString()};
   var q=c.from('pending_items');if(old.id){q=q.update(payload).eq('id',old.id);if(old.version)q=q.eq('updated_at',old.version);}else q=q.insert(payload);
   state.labSaving=true;
@@ -3313,14 +3351,14 @@ function renderCobrancas(){
   items.forEach(function(x){var r=chargeRemaining(x);pending+=r;paid+=Number(chargeData(x).paid||0);if(r&&x.due_date<todayISO())late+=r;});
   var out='<div class="section-title">Central de cobranças <button class="btn btn-ghost btn-sm" data-action="charge-refresh">Atualizar</button></div><p>Avisos de cobrança por paciente. Não são boletos bancários e não têm compensação automática.</p><div class="reception-kpis">'+miniReceptionKpi(fmtMoney(pending),'Pendente')+miniReceptionKpi(fmtMoney(late),'Vencido')+miniReceptionKpi(fmtMoney(paid),'Baixas registradas')+'</div>';
   if(state.chargeError)out+='<div class="empty-note">'+esc(state.chargeError)+'</div>';
-  out+='<div class="card"><h3>Nova cobrança</h3><div class="finance-form-grid"><div class="field"><label>Paciente</label><select id="charge-patient"><option value="">Selecione</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field"><label>Descrição</label><input id="charge-title" placeholder="Ex.: parcela 1 de 3 — prótese"></div><div class="field"><label>Valor (R$)</label><input id="charge-amount" type="number" min="0.01" step="0.01"></div><div class="field"><label>Vencimento</label><input id="charge-due" type="date" value="'+todayISO()+'"></div><div class="field"><label>Instruções de pagamento</label><textarea id="charge-instructions" placeholder="Ex.: chave Pix e nome do recebedor"></textarea></div></div><button class="btn btn-primary" data-action="charge-create" '+(state.chargeSaving?'disabled':'')+'>Criar cobrança</button><p class="mini-note">As baixas desta central controlam a dívida. Registre o recebimento no Financeiro uma única vez para incluí-lo no fluxo de caixa.</p></div>';
+  out+='<div class="card"><h3>Nova cobrança</h3><div class="finance-form-grid"><div class="field"><label>Paciente</label><select id="charge-patient"><option value="">Selecione</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'">'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field"><label>Descrição</label><input id="charge-title" placeholder="Ex.: parcela 1 de 3 — prótese"></div><div class="field"><label>Valor (R$)</label><input id="charge-amount" type="number" min="0.01" step="0.01"></div><div class="field"><label>Vencimento</label><input id="charge-due" type="date" value="'+todayISO()+'"></div><div class="field"><label>Instruções de pagamento</label><textarea id="charge-instructions" placeholder="Ex.: chave Pix e nome do recebedor"></textarea></div></div><button class="btn btn-primary" data-action="charge-create" '+(state.chargeSaving?'disabled':'')+'>Criar cobrança</button><p class="mini-note">O pagamento registrado aqui atualiza automaticamente o saldo e o Financeiro. Não lance o mesmo recebimento novamente.</p></div>';
   out+='<div class="field"><label>Filtrar paciente</label><select id="charge-filter"><option value="">Todos os pacientes</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'" '+(state.chargePatient===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="charge-filter">Aplicar filtro</button>';
   if(state.chargeLoading)return out+'<p>Carregando cobranças…</p>';if(!items.length)out+='<p>Nenhuma cobrança cadastrada para este filtro.</p>';
   items.forEach(function(x){var d=chargeData(x),remaining=chargeRemaining(x),color=remaining===0?'#17624b':x.due_date<todayISO()?'#a92c38':'#9b6610';out+='<div class="card" style="border-left:5px solid '+color+';margin-top:12px"><h3>'+esc(x.patient_name)+' — '+esc(d.description)+'</h3><p>Total: '+fmtMoney(Number(x.amount))+' · Pago: '+fmtMoney(Number(d.paid||0))+' · <strong>Pendente: '+fmtMoney(remaining)+'</strong></p><p>Vencimento: '+esc(x.due_date)+' · '+(remaining===0?'Quitado':x.due_date<todayISO()?'Vencido':'Pendente')+'</p><div class="row-actions" style="flex-wrap:wrap"><button class="btn btn-ghost btn-sm" data-action="charge-print" data-id="'+escAttr(x.id)+'">Gerar aviso / PDF</button><button class="btn btn-ghost btn-sm" data-action="charge-share" data-id="'+escAttr(x.id)+'">Preparar WhatsApp</button>'+(remaining>0?'<button class="btn btn-primary btn-sm" data-action="charge-pay" data-id="'+escAttr(x.id)+'">Registrar pagamento parcial / total</button>':'')+'</div><details><summary>Histórico de pagamentos</summary>'+(d.history||[]).map(function(h){return '<p>'+esc(new Date(h.at).toLocaleString('pt-BR'))+' · '+fmtMoney(h.amount)+'</p>';}).join('')+'</details></div>';});return out;
 }
 function chargeItem(id){return (state.chargeItems||[]).find(function(x){return x.id===id;});}
 function createCobranca(){if(state.chargeSaving)return;var c=pendingClient(),p=patientById(featureValue('charge-patient')),amount=Number(featureValue('charge-amount')),description=featureValue('charge-title'),due=featureValue('charge-due');if(!c||!p||!description||!Number.isFinite(amount)||amount<=0||!/^\d{4}-\d{2}-\d{2}$/.test(due)){alert('Selecione paciente, descrição, valor positivo e vencimento.');return;}var data={module:'cobranca-v1',description:description,instructions:featureValue('charge-instructions'),paid:0,history:[]};state.chargeSaving=true;var b=document.querySelector('[data-action="charge-create"]');if(b)b.disabled=true;c.from('pending_items').insert({patient_id:p.id,patient_name:p.name,phone:p.phone||null,type:'financeiro',title:'Cobrança · '+description,amount:Math.round(amount*100)/100,due_date:due,priority:'media',status:'aberto',details:JSON.stringify(data)}).select().single().then(function(r){if(r.error)throw r.error;state.chargeSaving=false;loadCobrancas();}).catch(function(e){state.chargeSaving=false;if(b)b.disabled=false;alert('Não foi possível salvar a cobrança. Os campos foram mantidos para tentar novamente.');});}
-function payCobranca(id){if(state.chargePaying)return;var x=chargeItem(id),c=pendingClient();if(!x||!c)return;var remaining=chargeRemaining(x);if(!remaining)return;var raw=prompt('Valor recebido (R$). Saldo: '+fmtMoney(remaining),remaining.toFixed(2));if(raw===null)return;var amount=Math.round(Number(raw.replace(',','.'))*100)/100;if(!Number.isFinite(amount)||amount<=0||amount>remaining){alert('Informe um valor positivo até o saldo pendente.');return;}var d=Object.assign({},chargeData(x));d.paid=Math.round((Number(d.paid||0)+amount)*100)/100;d.history=(d.history||[]).concat([{at:new Date().toISOString(),amount:amount}]);var q=c.from('pending_items').update({details:JSON.stringify(d),status:d.paid>=Number(x.amount)?'resolvido':'aberto',resolved_at:d.paid>=Number(x.amount)?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq('id',id);if(x.updated_at)q=q.eq('updated_at',x.updated_at);else q=q.is('updated_at',null);state.chargePaying=true;q.select().single().then(function(r){if(r.error)throw r.error;state.chargePaying=false;auditAction('registrou baixa de cobrança','pending_item',id,{amount:amount});loadCobrancas();}).catch(function(e){state.chargePaying=false;alert('Não foi possível registrar. Atualize a lista: outro usuário pode ter alterado esta cobrança.');});}
+function payCobranca(id){return integratedChargePayment(id);}
 function printCobranca(id){var x=chargeItem(id),d=x&&chargeData(x);if(!d)return;printableSheet('Aviso de cobrança', '<div class="notice">Documento interno de cobrança. Não é boleto bancário.</div><p><strong>Paciente:</strong> '+esc(x.patient_name)+'<br><strong>Referência:</strong> '+esc(x.id)+'<br><strong>Descrição:</strong> '+esc(d.description)+'</p><table><tr><th>Valor total</th><td>'+fmtMoney(Number(x.amount))+'</td></tr><tr><th>Pagamentos registrados</th><td>'+fmtMoney(Number(d.paid||0))+'</td></tr><tr><th>Saldo pendente</th><td>'+fmtMoney(chargeRemaining(x))+'</td></tr><tr><th>Vencimento</th><td>'+esc(x.due_date)+'</td></tr></table><h3>Como pagar</h3><p>'+htmlDocText(d.instructions||'Entre em contato com a clínica para combinar o pagamento.')+'</p><p>Após o pagamento, envie o comprovante à clínica.</p>');}
 function shareCobranca(id){var x=chargeItem(id),d=x&&chargeData(x);if(!d)return;var phone=String(x.phone||'').replace(/\D/g,'');if(phone.length===10||phone.length===11)phone='55'+phone;if(!/^55\d{10,11}$/.test(phone)){alert('Confira o telefone do paciente antes de compartilhar.');return;}var text='Olá, '+x.patient_name+'! Aqui é do Instituto Lins Rabello.\nSegue seu aviso de cobrança:\nReferência: '+x.id+'\n'+d.description+'\nSaldo pendente: '+fmtMoney(chargeRemaining(x))+'\nVencimento: '+x.due_date+'\n'+(d.instructions||'Entre em contato para combinar o pagamento.')+'\nDocumento interno, não é boleto bancário. Se já pagou, envie seu comprovante para conferirmos.';window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(text),'_blank','noopener');}
 
@@ -3355,6 +3393,51 @@ function sharePatientFormLink(){var p=patientById(state.recordPatientId),l=state
 function revokePatientForm(id){if(!confirm('Revogar este link? O paciente não poderá mais enviar por ele.'))return;var c=pendingClient();if(!c)return;var patientId=state.recordPatientId;c.rpc('revoke_patient_form',{p_id:id}).then(function(r){if(r.error)throw r.error;if(state.recordPatientId===patientId)loadPatientForms(patientId);}).catch(function(e){alert('Não foi possível revogar: '+e.message);});}
 function downloadPatientFormFile(id){var file=(state.patientFormFiles||[]).find(function(f){return f.id===id;}),c=pendingClient();if(!file||!c)return;c.rpc('read_patient_form_file',{p_id:id}).then(function(r){if(r.error)throw r.error;var d=r.data,raw=atob(d.data.replace(/\s/g,'')),bytes=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);var url=URL.createObjectURL(new Blob([bytes],{type:d.mime})),a=document.createElement('a');a.href=url;a.download=String(d.name||'anexo').replace(/[\\/]/g,'_');document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);}).catch(function(e){alert('Não foi possível baixar o anexo: '+e.message);});}
 
+/* Planos de tratamento, acompanhamento e revisões. */
+var QUOTE_STATES={negociacao:'Em negociação',aceito:'Aceito',nao_fechou:'Não fechou',parcial:'Realizado parcialmente',concluido:'Tratamento concluído'};
+var QUOTE_ITEM_STATES={proposto:'Proposto',aceito:'Aceito',realizado:'Realizado',nao_realizado:'Não realizado / recusado'};
+var QUOTE_TEETH=[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+var LAB_ROUTES={coroa:['Escaneamento intraoral','Moldagem inicial','Prova do metal','Prova da porcelana','Ajustes','Finalização','Instalação / cimentação','Controle pós-entrega'],total:['Moldagem inicial','Confecção da moldeira individual','Moldagem funcional','Mordida / registro oclusal','Prova dos dentes','Finalização','Entrega','Controle pós-entrega'],parcial:['Moldagem inicial','Prova da estrutura','Mordida / registro oclusal','Prova dos dentes','Finalização','Entrega','Controle pós-entrega'],implante:['Escaneamento intraoral','Moldagem inicial','Prova da estrutura','Prova dos dentes','Prova da porcelana','Finalização','Instalação / cimentação','Controle pós-entrega']};
+function newId(prefix){return prefix+Date.now()+'-'+Math.random().toString(36).slice(2,9);}
+function quoteById(id){return (store.quotes||[]).find(function(q){return q.id===id;});}
+function quoteTotals(q){var total=0,done=0,accepted=0; (q.items||[]).forEach(function(i){var v=Number(i.qty||0)*Number(i.unitPrice||0);total+=v;if(i.status==='realizado')done+=v;if(i.status==='aceito'||i.status==='realizado')accepted+=v;});return {total:Math.round(total*100)/100,done:Math.round(done*100)/100,accepted:Math.round(accepted*100)/100,potential:Math.round((total-done)*100)/100};}
+function defaultClinicInfo(){return {name:'Instituto Lins Rabello',subtitle:'Odontologia integrada',address:'Itapecerica da Serra — SP',phone:'',responsible:'',cro:''};}
+function quoteOptions(map,value){return Object.keys(map).map(function(k){return '<option value="'+escAttr(k)+'" '+(k===value?'selected':'')+'>'+esc(map[k])+'</option>';}).join('');}
+function openQuote(id,patientId){var q=id?quoteById(id):null;state.quoteDraft=q?JSON.parse(JSON.stringify(q)):{id:newId('q'),patientId:patientId||'',professionalId:PROFESSIONALS[0].id,status:'negociacao',date:todayISO(),validUntil:addDays(todayISO(),30),items:[],notes:'',contactDate:addDays(todayISO(),7)};state.staffTab='orcamentos';state.selectedQuoteTooth=null;render();}
+function readQuoteDraft(){var q=state.quoteDraft;if(!q)return null;var d=JSON.parse(JSON.stringify(q));d.patientId=featureValue('q-patient')||d.patientId;d.professionalId=featureValue('q-prof')||d.professionalId;d.status=featureValue('q-status')||d.status;d.validUntil=featureValue('q-valid');d.contactDate=featureValue('q-contact');d.notes=featureValue('q-notes');d.items.forEach(function(i){var qty=document.getElementById('qi-qty-'+i.id),price=document.getElementById('qi-price-'+i.id),status=document.getElementById('qi-status-'+i.id);if(qty)i.qty=Number(qty.value);if(price)i.unitPrice=Number(price.value);if(status)i.status=status.value;});return d;}
+function selectQuoteTooth(tooth){state.quoteDraft=readQuoteDraft();state.selectedQuoteTooth=tooth;render();}
+function addQuoteItem(){var q=readQuoteDraft(),p=procById(featureValue('q-procedure')),tooth=state.selectedQuoteTooth||'geral',desc=featureValue('q-description')||p.name,qty=Number(featureValue('q-qty')),price=Number(featureValue('q-price'));if(!q||!desc||!Number.isFinite(qty)||qty<=0||!Number.isFinite(price)||price<0){alert('Informe descrição, quantidade positiva e valor válido.');return;}q.items.push({id:newId('qi'),tooth:String(tooth),procedureId:p.id,description:desc,qty:qty,unitPrice:price,status:'proposto'});state.quoteDraft=q;render();}
+function renderQuoteOdontogram(q){var teeth=state.quoteDentition==='infantil'?[55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75]:QUOTE_TEETH;return '<div class="quote-mouth" aria-label="Odontograma do orçamento">'+teeth.map(function(t){var items=(q.items||[]).filter(function(i){return i.tooth===String(t);}),cls=items.some(function(i){return i.status==='realizado';})?'done':items.length?'planned':'';return '<button type="button" class="quote-tooth '+cls+' '+(state.selectedQuoteTooth===String(t)?'selected':'')+'" data-action="quote-tooth" data-id="'+t+'" aria-label="Dente '+t+'" title="Dente '+t+' — '+items.length+' item(ns)"><span class="tooth-shape"></span>'+t+'</button>';}).join('')+'</div>';
+}
+function renderQuoteEditor(){var q=state.quoteDraft;if(!q)return '';var totals=quoteTotals(q),out='<div class="card"><h3>Plano de tratamento</h3><div class="finance-form-grid"><div class="field"><label>Paciente</label><select id="q-patient"><option value="">Selecione</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'" '+(p.id===q.patientId?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field"><label>Dentista</label><select id="q-prof">'+PROFESSIONALS.map(function(p){return '<option value="'+p.id+'" '+(p.id===q.professionalId?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field"><label>Resposta do paciente / andamento</label><select id="q-status">'+quoteOptions(QUOTE_STATES,q.status)+'</select></div><div class="field"><label>Validade da proposta</label><input id="q-valid" type="date" value="'+escAttr(q.validUntil||'')+'"></div><div class="field"><label>Próximo contato comercial</label><input id="q-contact" type="date" value="'+escAttr(q.contactDate||'')+'"></div></div><p>Selecione o dente e adicione cada procedimento. Itens sem dente específico podem ser adicionados como gerais.</p><div class="row-actions"><button class="btn btn-ghost btn-sm" data-action="quote-dentition" data-id="permanente">Permanentes</button><button class="btn btn-ghost btn-sm" data-action="quote-dentition" data-id="infantil">Decíduos</button><button class="btn btn-ghost btn-sm" data-action="quote-tooth" data-id="geral">Procedimento geral</button></div>'+renderQuoteOdontogram(q)+'<p><strong>Selecionado: '+esc(state.selectedQuoteTooth||'geral')+'</strong> · Dentes com proposta: dourado · com itens realizados: verde.</p><div class="finance-form-grid"><div class="field"><label>Procedimento de referência</label><select id="q-procedure">'+PROCEDURES.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join('')+'</select></div><div class="field"><label>Descrição específica</label><input id="q-description" placeholder="Ex.: coroa em porcelana"></div><div class="field"><label>Quantidade</label><input id="q-qty" type="number" min="0.1" step="0.1" value="1"></div><div class="field"><label>Valor unitário (R$)</label><input id="q-price" type="number" min="0" step="0.01" value="'+Number(PROCEDURES[0].price||0)+'"></div></div><button class="btn btn-ghost" data-action="quote-add-item">Adicionar procedimento</button><div class="finance-table-wrap"><table><thead><tr><th>Dente</th><th>Proposto</th><th>Qtd.</th><th>Valor unit.</th><th>Etapa</th><th></th></tr></thead><tbody>';
+ q.items.forEach(function(i){out+='<tr><td>'+esc(i.tooth)+'</td><td>'+esc(i.description)+'</td><td><input id="qi-qty-'+i.id+'" type="number" min="0.1" step="0.1" value="'+i.qty+'" style="width:74px"></td><td><input id="qi-price-'+i.id+'" type="number" min="0" step="0.01" value="'+i.unitPrice+'" style="width:110px"></td><td><select id="qi-status-'+i.id+'">'+quoteOptions(QUOTE_ITEM_STATES,i.status)+'</select></td><td><button class="btn btn-ghost btn-sm" data-action="quote-remove-item" data-id="'+i.id+'">Remover</button></td></tr>';});
+ out+='</tbody></table></div><p>Total proposto: <strong>'+fmtMoney(totals.total)+'</strong> · Executado: '+fmtMoney(totals.done)+'</p><div class="field"><label>Observações e condições da proposta</label><textarea id="q-notes">'+esc(q.notes||'')+'</textarea></div><div class="row-actions"><button class="btn btn-primary" data-action="quote-save">Salvar orçamento</button><button class="btn btn-ghost" data-action="quote-close">Fechar edição</button></div></div>';return out;
+}
+function renderClinicSettings(){if(currentStaffRole()!=='admin')return '<p class="mini-note">Os dados da clínica no PDF são configurados pelo administrador.</p>';var c=Object.assign(defaultClinicInfo(),store.clinicInfo||{});return '<details class="card" style="margin-top:14px"><summary>Dados da clínica para o PDF</summary><p>Confira os dados antes de entregar uma proposta.</p><div class="finance-form-grid">'+[['name','Nome'],['address','Endereço completo'],['phone','Telefone'],['responsible','Responsável técnico'],['cro','CRO']].map(function(x){return '<div class="field"><label>'+x[1]+'</label><input id="clinic-'+x[0]+'" value="'+escAttr(c[x[0]])+'"></div>';}).join('')+'</div><button class="btn btn-ghost" data-action="clinic-save">Salvar dados da clínica</button></details>';}
+function renderQuoteList(items){var out='';if(!items.length)return '<div class="empty-note">Nenhum orçamento para este filtro.</div>';items.slice().sort(function(a,b){return String(b.updatedAt||b.date).localeCompare(String(a.updatedAt||a.date));}).forEach(function(q){var p=patientById(q.patientId),t=quoteTotals(q);out+='<div class="card" style="margin-top:12px"><h3>'+esc(p?p.name:'Paciente não encontrado')+'</h3><p><strong>'+esc(QUOTE_STATES[q.status]||q.status)+'</strong> · '+(q.items||[]).length+' item(ns) · Proposto: '+fmtMoney(t.total)+' · Realizado: '+fmtMoney(t.done)+'</p><p>Próximo contato: '+esc(q.contactDate||'Não definido')+'</p><div class="row-actions" style="flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-action="quote-edit" data-id="'+q.id+'">Abrir plano</button><button class="btn btn-ghost btn-sm" data-action="quote-pdf" data-id="'+q.id+'">Baixar PDF</button><button class="btn btn-ghost btn-sm" data-action="quote-contact" data-id="'+q.id+'">Preparar contato</button></div></div>';});return out;}
+function renderOrcamentos(){var out='<div class="section-title">Orçamentos e odontograma</div><button class="btn btn-primary" data-action="quote-new">Novo orçamento</button>'+renderQuoteEditor();out+='<div class="field"><label>Filtrar por paciente</label><select id="q-filter"><option value="">Todos</option>'+(store.patients||[]).map(function(p){return '<option value="'+escAttr(p.id)+'" '+(state.quotePatient===p.id?'selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div><button class="btn btn-ghost" data-action="quote-filter">Aplicar filtro</button>';out+=renderQuoteList((store.quotes||[]).filter(function(q){return !state.quotePatient||q.patientId===state.quotePatient;}));return out+renderClinicSettings();}
+function markTreatmentCompleted(id){if(!canAccessClinical())return;var a=(store.appointments||[]).find(function(x){return x.id===id&&x.status==='realizado';});if(!a)return;var key='appointment-treatment-'+id;store.followups=store.followups||[];if(store.followups.some(function(f){return f.id===key;})){alert('A revisão desse tratamento já foi registrada. Confira em Retornos.');return;}store.followups.push({id:key,patientName:a.name,phone:a.phone,title:'Revisão após conclusão do tratamento',dueDate:addMonths(todayISO(),3),status:'aberto',sourceAppointmentId:id,createdAt:new Date().toISOString()});persist(function(){alert('Revisão registrada para daqui a 3 meses. Ajuste o prazo em Retornos se necessário.');});}
+function createCompletionRecall(q){var id='treatment-'+q.id,existing=(store.followups||[]).find(function(f){return f.id===id;});if(existing)return;var p=patientById(q.patientId);store.followups.push({id:id,patientId:q.patientId,patientName:p?p.name:'Paciente',phone:p?p.phone:'',title:'Revisão após conclusão do tratamento',sourceQuoteId:q.id,dueDate:addMonths(todayISO(),3),status:'aberto',createdAt:new Date().toISOString()});}
+function saveQuote(){var q=readQuoteDraft();if(!q||!patientById(q.patientId)||!q.items.length){alert('Selecione um paciente e adicione pelo menos um procedimento.');return;}if(!QUOTE_STATES[q.status]||q.items.some(function(i){return !Number.isFinite(i.qty)||i.qty<=0||!Number.isFinite(i.unitPrice)||i.unitPrice<0||!QUOTE_ITEM_STATES[i.status];})){alert('Revise quantidades, valores e etapas.');return;}if(q.status==='aceito')q.items.forEach(function(i){if(i.status==='proposto')i.status='aceito';});var done=q.items.filter(function(i){return i.status==='realizado';}).length,unfinished=q.items.some(function(i){return i.status==='proposto'||i.status==='aceito';});if(q.status==='concluido'&&(!done||unfinished)){alert('Para concluir, identifique os itens realizados e os que não serão executados.');return;}if(done&&unfinished)q.status='parcial';if(done&&!unfinished)q.status='concluido';q.updatedAt=new Date().toISOString();q.history=(q.history||[]).concat([{at:q.updatedAt,status:q.status}]);store.quotes=store.quotes||[];var idx=store.quotes.findIndex(function(x){return x.id===q.id;});if(idx>=0)store.quotes[idx]=q;else store.quotes.push(q);if(q.status==='concluido')createCompletionRecall(q);state.quoteDraft=null;persist();}
+function renderOportunidades(){var items=(store.quotes||[]).filter(function(q){return ['negociacao','nao_fechou','parcial'].indexOf(q.status)>=0;}),total=items.reduce(function(sum,q){return sum+quoteTotals(q).potential;},0);return '<div class="section-title">Acompanhamento de propostas</div><p>Pacientes em negociação, que não fecharam ou com itens ainda não realizados. Potencial proposto: <strong>'+fmtMoney(total)+'</strong>. Esse valor não é receita nem dívida.</p>'+renderQuoteList(items);}
+function contactQuote(id){var q=quoteById(id),p=q&&patientById(q.patientId);if(!p)return;openPatientWhatsApp(p.phone,'Olá, '+p.name+'! Aqui é do Instituto Lins Rabello. Podemos esclarecer alguma dúvida sobre seu plano de tratamento ou ajudar a organizar as próximas etapas?');}
+function openPatientWhatsApp(phone,text){var digits=String(phone||'').replace(/\D/g,'');if(digits.length===10||digits.length===11)digits='55'+digits;if(!/^55\d{10,11}$/.test(digits)){alert('Confira o telefone do paciente.');return;}window.open('https://wa.me/'+digits+'?text='+encodeURIComponent(text),'_blank','noopener');}
+function exportQuotePdf(id){var q=quoteById(id),p=q&&patientById(q.patientId),c=Object.assign(defaultClinicInfo(),store.clinicInfo||{});if(!q||!p){alert('Paciente não encontrado.');return;}if(!window.jspdf){alert('Não foi possível carregar o gerador de PDF. Atualize a página.');return;}if(c.address===defaultClinicInfo().address||!c.phone){alert('Preencha o endereço completo e o telefone em Dados da clínica para o PDF.');return;}var doc=new window.jspdf.jsPDF(),y=16,total=quoteTotals(q);function line(text,size){doc.setFontSize(size||10);var lines=doc.splitTextToSize(String(text||''),180);lines.forEach(function(part){if(y+5>275){doc.addPage();y=18;}doc.text(part,15,y);y+=5;});y+=3;}
+ try{doc.addImage(LOGO_FULL,'PNG',15,8,46,30);y=44;}catch(e){}
+ line(c.name,17);line(c.subtitle,10);line(c.address+' | '+c.phone);if(c.responsible||c.cro)line('Responsável: '+c.responsible+' | CRO: '+c.cro);line('ORÇAMENTO / PLANO DE TRATAMENTO',14);line('Referência: '+q.id+' | Data: '+q.date+' | Validade: '+(q.validUntil||'A combinar'));line('Paciente: '+p.name+' | Telefone: '+(p.phone||'Não informado'));if(p.cpf)line('CPF: '+p.cpf);if(p.address)line('Endereço do paciente: '+p.address+(p.number?', '+p.number:''));line('Dentista: '+profById(q.professionalId).name);
+ line('ODONTOGRAMA DO PLANO',11);if(y+32>275){doc.addPage();y=18;}var teeth=QUOTE_TEETH.slice();var extra=(q.items||[]).map(function(i){return Number(i.tooth);}).filter(function(t){return t&&teeth.indexOf(t)<0;});if(extra.length)teeth=teeth.concat(Array.from(new Set(extra)));teeth.forEach(function(t,i){var col=i%16,row=Math.floor(i/16),x=15+col*11,ty=y+row*13,items=q.items.filter(function(it){return it.tooth===String(t);});doc.setFillColor(...(items.length?[244,223,169]:[245,246,248]));doc.rect(x,ty,10,10,'FD');doc.setFontSize(8);doc.text(String(t),x+2,ty+7);});y+=Math.ceil(teeth.length/16)*13+6;line('Dentes com itens propostos destacados no odontograma. Itens gerais constam abaixo.',9);
+ q.items.forEach(function(i,index){line((index+1)+'. Dente/região '+i.tooth+' — '+i.description,11);line('Quantidade: '+i.qty+' | Unitário: '+fmtMoney(i.unitPrice)+' | Total: '+fmtMoney(i.qty*i.unitPrice)+' | '+QUOTE_ITEM_STATES[i.status],9);});line('TOTAL PROPOSTO: '+fmtMoney(total.total),14);line('Itens identificados como realizados: '+fmtMoney(total.done),10);if(q.notes)line('Observações / condições: '+q.notes);line('Os procedimentos e as etapas serão confirmados com o profissional responsável durante o atendimento.',9);for(var pg=1;pg<=doc.getNumberOfPages();pg++){doc.setPage(pg);doc.setFontSize(8);doc.text(c.name+' | Proposta individual | Página '+pg+' de '+doc.getNumberOfPages(),15,290);}doc.save('Orcamento_'+q.id+'.pdf');return doc;
+}
+function renderRetornos(){var items=(store.followups||[]).filter(function(f){return f.status==='aberto';}),out='<div class="section-title">Retornos e revisões <button class="btn btn-ghost btn-sm" data-action="recalls-refresh">Atualizar retornos clínicos</button></div><p>Datas sugeridas para controle da equipe. Confirme o prazo adequado ao caso; o contato com o paciente é manual.</p>';
+ items.sort(function(a,b){return a.dueDate.localeCompare(b.dueDate);}).forEach(function(f){out+='<div class="card" style="border-left:5px solid '+(f.dueDate<=todayISO()?'#c42d3c':'#d7a126')+';margin-top:12px"><h3>'+esc(f.patientName)+'</h3><p>'+esc(f.title)+' · '+esc(f.dueDate)+(f.dueDate<=todayISO()?' · CONTATAR':'')+'</p><div class="row-actions"><button class="btn btn-primary btn-sm" data-action="recall-contact" data-id="'+f.id+'">Preparar WhatsApp</button><button class="btn btn-ghost btn-sm" data-action="recall-date" data-id="'+f.id+'">Ajustar prazo</button><button class="btn btn-ghost btn-sm" data-action="recall-close" data-id="'+f.id+'">Concluir lembrete</button></div></div>';});
+ if(state.pendingError)out+='<div class="alert-card">'+esc(state.pendingError)+'</div>';if(state.pendingLoading)out+='<p>Carregando retornos clínicos…</p>';var clinical=(state.pendingItems||[]).filter(function(x){return x.type==='recall'&&x.status==='aberto';});clinical.forEach(function(x){out+='<div class="card" style="margin-top:12px"><h3>'+esc(x.patient_name)+'</h3><p>'+esc(x.title)+' · '+esc(x.due_date||'Sem data')+'</p><button class="btn btn-ghost btn-sm" data-action="clinical-recall-contact" data-id="'+escAttr(x.id)+'">Preparar WhatsApp</button> <button class="btn btn-ghost btn-sm" data-action="pending-snooze" data-id="'+escAttr(x.id)+'">Ajustar prazo</button> <button class="btn btn-ghost btn-sm" data-action="pending-resolve" data-id="'+escAttr(x.id)+'">Concluir lembrete</button></div>';});if(!items.length&&!clinical.length)out+='<div class="empty-note">Nenhum retorno pendente carregado.</div>';return out;
+}
+function patientSummary(p){var hist=patientHistory(p),quotes=(store.quotes||[]).filter(function(q){return q.patientId===p.id;}),out='<div class="card"><h3>Resumo do atendimento</h3><p>'+hist.length+' consultas vinculadas · '+quotes.length+' planos · Última consulta: '+(hist.length?esc(hist[0].date):'Não registrada')+'</p><div class="row-actions"><button class="btn btn-primary" data-action="record-tab" data-id="anamnese">Revisar anamnese</button><button class="btn btn-ghost" data-action="record-tab" data-id="formularios">Conferir documentos</button><button class="btn btn-ghost" data-action="quote-new-patient" data-id="'+p.id+'">Novo plano</button></div></div>';return out+renderQuoteList(quotes.slice(0,3));}
+function renderPatientQuoteTab(p){return '<button class="btn btn-primary" data-action="quote-new-patient" data-id="'+escAttr(p.id)+'">Novo orçamento deste paciente</button>'+renderQuoteList((store.quotes||[]).filter(function(q){return q.patientId===p.id;}));}
+function renderPatientLabTab(p){var items=(state.labItems||[]).filter(function(x){return x.patient_id===p.id;});return '<button class="btn btn-primary" data-action="patient-lab-manage" data-id="'+escAttr(p.id)+'">Gerenciar laboratório deste paciente</button>'+items.map(function(x){var d=labData(x);return '<div class="card"><h3>'+esc(d.treatment)+'</h3><p>'+esc(d.stage)+' · '+esc(d.situation)+' · Prazo: '+esc(x.due_date||'A combinar')+'</p></div>';}).join('');}
+function renderPatientChargesTab(p){var items=(state.chargeItems||[]).filter(function(x){return x.patient_id===p.id;});return '<button class="btn btn-primary" data-action="patient-charge-manage" data-id="'+escAttr(p.id)+'">Gerenciar cobranças deste paciente</button>'+items.map(function(x){return '<div class="card"><h3>'+esc(chargeData(x).description)+'</h3><p>Saldo: '+fmtMoney(chargeRemaining(x))+' · Vencimento: '+esc(x.due_date)+'</p></div>';}).join('');}
+function integratedChargePayment(id){if(state.storeSaving){alert('Aguarde a gravação atual terminar antes de registrar o recebimento.');return;}var x=chargeItem(id);if(!x||state.chargePaying)return;var balance=chargeRemaining(x);if(!balance)return;var raw=prompt('Valor recebido (R$). Saldo: '+fmtMoney(balance),balance.toFixed(2));if(raw===null)return;var amount=Math.round(Number(raw.replace(',','.'))*100)/100;if(!Number.isFinite(amount)||amount<=0||amount>balance){alert('Informe um valor até o saldo pendente.');return;}var method=prompt('Forma: Pix, Dinheiro, Débito, Crédito, Transferência ou Boleto','Pix');if(method===null)return;var c=pendingClient();if(!c)return;state.chargePaying=true;c.rpc('receive_patient_charge',{p_id:id,p_expected_paid:Number(chargeData(x).paid||0),p_amount:amount,p_method:method,p_date:todayISO()}).then(function(r){if(r.error)throw r.error;store=normalizeStore(r.data.state);writeLocalStore(store);if(window.ILRSupabase.acceptStateSnapshot)window.ILRSupabase.acceptStateSnapshot(store);state.chargePaying=false;loadCobrancas();}).catch(function(e){state.chargePaying=false;alert('Não foi possível registrar: '+e.message);});}
+
 function addWaitlist(){
   function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
   var name=v('wait-name'), phone=v('wait-phone').replace(/\D/g,''), procedure=v('wait-procedure'), preference=v('wait-preference');
@@ -3380,8 +3463,7 @@ function cycleOrSetStatus(t){
     appt.status = order[(idx+1) % order.length];
   }
   applyProcedureStock(appt);
-  persist();
-  if(appt.status==='realizado') ensureAutoRecallForAppointment(appt);
+  persist(function(){if(appt.status==='realizado')ensureAutoRecallForAppointment(appt);});
 }
 
 

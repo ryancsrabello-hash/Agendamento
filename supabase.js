@@ -16,11 +16,16 @@ async function currentAuthorizedUser() {
   return data.user;
 }
 
+let stateSnapshot = {};
+let stateWriteQueue = Promise.resolve();
+let queuedLocalState = null, queuedWrites = 0;
+const cloneState = value => JSON.parse(JSON.stringify(value || {}));
 async function loadStore() {
   const user = await currentAuthorizedUser();
   if (user) {
     const { data, error } = await client.from('app_state').select('data').eq('id', STATE_ROW_ID).maybeSingle();
     if (error) throw error;
+    stateSnapshot = cloneState(data ? data.data : {});
     return data ? data.data : null;
   }
 
@@ -29,17 +34,20 @@ async function loadStore() {
   return data || null;
 }
 
-async function saveStore(store) {
-  const user = await currentAuthorizedUser();
-  if (!user) throw new Error('Apenas a equipe autenticada pode alterar os dados administrativos.');
-
-  const { error } = await client.from('app_state').upsert({
-    id: STATE_ROW_ID,
-    data: store,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'id' });
-  if (error) throw error;
+function saveStore(store) {
+  const base = cloneState(queuedLocalState || stateSnapshot), next = cloneState(store);
+  queuedLocalState = next; queuedWrites++;
+  const operation = stateWriteQueue.catch(() => {}).then(async () => {
+    if (!await currentAuthorizedUser()) throw new Error('Apenas a equipe autenticada pode alterar os dados.');
+    const {data, error} = await client.rpc('save_team_state', {p_base:base,p_next:next});
+    if(error) throw error;
+    stateSnapshot = cloneState(data);
+    return data;
+  });
+  stateWriteQueue = operation;
+  return operation.finally(() => {queuedWrites--;if(!queuedWrites)queuedLocalState=null;});
 }
+function acceptStateSnapshot(value){stateSnapshot=cloneState(value);}
 
 async function createPublicBooking(booking) {
   const { data, error } = await client.rpc('create_public_booking', { p_booking: booking });
@@ -59,7 +67,7 @@ function subscribeStore(onChange) {
     if (!user) return;
     channel = client.channel('instituto-lins-rabello-store')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state', filter: `id=eq.${STATE_ROW_ID}` },
-        (payload) => { if (payload.new?.data) onChange(payload.new.data); })
+        (payload) => { if (payload.new?.data) {onChange(payload.new.data);} })
       .subscribe();
   });
   return { unsubscribe: () => channel?.unsubscribe() };
@@ -253,7 +261,7 @@ async function adminUpdateTeamProfile(userId,changes={}){
 }
 
 window.ILRSupabase = {
-  client, loadStore, saveStore, subscribeStore, createPublicBooking, lookupAppointments,
+  client, loadStore, saveStore, acceptStateSnapshot, subscribeStore, createPublicBooking, lookupAppointments,
   signIn, signOut, getCurrentUser, isAuthorizedTeamMember, onAuthChange,
   loadClinicalRecord, saveAnamnesis, saveTooth, addEvolution, getTeamProfile, listTeamProfiles, adminUpdateTeamProfile, writeAudit, listAudit, loadEvolutionDraft, saveEvolutionDraft, deleteEvolutionDraft,
   saveGeneratedClinicalDocument, uploadClinicalFile, getClinicalDocumentUrl, deleteClinicalDocument
