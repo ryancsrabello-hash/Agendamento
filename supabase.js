@@ -23,7 +23,9 @@ const cloneState = value => JSON.parse(JSON.stringify(value || {}));
 async function loadStore() {
   const user = await currentAuthorizedUser();
   if (user) {
-    const { data, error } = await client.from('app_state').select('data').eq('id', STATE_ROW_ID).maybeSingle();
+    const {data: reconciled,error: reconcileError}=await client.rpc('reconcile_expired_confirmations');
+    if(reconcileError)throw reconcileError;
+    const data={data:reconciled},error=null;
     if (error) throw error;
     stateSnapshot = cloneState(data ? data.data : {});
     return data ? data.data : null;
