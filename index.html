@@ -1358,7 +1358,9 @@ function slotAvailability(professionalId,date,time,duration){
   if(professionalScheduleClosed(professionalId,date,time)) return {free:false,reason:'Fechado pela escala'};
 
   var start=timeToMinutes(time),end=start+duration;
-  if(end>19*60) return {free:false,reason:'Fora do horário de atendimento'};
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')||date<clinicToday())return {free:false,reason:'Escolha uma data de hoje em diante'};
+  if(!/^(0[8-9]|1[0-8]):00$/.test(time)||!Number.isFinite(start)||start<480||start>1080||end>1140)return {free:false,reason:'Fora do horário de atendimento'};
+  if(start<780&&end>720)return {free:false,reason:'O procedimento atravessa o almoço (12h–13h)'};
 
   var manual=manualBlockForSlot(professionalId,date,time,duration);
   if(manual) return {free:false,reason:'Fechado manualmente'};
@@ -2888,7 +2890,7 @@ function attachEvents(){
     else if(a==='delete-patient'){ deletePatient(t.dataset.id); return; }
     else if(a==='patient-search'){ var ps=document.getElementById('pt-search'); state.patientSearch=ps?ps.value:''; render(); return; }
     else if(a==='open-record'){ if(!canAccessClinical()){alert('Seu perfil não possui acesso ao prontuário clínico.');return;} openClinicalRecord(t.dataset.id); return; }
-    else if(a==='close-record'){if(document.getElementById('ev-description'))scheduleEvolutionDraftSave();state.directAttendance=false;state.recordPatientId=null;state.selectedTooth=null;render();return;}
+    else if(a==='close-record'){state.pendingRecordRequest=null;if(document.getElementById('ev-description'))scheduleEvolutionDraftSave();state.directAttendance=false;state.recordPatientId=null;state.selectedTooth=null;render();return;}
     else if(a==='record-tab'){if(state.recordTab==='evolucoes'&&document.getElementById('ev-description'))scheduleEvolutionDraftSave();state.recordTab=t.dataset.id==='saude'?'anamnese':t.dataset.id;if(state.recordTab==='evolucoes'){loadCobrancas();loadLaboratorio();}else if(state.recordTab==='resumo')loadManagementData();else if(state.recordTab==='laboratorio')loadLaboratorio();else if(state.recordTab==='cobrancas'&&currentStaffRole()==='admin')loadCobrancas();else render();return;}
     else if(a==='select-tooth'){ state.selectedTooth=t.dataset.id; render(); return; }
     else if(a==='save-health-alerts'){ saveHealthAlerts(); return; }
@@ -3064,9 +3066,26 @@ function applyEvolutionTemplate(id){
   if(p)p.value=t.procedure;if(d)d.value=t.description;if(c)c.value=t.conduct;scheduleEvolutionDraftSave();
 }
 
+var websitePatientRegistrations={};
+function ensureWebsitePatient(id){
+ if(!canAccessClinical())return Promise.reject(new Error('Acesso restrito à equipe clínica.'));
+ var p=patientById(id),phone=normalizePhone(p?p.phone:String(id).replace(/^auto-/,''));
+ if(websitePatientRegistrations[phone])return websitePatientRegistrations[phone];
+ var existing=patientForPhone(phone);if(existing)return Promise.resolve(existing);
+ if(!p)return Promise.reject(new Error('Paciente não encontrado. Atualize a lista.'));
+ if((store.deletedPatients||[]).some(function(x){return (x.phones||[]).indexOf(phone)>=0;}))return Promise.reject(new Error('Este paciente foi excluído do cadastro.'));
+ if(websitePatientRegistrations[phone])return websitePatientRegistrations[phone];
+ var saved=Object.assign(patientBlank(),p,{id:'p-site-'+phone,phone:phone,sourcePhone:phone,source:'agendamento-site',createdAt:new Date().toISOString()});
+ store.patients=store.patients||[];store.patients.push(saved);
+ websitePatientRegistrations[phone]=persist().then(function(ok){if(!ok){store.patients=(store.patients||[]).filter(function(x){return x.id!==saved.id;});throw new Error('Não foi possível preparar a ficha. Confira a conexão e tente abrir o prontuário novamente.');}var registered=patientForPhone(phone);if(!registered)throw new Error('Não foi possível localizar o cadastro salvo. Atualize a lista.');return registered;}).finally(function(){delete websitePatientRegistrations[phone];});
+ return websitePatientRegistrations[phone];
+}
+
 function openClinicalRecord(id,tab){
  if(!canAccessClinical())return;
- if(String(id||'').indexOf('auto-')===0){alert('Abra e salve o cadastro do paciente antes de criar o prontuário.');return;}
+ var openingPatient=patientById(id),openingPhone=openingPatient&&normalizePhone(openingPatient.phone);
+ if(String(id||'').indexOf('auto-')===0||(openingPhone&&websitePatientRegistrations[openingPhone])){state.pendingRecordRequest=id;state.patientMessage='Preparando a ficha do paciente…';ensureWebsitePatient(id).then(function(patient){if(state.pendingRecordRequest!==id)return;state.pendingRecordRequest=null;state.patientMessage='';openClinicalRecord(patient.id,tab||'formularios');}).catch(function(e){if(state.pendingRecordRequest!==id)return;state.pendingRecordRequest=null;state.patientMessage=e.message;alert(e.message);render();});return;}
+ state.pendingRecordRequest=null;
  clearTimeout(evolutionDraftTimer);state.addendumDraft=null;state.examComparison=null;state.examFilter={};state.recordPatientId=id;state.clinicalDentition='permanente';state.treatmentFilter='todos';state.patientUpdateAvailable=false;state.patientForms=[];state.patientFormFiles=[];state.patientFormsPatientId=id;state.patientFormsError='';state.recordTab=tab==='saude'?'anamnese':tab||'resumo';state.recordLoading=true;state.recordError='';state.selectedTooth=null;state.recordData={prontuario:null,evolucoes:[],odontograma:[],documentos:[]};render();
  if(state.recordTab==='evolucoes'){loadCobrancas();loadLaboratorio();}
  waitForSupabase(5000).then(function(api){if(!api||!api.loadClinicalRecord)throw new Error('Módulo do prontuário indisponível.');return api.loadClinicalRecord(id);}).then(function(data){if(state.recordPatientId!==id)return null;state.recordData=data||{prontuario:null,evolucoes:[],odontograma:[],documentos:[]};return waitForSupabase(2000).then(function(api){return api&&api.loadEvolutionDraft?api.loadEvolutionDraft(id):null;}).catch(function(){return null;});}).then(function(draft){if(state.recordPatientId!==id)return;var local=null;try{local=JSON.parse(localStorage.getItem('ilr-evolution-draft-'+id)||'null');}catch(e){}state.evolutionDraft=local&&(!draft||(local._editedAt||'')>(draft._editedAt||''))?local:draft||local||{data_atendimento:todayISO(),procedimento:'',descricao:'',conduta:'',observacoes:''};state.draftStatus='Rascunho salvo automaticamente';state.recordLoading=false;render();loadPatientForms(id);}).catch(function(e){if(state.recordPatientId!==id)return;state.recordLoading=false;state.recordError=e.message||'Erro ao carregar prontuário.';render();});
@@ -3148,8 +3167,9 @@ function confirmBooking(){
   if(digits.length!==11){ b.error = 'Informe o telefone com DDD + 9 dígitos (11 números), sem espaços ou traços.'; render(); return; }
 
   var proc = procById(b.procedureId);
-  if(!isFreeSlot(b.professionalId, b.date, b.time, proc.duration)){
-    b.error = 'Esse horário acabou de ser preenchido. Escolha outro horário.';
+  var availability=slotAvailability(b.professionalId,b.date,b.time,proc.duration);
+  if(!availability.free){
+    b.error='Horário indisponível: '+availability.reason+'. Escolha outro horário.';
     b.step = 3; b.time = null; render(); return;
   }
 
