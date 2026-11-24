@@ -2162,6 +2162,32 @@ function dashboardNumbers(){
 }
 function dashboardCard(label,value,sub,cls){return '<div class="card dash-card"><div class="d-label">'+label+'</div><div class="d-value '+(cls||'')+'">'+value+'</div><div class="d-sub">'+sub+'</div></div>';}
 
+function renderProductivityMetrics(ref){
+  var items=(store.appointments||[]).filter(function(a){return inMonth(a.date,ref)&&a.status!=='cancelado';});
+  var completed=items.filter(function(a){return a.status==='realizado';}).length;
+  var absences=items.filter(function(a){return a.status==='falta';}).length;
+  var attendanceBase=completed+absences;
+  var attendanceRate=attendanceBase?Math.round(completed/attendanceBase*100):0;
+  var quotes=(store.quotes||[]).filter(function(q){return inMonth(q.date||q.createdAt||'',ref);});
+  var accepted=quotes.filter(function(q){return q.status==='aceito'||q.status==='parcial'||q.status==='concluido';}).length;
+  var quoteRate=quotes.length?Math.round(accepted/quotes.length*100):0;
+  var byProfessional=PROFESSIONALS.map(function(prof){
+    var rows=items.filter(function(a){return a.professionalId===prof.id;}),done=rows.filter(function(a){return a.status==='realizado';}).length;
+    return {name:prof.name,total:rows.length,done:done,rate:rows.length?Math.round(done/rows.length*100):0,color:prof.color};
+  });
+  var byProcedure=PROCEDURES.map(function(proc){return {name:proc.name,total:items.filter(function(a){return a.procedureId===proc.id&&a.status==='realizado';}).length};}).filter(function(x){return x.total>0;}).sort(function(a,b){return b.total-a.total;}).slice(0,5);
+  var newPatients=(store.patients||[]).filter(function(p){return inMonth(p.createdAt||p.criado_em||'',ref);}).length;
+  var out='<section class="card" style="margin-bottom:16px"><div class="today-heading"><div><h2 style="margin:0">Produtividade da equipe</h2><p class="mini-note">Indicadores operacionais · '+esc(monthLabel(ref))+'</p></div><span class="profile-badge">Mês atualizável</span></div>';
+  out+='<div class="dash-grid">'+dashboardCard('Atendimentos concluídos',completed,'consultas finalizadas')+dashboardCard('Taxa de comparecimento',attendanceRate+'%',attendanceBase+' consultas realizadas ou faltas')+dashboardCard('Novos pacientes',newPatients,'cadastros no período')+dashboardCard('Orçamentos aceitos',quoteRate+'%',accepted+' de '+quotes.length+' orçamentos')+'</div>';
+  out+='<div class="two-col"><div><h3>Produção por profissional</h3>';
+  byProfessional.forEach(function(x){out+='<div class="bar-row"><div class="lbl"><span>'+esc(x.name)+'</span><span class="mono">'+x.done+'/'+x.total+' · '+x.rate+'%</span></div><div class="bar-track"><div class="bar-fill" style="width:'+x.rate+'%;background:'+x.color+'"></div></div></div>';});
+  out+='</div><div><h3>Procedimentos mais realizados</h3>';
+  if(!byProcedure.length)out+='<p class="mini-note">Sem procedimentos finalizados neste mês.</p>';
+  byProcedure.forEach(function(x){out+='<div class="bar-row"><div class="lbl"><span>'+esc(x.name)+'</span><span class="mono">'+x.total+'</span></div></div>';});
+  out+='</div></div><p class="mini-note">A taxa de comparecimento considera somente consultas finalizadas e faltas registradas. Orçamentos aceitos incluem os status aceito, parcial e concluído.</p></section>';
+  return out;
+}
+
 function renderVisaoGeral(){
   var d=dashboardNumbers(), fs=d.fs;
   var out='<div class="section-title">Painel de hoje <span style="font-size:12px;color:var(--ink-soft);font-weight:500;">'+fullDisplay(d.today)+'</span></div>';
@@ -2182,7 +2208,7 @@ function renderVisaoGeral(){
   out+='</div>';
   var due=(store.followups||[]).filter(function(f){return f.status==='aberto'&&f.dueDate<=todayISO();}).length;var opportunities=(store.quotes||[]).filter(function(q){return ['negociacao','nao_fechou','parcial'].indexOf(q.status)>=0&&(!q.contactDate||q.contactDate<=todayISO());}).length;
   out+='<div class="section-title">Próximas ações</div><div class="quick-actions"><button class="btn btn-primary" data-stafftab="recepcao">Atendimentos de hoje</button><button class="btn btn-ghost" data-stafftab="retornos">Revisões para contatar: '+due+'</button><button class="btn btn-ghost" data-stafftab="oportunidades">Propostas para acompanhar: '+opportunities+'</button></div>';
-  return renderManagementPanel()+out;
+  return renderProductivityMetrics(d.month)+renderManagementPanel()+out;
 }
 function kpi(label,val,sub){
   return '<div class="card kpi"><div class="label">'+label+'</div><div class="val">'+val+'</div><div class="sub">'+sub+'</div></div>';
@@ -2768,9 +2794,29 @@ function exportPatientsCSV(){
   var rows=[['Nome','CPF','Telefone','E-mail','Nascimento','Cidade','Observações']];(store.patients||[]).forEach(function(p){rows.push([p.name||p.nome,p.cpf,p.phone||p.telefone,p.email,p.birthDate||p.nascimento,p.city||p.cidade,p.notes||p.observacoes]);});
   downloadText('pacientes-'+todayISO()+'.csv','\ufeff'+rows.map(function(r){return r.map(csvCell).join(';');}).join('\n'),'text/csv;charset=utf-8');
 }
-function exportBackup(){downloadText('backup-instituto-lins-rabello-'+todayISO()+'.json',JSON.stringify({version:1,exportedAt:new Date().toISOString(),store:store},null,2),'application/json');}
+function exportBackup(){
+  if(state.role!=='staff'||currentStaffRole()!=='admin'){alert('Somente administradores podem exportar o backup completo.');return;}
+  var payload={version:2,exportedAt:new Date().toISOString(),exportedBy:state.staffEmail||state.staffUser||'administrador',store:store};
+  downloadText('backup-instituto-lins-rabello-'+todayISO()+'.json',JSON.stringify(payload,null,2),'application/json');
+  auditAction('exportou backup completo','backup',null,{version:payload.version});
+}
 function restoreBackupFile(file){
-  if(!file)return;var reader=new FileReader();reader.onload=function(){try{var data=JSON.parse(reader.result),incoming=data.store||data;if(!incoming||!Array.isArray(incoming.appointments))throw new Error('Arquivo inválido.');if(!confirm('Restaurar este backup substituirá os dados atuais do sistema. Deseja continuar?'))return;store=incoming;persist();alert('Backup restaurado com sucesso.');}catch(e){alert('Não foi possível restaurar: '+e.message);}};reader.readAsText(file);
+  if(!file)return;
+  if(state.role!=='staff'||currentStaffRole()!=='admin'){alert('Somente administradores podem restaurar backups.');return;}
+  var reader=new FileReader();reader.onload=function(){
+    try{
+      var data=JSON.parse(reader.result),incoming=data.store||data;
+      if(!incoming||!Array.isArray(incoming.appointments)||!Array.isArray(incoming.patients))throw new Error('Arquivo inválido ou incompleto.');
+      if(!confirm('ATENÇÃO: a restauração substituirá os dados atuais do ERP. Faça um backup atual antes de continuar. Deseja restaurar?'))return;
+      var previous=store;store=normalizeStore(incoming);
+      persist().then(function(saved){
+        if(saved){auditAction('restaurou backup completo','backup',null,{version:data.version||1,exportedAt:data.exportedAt||null});alert('Backup restaurado e sincronizado.');}
+        else{store=previous;alert('A restauração não foi confirmada pelo Supabase. Os dados locais anteriores foram preservados nesta sessão. Verifique a conexão antes de tentar novamente.');}
+      });
+    }catch(e){alert('Não foi possível restaurar: '+e.message);}
+  };
+  reader.onerror=function(){alert('Não foi possível ler o arquivo de backup.');};
+  reader.readAsText(file);
 }
 
 
@@ -2787,7 +2833,7 @@ function renderAdministracao(){
     out+='<tr><td><input id="team-name-'+p.user_id+'" value="'+esc(p.display_name||'')+'" style="min-width:150px;"></td><td>'+esc(p.email||'')+'</td><td><select id="team-role-'+p.user_id+'" '+(locked?'disabled':'')+'><option value="admin" '+(p.role==='admin'?'selected':'')+'>Administrador</option><option value="dentista" '+(p.role==='dentista'?'selected':'')+'>Dentista</option><option value="recepcao" '+(p.role==='recepcao'?'selected':'')+'>Recepção</option></select>'+(locked?'<div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">Sócio administrador</div>':'')+'</td><td><select id="team-active-'+p.user_id+'" '+(locked?'disabled':'')+'><option value="true" '+(p.active!==false?'selected':'')+'>Ativo</option><option value="false" '+(p.active===false?'selected':'')+'>Bloqueado</option></select></td><td><button class="btn btn-primary btn-sm" data-action="team-save" data-id="'+p.user_id+'">Salvar</button></td></tr>';
   });
   out+='</tbody></table></div>';
-  out+='<div class="card" style="margin-top:16px;"><h3 style="margin-top:0;">Boas práticas</h3><ul style="margin-bottom:0;color:var(--ink-soft);font-size:13px;line-height:1.7;"><li>Use uma conta individual para cada pessoa.</li><li>Não compartilhe senhas.</li><li>Bloqueie imediatamente o acesso de quem sair da equipe.</li><li>Consulte a aba Auditoria para acompanhar alterações importantes.</li></ul></div>';
+  out+='<div class="card" style="margin-top:16px;"><h3 style="margin-top:0;">Segurança e continuidade</h3><div class="dash-grid">'+dashboardCard('Sessão atual',esc(state.staffEmail||'Equipe'),'usuário autenticado')+dashboardCard('Perfil',roleLabel(currentStaffRole()),'permissões aplicadas pelo perfil')+dashboardCard('Backup manual','Disponível','exportação completa restrita a administradores')+dashboardCard('Auditoria','Ativa no ERP','consulte o módulo Auditoria')+'</div><div class="clinical-alert warning"><strong>Importante:</strong> o backup baixado contém dados pessoais e clínicos. Armazene-o em local criptografado, com acesso restrito. O botão do ERP não substitui os backups automáticos do banco Supabase.</div><h3>Checklist administrativo</h3><ul style="margin-bottom:0;color:var(--ink-soft);font-size:13px;line-height:1.7;"><li>Use uma conta individual para cada pessoa e ative MFA para administradores.</li><li>Bloqueie imediatamente o acesso de quem sair da equipe.</li><li>Confirme no Supabase que RLS está habilitado em todas as tabelas com dados de pacientes.</li><li>Confirme a rotina de backup do projeto e teste a restauração em ambiente separado.</li><li>Não compartilhe senhas, chaves secretas ou arquivos de backup por WhatsApp/e-mail.</li><li>Consulte a aba Auditoria para acompanhar alterações importantes.</li></ul><div class="row-actions" style="margin-top:12px"><button class="btn btn-primary" data-action="export-backup">Baixar backup completo</button><button class="btn btn-ghost" data-stafftab="auditoria">Abrir auditoria</button></div></div>';
   return out;
 }
 function loadTeamProfiles(){
@@ -2819,7 +2865,9 @@ function renderRelatorios(){
   var month=monthRef(), fs=financeSummary(month), monthAppts=store.appointments.filter(function(a){return inMonth(a.date,month);});
   var total=monthAppts.filter(function(a){return a.status!=='cancelado';}).length, done=monthAppts.filter(function(a){return a.status==='realizado';}).length, abs=monthAppts.filter(function(a){return a.status==='falta';}).length;
   var out='<div class="section-title">Relatórios e segurança dos dados</div>';
-  out+='<div class="report-toolbar"><div class="field"><label>Mês analisado</label><input type="month" id="finance-month" value="'+month+'"></div><button class="btn btn-ghost" data-action="finance-month">Atualizar</button><button class="btn btn-primary" data-action="export-backup">Baixar backup completo</button><button class="btn btn-ghost" data-action="restore-backup">Restaurar backup</button><input id="restore-file" type="file" accept="application/json,.json" style="display:none"></div>';
+  out+='<div class="report-toolbar"><div class="field"><label>Mês analisado</label><input type="month" id="finance-month" value="'+month+'"></div><button class="btn btn-ghost" data-action="finance-month">Atualizar</button>';
+  if(currentStaffRole()==='admin')out+='<button class="btn btn-primary" data-action="export-backup">Baixar backup completo</button><button class="btn btn-ghost" data-action="restore-backup">Restaurar backup</button><input id="restore-file" type="file" accept="application/json,.json" style="display:none">';
+  out+='</div>';
   out+='<div class="dash-grid">'+dashboardCard('Agendamentos',total,'no mês selecionado')+dashboardCard('Realizados',done,total?Math.round(done/total*100)+'% de conclusão':'sem consultas')+dashboardCard('Faltas',abs,total?Math.round(abs/total*100)+'% do total':'sem consultas',abs?'negative':'positive')+dashboardCard('Resultado',fmtMoney(fs.result),'estimativa financeira',fs.result>=0?'positive':'negative')+'</div>';
   out+='<div class="quick-actions"><button class="btn btn-ghost" data-action="export-appointments">Exportar agenda CSV</button><button class="btn btn-ghost" data-action="export-patients">Exportar pacientes CSV</button><button class="btn btn-ghost" data-action="export-finance">Exportar financeiro CSV</button></div>';
   out+='<div class="two-col"><div class="card"><h3 style="margin-top:0;">Consultas por profissional</h3>';
@@ -2870,7 +2918,7 @@ function attachEvents(){
     if(a==='agreement-preview'){previewAgreement();return;}
     var b = state.booking;
     if(a==='export-backup'){ exportBackup(); return; }
-    if(a==='restore-backup'){ var rf=document.getElementById('restore-file'); if(rf) rf.click(); return; }
+    if(a==='restore-backup'){ if(state.role!=='staff'||currentStaffRole()!=='admin'){alert('Somente administradores podem restaurar backups.');return;} var rf=document.getElementById('restore-file'); if(rf) rf.click(); return; }
     if(a==='export-appointments'){ exportAppointmentsCSV(); return; }
     if(a==='export-patients'){ exportPatientsCSV(); return; }
     if(a==='export-finance'){ exportFinanceCSV(); return; }
@@ -3096,7 +3144,7 @@ function attachEvents(){
     render();
   };
 
-  root.onchange=function(e){if(e.target&&e.target.id==='pf-kind'){if(e.target.value==='anamnese'){var title=document.getElementById('pf-title');if(title)title.value='Anamnese individual';return;}if(!featureValue('pf-text'))generateLegalText();return;}if(e.target&&e.target.id==='pr-select'){state.pricingSelected=e.target.value;state.pricingDraft=null;render();return;}if(e.target&&['pr-doctor','pr-method'].includes(e.target.id)){state.pricingDraft=readPricingEntry();state.pricingDoctor=featureValue('pr-doctor');state.pricingMethod=featureValue('pr-method');render();return;}if(e.target&&['q-procedure','q-prof','q-price-method'].includes(e.target.id)){applyQuoteCalculatedPrice();return;}if(e.target&&e.target.id==='management-month'){if(/^\d{4}-\d{2}$/.test(e.target.value)){state.managementMonth=e.target.value;render();}return;}if(e.target&&e.target.id==='lab-patient'){state.labDraft=readLabFormDraft();state.labDraft.quoteId='';state.labDraft.quoteItemId='';render();return;}if(e.target&&e.target.id==='lab-plan-item'){state.labDraft=readLabFormDraft();var q=quoteById(state.labDraft.quoteId),i=q&&(q.items||[]).find(function(x){return x.id===state.labDraft.quoteItemId;});if(i){state.labDraft.treatment=i.description;state.labDraft.professional=q.professionalId;}render();return;}if(e.target&&e.target.id==='agenda-direct-date'){if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)&&e.target.value>=todayISO()){state.agendaDate=e.target.value;render();}return;}if(e.target&&e.target.id.indexOf('ns-')===0){state.nextStepDraft=readNextStepDraft();if(e.target.id==='ns-kind'){state.nextStepDraft.procedureId=state.nextStepDraft.procedureId||'retorno';if(e.target.value==='concluido')state.nextStepDraft.dueDate=addMonths(todayISO(),3);render();}return;}if(e.target&&e.target.id==='treatment-patient'){if(document.getElementById('ev-description'))scheduleEvolutionDraftSave();openClinicalRecord(e.target.value,'evolucoes');return;}if(e.target&&e.target.dataset.clinicalQuote){scheduleEvolutionDraftSave();setClinicalPlanStatus(e.target.dataset.clinicalQuote,e.target.dataset.item,e.target.value);return;}if(e.target&&e.target.id==='charge-mode'){state.boletoDraft=readBoletoDraft();render();return;}if(e.target&&e.target.id==='q-procedure'){var p=procById(e.target.value),price=document.getElementById('q-price');if(price)price.value=p.price||0;}if(e.target&&e.target.id==='lab-route'){var sel=document.getElementById('lab-stage'),route=LAB_ROUTES[e.target.value]||LAB_STAGES;if(sel)sel.innerHTML=labOptions(route,route[0]);}if(e.target&&e.target.id==='pf-kind'){var title=document.getElementById('pf-title');if(title)title.value=formKindLabel(e.target.value)+' individual';}if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();if(e.target&&e.target.id==='pd-patient')pendingPatientPicked();};
+  root.onchange=function(e){if(e.target&&e.target.id==='restore-file'){var backupFile=e.target.files&&e.target.files[0];if(backupFile)restoreBackupFile(backupFile);e.target.value='';return;}if(e.target&&e.target.id==='pf-kind'){if(e.target.value==='anamnese'){var title=document.getElementById('pf-title');if(title)title.value='Anamnese individual';return;}if(!featureValue('pf-text'))generateLegalText();return;}if(e.target&&e.target.id==='pr-select'){state.pricingSelected=e.target.value;state.pricingDraft=null;render();return;}if(e.target&&['pr-doctor','pr-method'].includes(e.target.id)){state.pricingDraft=readPricingEntry();state.pricingDoctor=featureValue('pr-doctor');state.pricingMethod=featureValue('pr-method');render();return;}if(e.target&&['q-procedure','q-prof','q-price-method'].includes(e.target.id)){applyQuoteCalculatedPrice();return;}if(e.target&&e.target.id==='management-month'){if(/^\d{4}-\d{2}$/.test(e.target.value)){state.managementMonth=e.target.value;render();}return;}if(e.target&&e.target.id==='lab-patient'){state.labDraft=readLabFormDraft();state.labDraft.quoteId='';state.labDraft.quoteItemId='';render();return;}if(e.target&&e.target.id==='lab-plan-item'){state.labDraft=readLabFormDraft();var q=quoteById(state.labDraft.quoteId),i=q&&(q.items||[]).find(function(x){return x.id===state.labDraft.quoteItemId;});if(i){state.labDraft.treatment=i.description;state.labDraft.professional=q.professionalId;}render();return;}if(e.target&&e.target.id==='agenda-direct-date'){if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)&&e.target.value>=todayISO()){state.agendaDate=e.target.value;render();}return;}if(e.target&&e.target.id.indexOf('ns-')===0){state.nextStepDraft=readNextStepDraft();if(e.target.id==='ns-kind'){state.nextStepDraft.procedureId=state.nextStepDraft.procedureId||'retorno';if(e.target.value==='concluido')state.nextStepDraft.dueDate=addMonths(todayISO(),3);render();}return;}if(e.target&&e.target.id==='treatment-patient'){if(document.getElementById('ev-description'))scheduleEvolutionDraftSave();openClinicalRecord(e.target.value,'evolucoes');return;}if(e.target&&e.target.dataset.clinicalQuote){scheduleEvolutionDraftSave();setClinicalPlanStatus(e.target.dataset.clinicalQuote,e.target.dataset.item,e.target.value);return;}if(e.target&&e.target.id==='charge-mode'){state.boletoDraft=readBoletoDraft();render();return;}if(e.target&&e.target.id==='q-procedure'){var p=procById(e.target.value),price=document.getElementById('q-price');if(price)price.value=p.price||0;}if(e.target&&e.target.id==='lab-route'){var sel=document.getElementById('lab-stage'),route=LAB_ROUTES[e.target.value]||LAB_STAGES;if(sel)sel.innerHTML=labOptions(route,route[0]);}if(e.target&&e.target.id==='pf-kind'){var title=document.getElementById('pf-title');if(title)title.value=formKindLabel(e.target.value)+' individual';}if(e.target&&e.target.id==='doc-type')updateDocumentTemplate();if(e.target&&e.target.id==='pd-patient')pendingPatientPicked();};
   root.onkeydown=function(e){if(e.target.id==='global-patient-search'&&e.key==='Enter'){e.preventDefault();updateUnifiedSearch();}};
   root.oninput=function(e){if(e.target&&e.target.id==='global-patient-search'){updateUnifiedSearch();return;}if(e.target&&/^pc-/.test(e.target.id)){state.pricingConfigDraft=readPricingConfigDraft();return;}if(e.target&&/^co-/.test(e.target.id)){state.closeoutDraft={performed:featureValue('co-performed'),instructions:featureValue('co-instructions'),nextInfo:featureValue('co-next')};return;}if(e.target&&e.target.id.indexOf('ns-')===0)state.nextStepDraft=readNextStepDraft();if(e.target&&e.target.id.indexOf('charge-')===0){state.boletoDraft=readBoletoDraft();var prev=document.getElementById('boleto-preview');if(prev)prev.textContent=boletoParcelPreview(state.boletoDraft);}if(e.target&&['ev-date','ev-procedure','ev-description','ev-conduct','ev-notes'].indexOf(e.target.id)>=0)scheduleEvolutionDraftSave();};
   setTimeout(function(){initSignatureCanvas();if(state.recordTab==='documentos'&&state.examFilter)filterExams();},0);
